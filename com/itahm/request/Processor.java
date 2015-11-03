@@ -50,9 +50,7 @@ public class Processor extends Request {
 			return null;
 		}
 		
-		JSONObject jo = node.getData(Resource.HRPROCESSORLOAD, Integer.toString(index), start, end, summary);
-		
-		return jo;
+		return node.getData(Resource.HRPROCESSORLOAD, Integer.toString(index), start, end, summary);
 	}
 	
 }

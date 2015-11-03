@@ -7,6 +7,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import org.json.JSONObject;
+
 public final class Response extends Message {
 
 	public final static String COOKIE = "SESSION=%s; HttpOnly";
@@ -39,38 +41,25 @@ public final class Response extends Message {
 	public boolean own(SocketChannel channel) {
 		return channel == this.channel;
 	}
-	/*
-	public byte [] build() throws IOException {
-		Iterator<String> iterator = this.header.keySet().iterator();
-		String key;
-		StringBuilder header = new StringBuilder();
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();		
-		
-		header.append(startLine +CRLF);
-		header.append(String.format(FIELD, "Access-Control-Allow-Headers", "Authorization, Content-Type"));
-		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://app.itahm.com"));
-		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://free.itahm.com"));
-		header.append(String.format(FIELD, "Access-Control-Allow-Credentials", "true"));
-		
-		while(iterator.hasNext()) {
-			key = iterator.next();
-			
-			header.append(String.format(FIELD, key, this.header.get(key)));
-		}
-		
-		header.append(CRLF);
-		baos.write(header.toString().getBytes("US-ASCII"));
-		baos.write(this.body);
-		
-		return baos.toByteArray();
-	}
-	*/
+	
 	/**
 	 * body 없는 전송
 	 * @throws IOException
 	 */
 	public void send() throws IOException {
 		sendHeader(0);
+	}
+	
+	public void ok(JSONObject data) throws IOException {
+		status(200, "OK").send(data.toString());
+	}
+	
+	public void unauthorized() throws IOException {
+		status(401, "Unauthorized").send();
+	}
+	
+	public void badRequest() throws IOException {
+		status(400, "Bad request").send();
 	}
 	
 	/**
@@ -118,7 +107,7 @@ public final class Response extends Message {
 		
 		header.append(this.startLine);
 		header.append(String.format(FIELD, "Access-Control-Allow-Headers", "Authorization, Content-Type"));
-		//header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://app.itahm.com"));
+		//header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://itahm.com"));
 		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://localhost"));
 		header.append(String.format(FIELD, "Access-Control-Allow-Credentials", "true"));
 		header.append(String.format(FIELD, "Content-Length", Long.toString(length)));

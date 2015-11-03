@@ -28,11 +28,13 @@ public class Delay extends Request {
 		
 		long start;
 		long end;
+		
 		boolean summary = false;
 		
 		try {
 			start = value.getLong("start");
 			end = value.getLong("end");
+		
 			
 			if (value.has("summary")) {
 				summary = value.getBoolean("summary");
@@ -48,9 +50,7 @@ public class Delay extends Request {
 			return null;
 		}
 		
-		JSONObject jo = node.getData(Resource.DELAY, "0", start, end, summary);
-		
-		return jo;
+		return node.getData(Resource.DELAY, "0", start, end, summary);
 	}
 	
 }

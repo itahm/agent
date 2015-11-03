@@ -15,6 +15,7 @@ import com.itahm.http.Listener;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 import com.itahm.session.Session;
+import com.itahm.command.Command;
 import com.itahm.event.Event;
 import com.itahm.event.EventQueue;
 import com.itahm.event.EventResponder;
@@ -23,21 +24,28 @@ import com.itahm.event.WaitingQueue;
 
 public class ITAhM implements EventListener, EventResponder, Closeable {
 
-	private final static Map<String, String> commandMap = new HashMap<String, String>();
+	private final static Map<String, String> DBMap = new HashMap<String, String>();
 	{
-		commandMap.put("account", "com.itahm.request.Account");
-		commandMap.put("device", "com.itahm.request.Device");
-		commandMap.put("line", "com.itahm.request.Line");
-		commandMap.put("inoctet", "com.itahm.request.InOctet");
-		commandMap.put("outoctet", "com.itahm.request.OutOctet");
-		commandMap.put("profile", "com.itahm.request.Profile");
-		commandMap.put("address", "com.itahm.request.Address");
-		commandMap.put("snmp", "com.itahm.request.Snmp");
-		commandMap.put("processor", "com.itahm.request.Processor");
-		commandMap.put("storage", "com.itahm.request.Storage");
-		commandMap.put("memory", "com.itahm.request.Storage");
-		commandMap.put("delay", "com.itahm.request.Delay");
-		commandMap.put("realtime", "com.itahm.request.RealTime");
+		DBMap.put("account", "com.itahm.request.Account");
+		DBMap.put("device", "com.itahm.request.Device");
+		DBMap.put("line", "com.itahm.request.Line");
+		DBMap.put("inoctet", "com.itahm.request.InOctet");
+		DBMap.put("outoctet", "com.itahm.request.OutOctet");
+		DBMap.put("profile", "com.itahm.request.Profile");
+		DBMap.put("address", "com.itahm.request.Address");
+		DBMap.put("snmp", "com.itahm.request.Snmp");
+		DBMap.put("processor", "com.itahm.request.Processor");
+		DBMap.put("storage", "com.itahm.request.Storage");
+		DBMap.put("memory", "com.itahm.request.Storage");
+		DBMap.put("delay", "com.itahm.request.Delay");
+		DBMap.put("realtime", "com.itahm.request.RealTime");
+	}
+	
+	private final static Map<String, String> cmdMap = new HashMap<String, String>();
+	{
+		cmdMap.put("echo","com.itahm.command.Echo");
+		cmdMap.put("pull","com.itahm.command.Pull");
+		cmdMap.put("get","com.itahm.command.Get");
 	}
 	
 	private final Listener http;
@@ -117,9 +125,25 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		
 		return false;
 	}
+	/*
+	private void processRequest(JSONObject request) {
+		String className =DBMap.get(request.getString("database"));
+		
+		if (className != null) {
+			try {
+				Class.forName(className).getDeclaredConstructor(JSONObject.class).newInstance(request);
+			} catch (InstantiationException | IllegalAccessException
+					| IllegalArgumentException | InvocationTargetException
+					| NoSuchMethodException | SecurityException
+					| ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	*/
 	
 	private void processRequest(JSONObject request) {
-		String className =commandMap.get(request.getString("database"));
+		String className = DBMap.get(request.getString("database"));
 		
 		if (className != null) {
 			try {
@@ -135,6 +159,24 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	
 	private void stop() {
 		
+	}
+	
+	public void test(Request request, Response response) throws IOException {
+		JSONObject data = request.getJSONObject();
+		String cmdString = data.getString("command");
+		
+		try {
+			String className = cmdMap.get(cmdString);
+			
+			if (className == null) {
+				response.badRequest();
+			}
+			else {
+				((Command)Class.forName(className).newInstance()).execute(request, response);
+			}
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@Override
@@ -158,51 +200,53 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		try {
 			// JSONException
 			try {
-				// session 없는 요청은 signin
-				if (session == null) { 
-					if ("signin".equals(command) && signIn(json.getString("username"), json.getString("password"))) {
-						// signin 성공, cookie 발행
-						session = Session.getInstance();
-						
-						response.header("Set-Cookie", String.format(Response.COOKIE, session.getID())).status(200, "OK").send();
-					}
-					else {
-						// signin 실패하거나 signin이 아닌 session 없는 요청은 거부
-						response.status(401, "Unauthorized").send();
-					}
+				if ("echo".equals(command) || "pull".equals(command)) {
+					test(request, response);
 				}
-				// session 있는 정상 요청
 				else {
-					if ("signout".equals(command)) {
-						session.close();
-						
-						response.status(401, "Unauthorized").send();
-					}
-					else if ("echo".equals(command)) {
-						response.status(200, "OK").send();
-					}
-					else if ("event".equals(command)) {
-						Waiter waiter = new Waiter(response, json.getInt("index"));
-						int index = waiter.index();
-						Event event = this.eventQueue.getNext(index);
-						
-						waiter.set(response);
-						
-						if (index == -1 || event == null) {
-							this.waitingQueue.push(waiter);
+					// session 없는 요청은 signin
+					if (session == null) { 
+						if ("signin".equals(command) && signIn(json.getString("username"), json.getString("password"))) {
+							// signin 성공, cookie 발행
+							session = Session.getInstance();
 							
+							response.header("Set-Cookie", String.format(Response.COOKIE, session.getID())).status(200, "OK").send();
 						}
 						else {
-							waiter.checkout(event);
+							// signin 실패하거나 signin이 아닌 session 없는 요청은 거부
+							response.status(401, "Unauthorized").send();
 						}
 					}
-					else if (json.has("database")) {
-						processRequest(json);
-						
-						response.status(200, "OK").send(json.toString());
-					}
+					// session 있는 정상 요청
 					else {
-						response.status(400, "Bad Request").send();
+						if ("signout".equals(command)) {
+							session.close();
+							
+							response.status(401, "Unauthorized").send();
+						}
+						else if ("event".equals(command)) {
+							Waiter waiter = new Waiter(response, json.getInt("index"));
+							int index = waiter.index();
+							Event event = this.eventQueue.getNext(index);
+							
+							waiter.set(response);
+							
+							if (index == -1 || event == null) {
+								this.waitingQueue.push(waiter);
+								
+							}
+							else {
+								waiter.checkout(event);
+							}
+						}
+						else if (json.has("database")) {
+							processRequest(json);
+							
+							response.status(200, "OK").send(json.toString());
+						}
+						else {
+							response.status(400, "Bad Request").send();
+						}
 					}
 				}
 			}

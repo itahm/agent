@@ -39,6 +39,24 @@ public class Data {
 	public static enum Table {
 		ACCOUNT, PROFILE, DEVICE, LINE, INDEX, SNMP, ADDRESS
 	}
+	
+	public static enum Table2 {
+		ACCOUNT(accountObj),
+		PROFILE(profileObj),
+		DEVICE(deviceObj),
+		SNMP(snmpObj);
+		
+		private final JSONObject table;
+		
+		Table2(JSONObject table) {
+			this.table = table;
+		}
+		
+		public JSONObject getJSONObject() {
+			return this.table;
+		}
+	}
+	
 	/**
 	 * Instantiates a new database.
 	 * @throws ITAhMException 
@@ -165,6 +183,15 @@ public class Data {
 		
 		
 		return initialized = true;
+	}
+	
+	public static JSONObject getJSONObject(String name) {
+		try {
+			return Table2.valueOf(name.toUpperCase()).getJSONObject();
+		}
+		catch (IllegalArgumentException iae) {
+			return null;
+		}
 	}
 	
 	public static JSONObject getJSONObject(Table name) {
