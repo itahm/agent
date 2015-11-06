@@ -21,7 +21,7 @@ public abstract class Command {
 				execute(request.getJSONObject(), response);
 			}
 			catch (JSONException jsone) {
-				response.badRequest();
+				response.badRequest(new JSONObject().put("error", "invalid json request").toString());
 			}
 		}
 	}

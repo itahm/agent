@@ -50,7 +50,7 @@ public class Delay extends Request {
 			return null;
 		}
 		
-		return node.getData(Resource.DELAY, "0", start, end, summary);
+		return node.getData(Resource.RESPONSETIME, "0", start, end, summary);
 	}
 	
 }

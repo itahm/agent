@@ -45,7 +45,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	{
 		cmdMap.put("echo","com.itahm.command.Echo");
 		cmdMap.put("pull","com.itahm.command.Pull");
-		cmdMap.put("get","com.itahm.command.Get");
+		cmdMap.put("query","com.itahm.command.Query");
 	}
 	
 	private final Listener http;
@@ -161,7 +161,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		
 	}
 	
-	public void test(Request request, Response response) throws IOException {
+	public void processRequest(Request request, Response response) throws IOException {
 		JSONObject data = request.getJSONObject();
 		String cmdString = data.getString("command");
 		
@@ -169,7 +169,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 			String className = cmdMap.get(cmdString);
 			
 			if (className == null) {
-				response.badRequest();
+				response.badRequest(null);
 			}
 			else {
 				((Command)Class.forName(className).newInstance()).execute(request, response);
@@ -200,8 +200,8 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		try {
 			// JSONException
 			try {
-				if ("echo".equals(command) || "pull".equals(command)) {
-					test(request, response);
+				if ("echo".equals(command) || "pull".equals(command) || "query".equals(command)) {
+					processRequest(request, response);
 				}
 				else {
 					// session 없는 요청은 signin

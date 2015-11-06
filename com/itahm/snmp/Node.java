@@ -153,7 +153,7 @@ public class Node extends CommunityTarget {
 			this.nodeData.put("delay", delay);
 			this.nodeData.put("timeout", -1);
 			
-			this.rollingMap.put(Resource.DELAY, "0", delay *100 /TIMEOUT);
+			this.rollingMap.put(Resource.RESPONSETIME, "0", delay *100 /TIMEOUT);
 		}
 		else {
 			this.nodeData.put("timeout", responseTime);
@@ -660,6 +660,16 @@ public class Node extends CommunityTarget {
 	
 	public JSONObject getData(Resource resource, String index, long start, long end, boolean summary) {
 		RollingFile rollingFile = this.rollingMap.getFile(resource, index);
+		
+		if (rollingFile != null) {
+			return rollingFile.getData(start, end, summary);
+		}
+		
+		return null;
+	}
+	
+	public JSONObject getData(String database, String index, long start, long end, boolean summary) {
+		RollingFile rollingFile = this.rollingMap.getFile(Resource.valueOf(database.toUpperCase()), index);
 		
 		if (rollingFile != null) {
 			return rollingFile.getData(start, end, summary);

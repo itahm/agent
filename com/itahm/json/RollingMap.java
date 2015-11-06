@@ -12,12 +12,12 @@ public class RollingMap {
 		IFINOCTETS("ifInOctets"),
 		IFOUTOCTETS("ifOutOctets"),
 		HRSTORAGEUSED("hrStorageUsed"),
-		DELAY("delay");
+		RESPONSETIME("responseTime");
 		
 		private String string;
 		
-		private Resource(String arg) {
-			string = arg;
+		private Resource(String string) {
+			this.string = string;
 		}
 		
 		public String toString() {

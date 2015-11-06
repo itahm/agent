@@ -42,14 +42,6 @@ public final class Response extends Message {
 		return channel == this.channel;
 	}
 	
-	/**
-	 * body 없는 전송
-	 * @throws IOException
-	 */
-	public void send() throws IOException {
-		sendHeader(0);
-	}
-	
 	public void ok(JSONObject data) throws IOException {
 		status(200, "OK").send(data.toString());
 	}
@@ -58,8 +50,23 @@ public final class Response extends Message {
 		status(401, "Unauthorized").send();
 	}
 	
-	public void badRequest() throws IOException {
-		status(400, "Bad request").send();
+	public void badRequest(String body) throws IOException {
+		status(400, "Bad request");
+		
+		if (body == null) {
+			send();
+		}
+		else {
+			send(body);
+		}
+	}
+	
+	/**
+	 * body 없는 전송
+	 * @throws IOException
+	 */
+	public void send() throws IOException {
+		sendHeader(0);
 	}
 	
 	/**

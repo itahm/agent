@@ -20,14 +20,14 @@ public class Pull extends Command {
 			
 			if (data != null) {
 				response.ok(data);
-				
-				return;
+			}
+			else {
+				response.badRequest(new JSONObject().put("error", "database not found").toString());
 			}
 		}
 		catch (JSONException jsone) {
+			response.badRequest(new JSONObject().put("error", "invalid json request").toString());
 		}
-		
-		response.badRequest();
 	}
 
 }
