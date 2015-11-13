@@ -5,8 +5,9 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.itahm.SnmpManager;
 import com.itahm.http.Response;
-import com.itahm.snmp.Node;
+import com.itahm.snmp.RealNode;
 
 public class Query extends Command {
 	
@@ -16,7 +17,7 @@ public class Query extends Command {
 	@Override
 	protected void execute(JSONObject request, Response response) throws IOException {
 		try {
-			Node node = Node.getNode(request.getString("device"));
+			RealNode node = SnmpManager.getNode(request.getString("device"));
 			
 			if (node != null) {
 				JSONObject data = node.getData(request.getString("database")
@@ -29,15 +30,15 @@ public class Query extends Command {
 					response.ok(data);
 				}
 				else {
-					response.badRequest(null);
+					response.badRequest(new JSONObject().put("error", "database not found"));
 				}
 			}
 			else {
-				response.badRequest(new JSONObject().put("error", "node not found").toString());
+				response.badRequest(new JSONObject().put("error", "node not found"));
 			}
 		}
 		catch (JSONException | IllegalArgumentException e) {
-			response.badRequest(new JSONObject().put("error", "invalid json request").toString());
+			response.badRequest(new JSONObject().put("error", "invalid json request"));
 		}
 	}
 

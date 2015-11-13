@@ -5,13 +5,13 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.table.Table;
 import com.itahm.ITAhM;
+import com.itahm.table.Table;
 import com.itahm.http.Response;
 
-public class Pull extends Command {
+public class Push extends Command {
 	
-	public Pull() {
+	public Push() {
 	}
 
 	@Override
@@ -23,12 +23,18 @@ public class Pull extends Command {
 				response.badRequest(new JSONObject().put("error", "database not found"));
 			}
 			else {
-				response.ok(table.getJSONObject());
+				table.save(request.getJSONObject("data"));
+				
+				response.ok();
 			}
 		}
 		catch (JSONException jsone) {
 			response.badRequest(new JSONObject().put("error", "invalid json request"));
 		}
+		catch (IllegalArgumentException iae) {
+			response.badRequest(new JSONObject().put("error", "database not found"));
+		}
 	}
+
 	
 }

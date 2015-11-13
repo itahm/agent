@@ -51,8 +51,6 @@ public class JSONFile implements Closeable{
 	public JSONFile load(File file) throws IOException {
 		if (this.file != null) {
 			close();
-			
-			this.json.clear();
 		}
 		
 		this.file = new RandomAccessFile(file, "rws");
@@ -147,6 +145,17 @@ public class JSONFile implements Closeable{
 		
 		this.file.setLength(0);
 		this.channel.write(buffer);
+	}
+	
+	/**
+	 * Save.
+	 *
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	public void save(JSONObject json) throws IOException {	
+		this.json = json;
+		
+		save();
 	}
 	
 	/* (non-Javadoc)

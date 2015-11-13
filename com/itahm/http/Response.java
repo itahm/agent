@@ -42,23 +42,24 @@ public final class Response extends Message {
 		return channel == this.channel;
 	}
 	
-	public void ok(JSONObject data) throws IOException {
-		status(200, "OK").send(data.toString());
+	public void ok(JSONObject body) throws IOException {
+		status(200, "OK").send(body.toString());
+	}
+	
+	public void ok() throws IOException {
+		status(200, "OK").send();
 	}
 	
 	public void unauthorized() throws IOException {
 		status(401, "Unauthorized").send();
 	}
 	
-	public void badRequest(String body) throws IOException {
-		status(400, "Bad request");
-		
-		if (body == null) {
-			send();
-		}
-		else {
-			send(body);
-		}
+	public void badRequest(JSONObject body) throws IOException {
+		status(400, "Bad request").send(body.toString());
+	}
+	
+	public void badRequest() throws IOException {
+		status(400, "Bad request").send();
 	}
 	
 	/**
