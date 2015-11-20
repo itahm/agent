@@ -5,7 +5,7 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.SnmpManager;
+import com.itahm.ITAhM;
 import com.itahm.http.Response;
 import com.itahm.snmp.RealNode;
 
@@ -16,8 +16,9 @@ public class Query extends Command {
 
 	@Override
 	protected void execute(JSONObject request, Response response) throws IOException {
+		
 		try {
-			RealNode node = SnmpManager.getNode(request.getString("device"));
+			RealNode node = ITAhM.getSnmp().getNode(request.getString("ip"));
 			
 			if (node != null) {
 				JSONObject data = node.getData(request.getString("database")

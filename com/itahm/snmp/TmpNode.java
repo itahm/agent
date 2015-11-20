@@ -11,7 +11,6 @@ import org.snmp4j.mp.SnmpConstants;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
 
-import com.itahm.Data.Table;
 import com.itahm.ITAhM;
 import com.itahm.SnmpManager;
 
@@ -35,7 +34,7 @@ public class TmpNode extends CommunityTarget implements Node {
 		setVersion(SnmpConstants.version2c);
 		setTimeout(TIMEOUT);
 				
-		JSONObject profileData = Table.PROFILE.getJSONObject();
+		JSONObject profileData = ITAhM.getTable("profile").getJSONObject();
 		String [] names = JSONObject.getNames(profileData);
 		
 		if (names != null) {
@@ -63,11 +62,8 @@ public class TmpNode extends CommunityTarget implements Node {
 	public void requestCompleted(boolean success) throws IOException {
 			int index = this.profileList.size() -1;
 			
-			if (success) {
-				this.snmp.getNode(this.ip);
-				this.profileList.get(index).getString("name");
-				
-				// TODO 성공 
+			if (success) {				
+				this.snmp.addNode(this.ip, this.profileList.get(index).getString("name"));
 			}
 			else {
 				this.profileList.remove(index);

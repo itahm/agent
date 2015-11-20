@@ -5,9 +5,10 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.Data;
-import com.itahm.Data.Table;
+import com.itahm.ITAhM;
+import com.itahm.SnmpManager;
 import com.itahm.http.Response;
+import com.itahm.snmp.RealNode;
 
 public class Select extends Command {
 	
@@ -16,18 +17,21 @@ public class Select extends Command {
 
 	@Override
 	protected void execute(JSONObject request, Response response) throws IOException {
+		SnmpManager snmp = ITAhM.getSnmp();
+		
 		try {
-			String database = request.getString("database");
-			Table table;
+			RealNode node = snmp.getNode(request.getString("ip"));
 			
-			if ("snmp".equals(database)) {
-				table = Table.DEVICE;
+			if (node != null) {
+				response.ok(node.getData());
+				
+				if (request.has("trigger") && request.getBoolean("trigger")) {
+					snmp.request(node);
+				}
 			}
 			else {
-				table = Table.valueOf(request.getString("device"));;
+				response.badRequest(new JSONObject().put("error", "node not found"));
 			}
-			
-			response.ok();
 		}
 		catch (JSONException jsone) {
 			response.badRequest(new JSONObject().put("error", "invalid json request"));

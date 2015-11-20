@@ -3,17 +3,10 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.channels.SocketChannel;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
-import java.util.TimerTask;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,10 +20,6 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.snmp.Constants;
 import com.itahm.snmp.RealNode;
-import com.itahm.http.Request;
-import com.itahm.http.Response;
-import com.itahm.json.JSONFile;
-import com.itahm.event.Event;
 
 public class SnmpManager extends Timer implements ResponseListener, Closeable  {
 
@@ -50,31 +39,34 @@ public class SnmpManager extends Timer implements ResponseListener, Closeable  {
 		System.out.println("snmp manager is running");
 	}
 	
-	//public void request(Node node) throws IOException {
+	public void initialize() throws JSONException, IOException {
+		JSONObject table = ITAhM.getTable("device").getJSONObject();
+		String [] data = JSONObject.getNames(table);
+		JSONObject device;
+		
+		for (int i=0, length=data.length; i<length; i++) {
+			device = table.getJSONObject(data[i]);
+			
+			if (device.has("profile")) {
+				addNode(device.getString("ip"), device.getString("profile"));
+			}
+		}
+	}
+	
+	public void request(RealNode node) throws IOException {
+		node.setRequestTime(Calendar.getInstance().getTimeInMillis());
+		
+		this.snmp.send(pdu, node, node, this);
+	}
+	
 	public void request(CommunityTarget node) throws IOException {
 		this.snmp.send(pdu, node, node, this);
 	}
 	
-	public void tryNode(String ip, int udp, String community) throws IOException {
-		try {
-			InetAddress.getByName(ip);
-		}
-		catch (UnknownHostException uhe) {
-			return;
-		}
-		
-		RealNode node = new RealNode(ip, udp, community);
-		
-		request(node);
+	public void addNode(String ip, String profile) throws IOException {
+		this.nodeMap.put(ip, new RealNode(ip, profile));
 	}
 	
-	public void addNode(RealNode node) {
-		this.nodeMap.put(node.getIP(), node);
-	}
-	
-	/**
-	 * static method
-	 */
 	public void removeNode(String ip) {
 		RealNode node = this.nodeMap.get(ip);
 		

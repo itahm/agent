@@ -3,7 +3,6 @@ package com.itahm.snmp;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +26,6 @@ import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 
-import com.itahm.Data.Table;
 import com.itahm.ITAhM;
 import com.itahm.SnmpManager;
 import com.itahm.json.JSONFile;
@@ -41,7 +39,7 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 
 	private static final long serialVersionUID = 7479923177197300424L;
 	
-	private final SnmpManager snmp;
+	private final SnmpManager snmp = ITAhM.getSnmp();
 	private final JSONFile file;
 	private final JSONObject data;
 	private TimerTask schedule;
@@ -54,7 +52,6 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 	private JSONObject hrStorageIndex;
 	private RollingMap rollingMap;
 	private final Address address = new Address();
-	private final ArrayList<JSONObject> profileList = new ArrayList<JSONObject>();
 	private final Map<String, Counter> inCounter = new HashMap<String, Counter>();
 	private final Map<String, Counter> outCounter = new HashMap<String, Counter>();
 	private final Map<String, Counter> hcInCounter = new HashMap<String, Counter>();
@@ -68,7 +65,7 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 	 * @param snmp
 	 * @throws IOException
 	 */
-	public RealNode(SnmpManager snmp) throws IOException {
+	private RealNode(String ip) throws IOException {		
 		// target 설정
 		setVersion(SnmpConstants.version2c);
 		setTimeout(TIMEOUT);
@@ -119,47 +116,17 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 		file.save();
 		
 		// 기타 초기화
-		this.snmp = snmp;
-
+		this.ip = ip;
 		hrProcessorIndex = new JSONObject();
 		rollingMap = new RollingMap(nodeRoot);
 	}
 	
-	/**
-	 * 아직 등록되지 않은 node 생성자
-	 * profile 목록 으로부터 자동으로 등록 시도 후 실패시 
-	 * @param snmp
-	 * @param ip
-	 * @throws IOException
-	 */
-	public RealNode(SnmpManager snmp, String ip) throws IOException {
-		this(snmp);
-		
-		// 기타 초기화
-		this.ip = ip;
-				
-		// profile
-		JSONObject profileData = Table.PROFILE.getJSONObject();
-		String [] names = JSONObject.getNames(profileData);
-		
-		if (names != null) {
-			for (int i=0, length=names.length; i< length; i++) {
-				this.profileList.add(profileData.getJSONObject(names[i]));
-			}
-			
-			trySNMP();
-		}
-	}
-	
-	public RealNode(SnmpManager snmp, String ip, String profileName) throws IOException {
-		this(snmp);
-		
-		// 기타 초기화
-		this.ip = ip;
+	public RealNode(String ip, String profileName) throws IOException {
+		this(ip);
 		
 		// profile
 		try {
-			JSONObject profile = Table.PROFILE.getJSONObject().getJSONObject(profileName);
+			JSONObject profile = ITAhM.getTable("profile").getJSONObject().getJSONObject(profileName);
 			
 			setAddress(new UdpAddress(String.format("%s/%d", ip, profile.getInt("udp"))));
 			setCommunity(new OctetString(profile.getString("community")));
@@ -183,19 +150,6 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 		}
 	}
 	
-	private void trySNMP() throws IOException {
-		JSONObject profile = this.profileList.get(this.profileList.size() -1);
-		
-		try {
-			setAddress(new UdpAddress(String.format("%s/%d", ip, profile.getInt("udp"))));
-			setCommunity(new OctetString(profile.getString("community")));
-			
-			this.snmp.request(this);
-		}
-		catch(JSONException jsone) {
-		}
-	}
-	
 	public String get(String key) {
 		try {
 			return this.data.getString(key);
@@ -207,18 +161,20 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 	
 	@Override
 	public void requestCompleted(boolean success) throws IOException {
-		long responseTime = Calendar.getInstance().getTimeInMillis();
-		long delay = responseTime - this.requestTime;
+		long currentTime = Calendar.getInstance().getTimeInMillis();
+		long responseTime = currentTime - this.requestTime;
 		
 		if (success) {
-			this.data.put("lastResponse", responseTime);
-			this.data.put("delay", delay);
+			this.data.put("lastResponse", currentTime);
+			this.data.put("responseTime", responseTime);
 			this.data.put("timeout", -1);
 			
-			this.rollingMap.put(Resource.RESPONSETIME, "0", delay *100 /TIMEOUT);
+			this.rollingMap.put(Resource.RESPONSETIME, "0", responseTime *100 /TIMEOUT);
+			
+			file.save();
 		}
 		else {
-			this.data.put("timeout", responseTime);
+			this.data.put("timeout", currentTime);
 		}
 		
 		if (this.success != success) {
@@ -661,6 +617,7 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 						this.rollingMap.put(Resource.HRSTORAGEUSED, index, 1L* intValue * storageData.getInt("hrStorageAllocationUnits"));
 					}
 					
+					storageData.put("hrStorageUsed", intValue);
 					
 					if (storageData.has("hrStorageUsed") && storageData.has("hrStorageSize") && storageData.has("hrStorageType")) {
 						int size = storageData.getInt("hrStorageSize");
@@ -682,8 +639,6 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 							}
 						}
 					}
-					
-					storageData.put("hrStorageUsed", intValue);
 					
 					return true;
 				}
@@ -719,9 +674,13 @@ public class RealNode extends CommunityTarget implements Node, Closeable {
 		
 		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
 	}
-	
+	/*
 	public String getIP() {
 		return this.ip;
+	}
+	*/
+	public JSONObject getData() {
+		return this.data;
 	}
 	
 	public JSONObject getData(String database, String index, long start, long end, boolean summary) {

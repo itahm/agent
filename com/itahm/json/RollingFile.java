@@ -65,7 +65,6 @@ public class RollingFile implements Closeable {
 	/**
 	 * Roll.
 	 *
-	 * @param key the key
 	 * @param value the value
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
@@ -74,35 +73,35 @@ public class RollingFile implements Closeable {
 		Calendar calendar = Calendar.getInstance();
 		long now;
 		int hour;
-		String key;
+		String hourString;
 		
 		calendar.set(Calendar.MILLISECOND, 0);
 		calendar.set(Calendar.SECOND, 0);
 		
 		now = calendar.getTimeInMillis();
 		hour = calendar.get(Calendar.HOUR_OF_DAY);
-		key = Long.toString(now);
+		hourString = Long.toString(now);
 
 		if (hour != this.lastHour) {
 			summarize();
 			
 			if (hour == 0) {
-				initDay(key);
+				initDay(hourString);
 			}
 									
-			initHour(key, hour);
+			initHour(hourString, hour);
 		}
 		
 		// 동일한 분 단위 data가 이미 존재 한다면 더 큰 수로 변경
-		roll(key, value);
+		roll(hourString, value);
 	}
 	
-	private void roll(String key, long value) throws IOException {
-		if (this.data.has(key) && this.data.getLong(key) >= value) {
+	private void roll(String hourString, long value) throws IOException {
+		if (this.data.has(hourString) && this.data.getLong(hourString) >= value) {
 			return;
 		}
 		 
-		this.data.put(key, value);
+		this.data.put(hourString, value);
 		
 		if (this.count == 0) {
 			this.sum = BigInteger.valueOf(value);

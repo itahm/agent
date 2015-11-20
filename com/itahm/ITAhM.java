@@ -57,6 +57,8 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		snmp = new SnmpManager();
 		
 		http = new Listener(this, tcp);
+		
+		snmp.initialize();
 	}
 	
 	private void stop() {
