@@ -21,6 +21,7 @@ public class Data {
 		tableMap.put("profile", new Profile());
 		tableMap.put("device", new Device());
 		tableMap.put("index", new Index());
+		tableMap.put("icon", new Icon());
 	}
 	
 	public Table getTable(String tableName) {
