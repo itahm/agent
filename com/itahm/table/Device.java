@@ -15,6 +15,7 @@ public class Device extends Table {
 				.put("ip", "127.0.0.1")
 				.put("x", 0).put("y", 0)
 				.put("name", "localhost")
+				.put("snmp", true)
 				.put("profile", "public")
 				.put("type", "server")
 			);
