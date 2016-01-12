@@ -55,14 +55,14 @@ public class Session {
 	public void update() {
 		String id = this.id;
 		
-		if (this.task != null) {System.out.println("갱신");
+		if (this.task != null) {
 			this.task.cancel();
 		}
 		
 		this.task = new TimerTask() {
 
 			@Override
-			public void run() {System.out.println("종료");
+			public void run() {
 				sessions.remove(id);
 			}
 		};
