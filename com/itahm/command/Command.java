@@ -7,7 +7,7 @@ import org.json.JSONObject;
 
 import com.itahm.http.Request;
 import com.itahm.http.Response;
-import com.itahm.session.Session;
+import com.itahm.http.Session;
 
 public abstract class Command {
 	public void execute(Request request, Response response) throws IOException {

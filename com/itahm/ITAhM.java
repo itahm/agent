@@ -4,16 +4,17 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
-import java.util.Map;
+//import java.util.HashMap;
+//import java.util.Map;
 
-import org.json.JSONObject;
+//import org.json.JSONObject;
 
+//import com.itahm.http.Listener;
 import com.itahm.http.Listener;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 import com.itahm.table.Table;
-import com.itahm.command.Command;
+//import com.itahm.command.Command;
 import com.itahm.event.Event;
 import com.itahm.event.EventQueue;
 import com.itahm.event.EventResponder;
@@ -21,7 +22,7 @@ import com.itahm.event.Waiter;
 import com.itahm.event.WaitingQueue;
 
 public class ITAhM implements EventListener, EventResponder, Closeable {
-	
+	/*
 	private final static Map<String, String> cmdMap = new HashMap<String, String>();
 	{
 		cmdMap.put("echo","com.itahm.command.Echo");
@@ -33,10 +34,11 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		cmdMap.put("select","com.itahm.command.Select");
 		cmdMap.put("listen","com.itahm.command.Listen");
 	}
-	
+	*/
 	private static File dataRoot;
 	private static Data data;
 	private static SnmpManager snmp;
+	//private final Listener http;
 	private final Listener http;
 	private final EventQueue eventQueue = new EventQueue();
 	private final WaitingQueue waitingQueue = new WaitingQueue();
@@ -56,6 +58,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		
 		snmp = new SnmpManager();
 		
+		//http = new Listener(this, tcp);
 		http = new Listener(this, tcp);
 		
 		snmp.initialize();
@@ -76,7 +79,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	public static Table getTable(String tableName) {
 		return data.getTable(tableName);
 	}
-	
+	/*
 	public void processRequest(Request request, Response response) throws IOException {
 		JSONObject data = request.getJSONObject();
 		String cmdString = data.getString("command");
@@ -94,7 +97,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 			e.printStackTrace();
 		}
 	}
-	
+	*/
 	public static void postMessage(Event event) {
 		
 	}
@@ -112,12 +115,12 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	
 	@Override
 	public void onRequest(Request request, Response response) {
-		try {
+		/*try {
 			processRequest(request, response);
 		}
 		catch (IOException ioe) {
 			onError(ioe);
-		}
+		}*/
 	}
 
 	@Override

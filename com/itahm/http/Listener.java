@@ -14,9 +14,6 @@ import java.util.Iterator;
 import java.util.Set;
 
 import com.itahm.EventListener;
-import com.itahm.ITAhMException;
-import com.itahm.session.Session;
-
 import com.itahm.event.Event;
 
 public class Listener implements Runnable, Closeable {
@@ -69,7 +66,7 @@ public class Listener implements Runnable, Closeable {
 						onConnect(channel.accept());
 					}
 					else if (key.isReadable()) {
-						onRead((SocketChannel)key.channel(), (Parser)key.attachment());
+						onRead((Worker)key.attachment());
 					}
 				}
 			}
@@ -80,81 +77,15 @@ public class Listener implements Runnable, Closeable {
 	
 	private void onConnect(SocketChannel channel) throws IOException {
 		channel.configureBlocking(false);
-		channel.register(selector, SelectionKey.OP_READ, new Parser());
-		
-		this.itahm.onConnect(channel);
+		channel.register(selector, SelectionKey.OP_READ, new Worker(channel));
 	}
 	
-	private void preProcessRequest(SocketChannel channel, Request request) throws IOException{
-		Response response = new Response(channel);
-		
-		String method = request.method();
-		String cookie = request.cookie();
-		
-		if (!"HTTP/1.1".equals(request.version())) {
-			response.status(505, "HTTP Version Not Supported").send();
-		}
-		else {
-			if ("OPTIONS".equals(method)) {
-				response.status(200, "OK").header("Allow", "OPTIONS, POST, GET").send();
-			}
-			else if ("POST".equals(method) || "GET".equals(method)) {
-				if (request.getJSONObject() == null) {
-					response.status(400, "Bad Request").send();
-				}
-				else {
-					if (cookie != null) {
-						Session session = Session.find(cookie);
-						if (session != null) {
-							session.update();
-						}
-					}
-					
-					this.itahm.onRequest(request, response);
-				}
-			}
-			else {
-				response.status(405, "Method Not Allowed").header("Allow", "OPTIONS, POST").send("");
-			}
-		}
-	}
-	
-	private void onRead(SocketChannel channel, Parser 	parser) throws IOException {
-		int bytes = -1;
-		
+	private void onRead(Worker session) throws IOException {
 		this.buffer.clear();
 		
-		// read 중에 client가 소켓을 close 하면 예외 발생
-		try {
-			bytes = channel.read(this.buffer);
-		}
-		catch (IOException ioe) {
-			// bytes = -1
-		}
-		
-		if (bytes == -1) {
-			onClose(channel);
-		}
-		else {
-			this.buffer.flip();
-			
-			try {
-				if (parser.update(this.buffer)) {
-					
-					preProcessRequest(channel, parser.message());
-					
-					parser.clear();
-				}
-				// else continue
-			}
-			catch (ITAhMException itahme) {
-				Response response = new Response(channel);
-				
-				response.status(400, "Bad Request").header("Connection", "Close").send();
-			}
-			
-			this.buffer.clear();
-		}
+		// buffer를 재활용하는것이 성능에 좋다는 판단에 인자로 넘겨줌
+		// 추후 확인할것.
+		session.update(this.buffer);
 	}
 
 	public void onClose(SocketChannel channel) throws IOException {

@@ -5,8 +5,6 @@ import java.nio.charset.Charset;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.session.Session;
-
 public final class Request extends Message {
 
 	public final static String CRLF = "\r\n";

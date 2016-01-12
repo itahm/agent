@@ -1,7 +1,8 @@
-package com.itahm.session;
+package com.itahm.http;
 
 import java.util.Map;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -9,10 +10,12 @@ public class Session {
 
 	private static final Map<String, Session> sessions = new ConcurrentHashMap<String, Session>();
 	private static final Timer timer = new Timer(true);
-	public static long timeout = 60 * 30 * 1000;
+	
+	//static long timeout = 60 * 30 * 1000;
+	static long timeout = 60 * 1000;
 	
 	private final String id;
-	private Task task;
+	private TimerTask task;
 	
 	private Session(String uuid) {
 		id = uuid;
@@ -50,40 +53,30 @@ public class Session {
 	}
 	
 	public void update() {
-		if (this.task != null) {
+		String id = this.id;
+		
+		if (this.task != null) {System.out.println("갱신");
 			this.task.cancel();
 		}
 		
-		this.task = new Task(this);
+		this.task = new TimerTask() {
+
+			@Override
+			public void run() {System.out.println("종료");
+				sessions.remove(id);
+			}
+		};
 		
-		timer.schedule(task, timeout);
+		timer.schedule(this.task, timeout);
 	}
 	
 	public void close() {
-		if (this.task != null) {
-			this.task.cancel();
-			
-			this.task = null;
-		}
+		this.task.cancel();
 		
-		sessions.remove(this.id);
+		remove(this);
 	}
 	
 	public static void main(String [] args) {
-		Session s1 = Session.getInstance();
-		
-		for (int i=0; i<10; i++) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			
-			System.out.println(Session.count());
-			
-			s1.update();
-		}
-		
-		
 	}
+	
 }

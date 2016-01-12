@@ -8,7 +8,7 @@ import org.json.JSONObject;
 import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
-import com.itahm.session.Session;
+import com.itahm.http.Session;
 
 public class SignIn extends Command {
 	
