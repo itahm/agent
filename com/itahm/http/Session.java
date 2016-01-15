@@ -11,8 +11,8 @@ public class Session {
 	private static final Map<String, Session> sessions = new ConcurrentHashMap<String, Session>();
 	private static final Timer timer = new Timer(true);
 	
-	//static long timeout = 60 * 30 * 1000;
-	static long timeout = 60 * 1000;
+	static long timeout = 60 * 30 * 1000;
+	//static long timeout = 60 * 1000;
 	
 	private final String id;
 	private TimerTask task;
