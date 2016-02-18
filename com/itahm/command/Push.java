@@ -23,9 +23,14 @@ public class Push extends Command {
 				response.badRequest(new JSONObject().put("error", "database not found"));
 			}
 			else {
-				table.save(request.getJSONObject("data"));
-				
-				response.ok();
+				if (table.commit(request.getInt("sequence"))) {
+					table.save(request.getJSONObject("data"));
+					
+					response.ok();
+				}
+				else {
+					response.badRequest(new JSONObject().put("error", "database lock"));
+				}
 			}
 		}
 		catch (JSONException jsone) {
@@ -35,6 +40,5 @@ public class Push extends Command {
 			response.badRequest(new JSONObject().put("error", "database not found"));
 		}
 	}
-
 	
 }

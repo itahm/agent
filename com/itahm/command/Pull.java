@@ -23,7 +23,12 @@ public class Pull extends Command {
 				response.badRequest(new JSONObject().put("error", "database not found"));
 			}
 			else {
-				response.ok(table.getJSONObject());
+				JSONObject data = new JSONObject();
+				
+				data.put("sequence", table.lock());
+				data.put("data", table.getJSONObject());
+				
+				response.ok(data);
 			}
 		}
 		catch (JSONException jsone) {

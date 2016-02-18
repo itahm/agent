@@ -22,23 +22,10 @@ import com.itahm.event.Waiter;
 import com.itahm.event.WaitingQueue;
 
 public class ITAhM implements EventListener, EventResponder, Closeable {
-	/*
-	private final static Map<String, String> cmdMap = new HashMap<String, String>();
-	{
-		cmdMap.put("echo","com.itahm.command.Echo");
-		cmdMap.put("signin","com.itahm.command.SignIn");
-		cmdMap.put("signout","com.itahm.command.SignOut");
-		cmdMap.put("pull","com.itahm.command.Pull");
-		cmdMap.put("push","com.itahm.command.Push");
-		cmdMap.put("query","com.itahm.command.Query");
-		cmdMap.put("select","com.itahm.command.Select");
-		cmdMap.put("listen","com.itahm.command.Listen");
-	}
-	*/
+	
 	private static File dataRoot;
-	private static Data data;
+	private static DataBase data;
 	private static SnmpManager snmp;
-	//private final Listener http;
 	private final Listener http;
 	private final EventQueue eventQueue = new EventQueue();
 	private final WaitingQueue waitingQueue = new WaitingQueue();
@@ -54,7 +41,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 		dataRoot = new File(path, "data");
 		dataRoot.mkdir();
 				
-		data = new Data();
+		data = new DataBase();
 		
 		snmp = new SnmpManager();
 		

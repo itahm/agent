@@ -12,11 +12,11 @@ import com.itahm.table.*;
 /**
  * The Class Database.
  */
-public class Data {
+public class DataBase {
 	
 	private final Map<String, Table> tableMap = new HashMap<String, Table>();
 	
-	public Data() throws IOException {
+	public DataBase() throws IOException {
 		tableMap.put("account", new Account());
 		tableMap.put("profile", new Profile());
 		tableMap.put("device", new Device());

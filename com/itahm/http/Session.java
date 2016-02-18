@@ -53,7 +53,7 @@ public class Session {
 	}
 	
 	public void update() {
-		String id = this.id;
+		final String id = this.id;
 		
 		if (this.task != null) {
 			this.task.cancel();
