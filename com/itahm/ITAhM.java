@@ -66,25 +66,7 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	public static Table getTable(String tableName) {
 		return data.getTable(tableName);
 	}
-	/*
-	public void processRequest(Request request, Response response) throws IOException {
-		JSONObject data = request.getJSONObject();
-		String cmdString = data.getString("command");
-		
-		try {
-			String className = cmdMap.get(cmdString);
-			
-			if (className == null) {
-				response.badRequest(new JSONObject().put("error", "invalid command"));
-			}
-			else {
-				((Command)Class.forName(className).newInstance()).execute(request, response);
-			}
-		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-	}
-	*/
+	
 	public static void postMessage(Event event) {
 		
 	}
