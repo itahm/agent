@@ -3,34 +3,40 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
+import java.util.TimerTask;
 
-import org.json.JSONException;
 import org.json.JSONObject;
-import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
-import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.event.ResponseListener;
-import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-import com.itahm.snmp.Constants;
-import com.itahm.snmp.RealNode;
+import com.itahm.snmp.Node;
+import com.itahm.snmp.NodeList;
+import com.itahm.snmp.RequestPDU;
+import com.itahm.table.Table;
 
-public class SnmpManager extends Timer implements ResponseListener, Closeable  {
+public class SnmpManager extends TimerTask implements Closeable  {
 
-	private final Map<String, RealNode> nodeMap = new HashMap<String, RealNode>();
 	private final File snmpRoot;
 	private final Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-	private final static PDU pdu = pdu();
+	
+	private final Table deviceTable = ITAhM.getTable("device");
+	private final Table profileTable = ITAhM.getTable("profile");
+	
+	private final static PDU pdu = new RequestPDU();
+	public static final NodeList nodeList = new NodeList();
+	
+	private final static String STRING_SNMP_STATUS = "snmp";
+	private final static String STRING_SHUTDOWN = "shutdown";
+	private final static String STRING_PROFILE = "profile";
+	private final static String STRING_COMMUNITY = "community";
+	private final static String STRING_UDP = "udp";
 	
 	public SnmpManager() throws IOException {
-		super(true);
-		
 		snmpRoot = new File(ITAhM.getRoot(), "snmp");
 		snmpRoot.mkdir();
 		
@@ -39,46 +45,105 @@ public class SnmpManager extends Timer implements ResponseListener, Closeable  {
 		System.out.println("snmp manager is running");
 	}
 	
-	public void initialize() throws JSONException, IOException {
-		JSONObject table = ITAhM.getTable("device").getJSONObject();
-		String [] data = JSONObject.getNames(table);
-		JSONObject device;
+	public synchronized void sendRequest(Node node, JSONObject profile) {
+		node.requestTime = Calendar.getInstance().getTimeInMillis();
 		
-		for (int i=0, length=data.length; i<length; i++) {
-			device = table.getJSONObject(data[i]);
-			
-			if (device.has("profile")) {
-				addNode(device.getString("ip"), device.getString("profile"));
+		node.set(profile.getString(STRING_COMMUNITY), profile.getInt(STRING_UDP));
+		
+		// 중요! 이렇게 하지 않으면 항상 같은 ID로 request 한다.
+		pdu.setRequestID(null);
+		
+		sendNextRequest(node, pdu);
+	}
+	
+	public void sendNextRequest(Node node, PDU nextPDU) {
+		try {
+			this.snmp.send(nextPDU, node, this, node);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static Node getNode(String ip) {
+		return nodeList.getNode(ip);
+	}
+	
+	public void cancel(PDU pdu, ResponseListener node) {
+		this.snmp.cancel(pdu, node);
+	}
+	public void onSuccess(Node node) throws IOException {
+		ArrayList<String> testProfileList = node.test();
+		JSONObject device = nodeList.getDevice(node);
+		
+		// 정상 응답
+		if (testProfileList == null) {
+			// shutdown 상태였으면
+			if (device.getBoolean(STRING_SHUTDOWN)) {
+				device.put(STRING_SHUTDOWN, false);
+				
+				System.out.println(node.getAddress()+", "+ "down to up");
+				
+				ITAhM.event.dispatch(new JSONObject()
+						.put("id", device.getString("id"))
+						.put("shutdown", false));
 			}
 		}
-	}
-	
-	public void request(RealNode node) throws IOException {
-		node.setRequestTime(Calendar.getInstance().getTimeInMillis());
-		
-		this.snmp.send(pdu, node, node, this);
-	}
-	
-	public void request(CommunityTarget node) throws IOException {
-		this.snmp.send(pdu, node, node, this);
-	}
-	
-	public void addNode(String ip, String profile) throws IOException {
-		this.nodeMap.put(ip, new RealNode(ip, profile));
-	}
-	
-	public void removeNode(String ip) {
-		RealNode node = this.nodeMap.get(ip);
-		
-		if (node != null) {
-			node.close();
+		// test 중이었다면
+		else {
+			String profileName = testProfileList.get(testProfileList.size() -1);
 			
-			nodeMap.remove(ip);
+			node.test(null);
+			
+			device.put(STRING_SNMP_STATUS, true);
+			device.put(STRING_SHUTDOWN, false);
+			device.put(STRING_PROFILE, profileName);
+				
+			deviceTable.save();
 		}
+				
+		node.requestCompleted();
 	}
 	
-	public RealNode getNode(String ip) {
-		return this.nodeMap.get(ip);
+	public void onFailure(Node node) {
+		ArrayList<String> testProfileList = node.test();
+		JSONObject device = nodeList.getDevice(node);
+		
+		// 정상 응답
+		if (testProfileList == null) {
+			if (!device.getBoolean(STRING_SHUTDOWN)) {
+				device.put(STRING_SHUTDOWN, true);
+				
+				System.out.println(node.getAddress()+", "+ "up to down");
+				
+				ITAhM.event.dispatch(new JSONObject()
+						.put("id", device.getString("id"))
+						.put("shutdown", true));
+			}
+		}
+		// test 중이었다면
+		else {
+			int size = testProfileList.size();
+		
+			testProfileList.remove(--size);
+			
+			// 테스트 계속
+			if (size > 0) {
+				String profileName = testProfileList.get(size -1);
+				
+				sendRequest(node, profileTable.getJSONObject(profileName));
+			}
+			// 테스트 실패
+			else {
+				node.test(null);
+				
+				device.put(STRING_SNMP_STATUS, false);
+				device.put(STRING_SHUTDOWN, true);
+				
+				deviceTable.save();
+				
+				// 알릴 필요는 없다.
+			}
+		}
 	}
 	
 	/**
@@ -92,83 +157,46 @@ public class SnmpManager extends Timer implements ResponseListener, Closeable  {
 	}
 	
 	@Override
-	public void onResponse(ResponseEvent event) {
-		PDU request = event.getRequest();
-		PDU response = event.getResponse();
-		RealNode node = ((RealNode)event.getUserObject());
+	public void run() {
+		JSONObject deviceData = this.deviceTable.getJSONObject();
+		String [] idArray = JSONObject.getNames(deviceData);
+		int idArrayLength = idArray.length;
+		JSONObject device;
+		Node node;
+		JSONObject profileData = this.profileTable.getJSONObject();
+		String [] profileArray = JSONObject.getNames(profileData);
+		ArrayList<String> testProfileList;
 		
-		((org.snmp4j.Snmp)event.getSource()).cancel(request, this);
+		nodeList.clear();
 		
-		try {
-			if (response == null) {			
-				// TODO response timed out
-				
-				node.requestCompleted(false);
-				return;
+		for (int i=0; i<idArrayLength; i++) {
+			device = deviceData.getJSONObject(idArray[i]);
+			
+			node = nodeList.join(device);
+			
+			if (node == null) {
+				continue;
+			}
+			
+			// 테스트
+			if (!device.has(STRING_SNMP_STATUS)) {
+				// 테스트 시작
+				if ( node.test() == null) {
+					
+					testProfileList = new ArrayList<String>(Arrays.asList(profileArray));
+					
+					node.test(testProfileList);
+					
+					sendRequest(node, this.profileTable.getJSONObject(testProfileList.get(testProfileList.size() -1)));
+				}
+				// else 테스트 중
+			}
+			// 정상 요청.
+			else if (device.getBoolean(STRING_SNMP_STATUS)) {
+				sendRequest(node, profileData.getJSONObject(device.getString("profile")));
 			}
 		}
-		catch (IOException ioe) {
-			// TODO rolling file에 쓰기 실패하는 경우
-		}
 		
-		int status = response.getErrorStatus();
-		
-		if (status == PDU.noError) {
-			try {
-				PDU nextRequest = node.parse(request, response);
-				
-				if (nextRequest == null) {
-					// end of get-next request
-					node.requestCompleted(true);
-				}
-				else {
-					this.snmp.send(nextRequest, node, node, this);
-				}
-			} catch (IOException e) {
-				// TODO fatal error
-				e.printStackTrace();
-			} catch (JSONException jsone) {
-				jsone.printStackTrace();
-			}
-		}
-		else {
-			// TODO 
-			System.out.println(String.format("error index[%d] status : %s", response.getErrorIndex(), response.getErrorStatusText()));
-		}
-	}
-	
-	public static PDU pdu() {
-		PDU pdu = new PDU();
-		
-		pdu.setType(PDU.GETNEXT);
-		pdu.add(new VariableBinding(Constants.sysDescr));
-		pdu.add(new VariableBinding(Constants.sysObjectID));
-		pdu.add(new VariableBinding(Constants.sysName));
-		pdu.add(new VariableBinding(Constants.sysServices));
-		pdu.add(new VariableBinding(Constants.ifIndex));
-		pdu.add(new VariableBinding(Constants.ifDescr));
-		pdu.add(new VariableBinding(Constants.ifType));
-		pdu.add(new VariableBinding(Constants.ifSpeed));
-		pdu.add(new VariableBinding(Constants.ifPhysAddress));
-		pdu.add(new VariableBinding(Constants.ifAdminStatus));
-		pdu.add(new VariableBinding(Constants.ifOperStatus));
-		pdu.add(new VariableBinding(Constants.ifName));
-		pdu.add(new VariableBinding(Constants.ifInOctets));
-		pdu.add(new VariableBinding(Constants.ifOutOctets));
-		pdu.add(new VariableBinding(Constants.ifHCInOctets));
-		pdu.add(new VariableBinding(Constants.ifHCOutOctets));
-		pdu.add(new VariableBinding(Constants.ifAlias));
-		pdu.add(new VariableBinding(Constants.ipNetToMediaType));
-		pdu.add(new VariableBinding(Constants.ipNetToMediaPhysAddress));
-		pdu.add(new VariableBinding(Constants.hrSystemUptime));
-		pdu.add(new VariableBinding(Constants.hrProcessorLoad));
-		pdu.add(new VariableBinding(Constants.hrStorageIndex));
-		pdu.add(new VariableBinding(Constants.hrStorageType));
-		pdu.add(new VariableBinding(Constants.hrStorageDescr));
-		pdu.add(new VariableBinding(Constants.hrStorageAllocationUnits));
-		pdu.add(new VariableBinding(Constants.hrStorageSize));
-		pdu.add(new VariableBinding(Constants.hrStorageUsed));
-		
-		return pdu;
+		nodeList.reset();
 	}
 }

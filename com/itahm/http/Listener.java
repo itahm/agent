@@ -13,8 +13,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.itahm.EventListener;
-import com.itahm.event.Event;
+import com.itahm.ITAhM;
 
 public class Listener implements Runnable, Closeable {
 
@@ -24,20 +23,18 @@ public class Listener implements Runnable, Closeable {
 	private final Thread thread;
 	private boolean shutdown;
 	private final ByteBuffer buffer;
-	private final EventListener itahm;
 	
-	public Listener(EventListener itahm) throws IOException {
-		this(itahm , 80);
+	public Listener() throws IOException {
+		this(80);
 	}
 
-	public Listener(EventListener handler, int tcp) throws IOException {
+	public Listener(int tcp) throws IOException {
 		channel = ServerSocketChannel.open();
 		listener = channel.socket();
 		selector = Selector.open();
 		thread = new Thread(this);
 		shutdown = false;
 		buffer = ByteBuffer.allocateDirect(1024);
-		itahm = handler;
 		
 		listener.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), tcp));
 		channel.configureBlocking(false);
@@ -66,7 +63,7 @@ public class Listener implements Runnable, Closeable {
 						onConnect(channel.accept());
 					}
 					else if (key.isReadable()) {
-						onRead((Worker)key.attachment());
+						onRead((Response)key.attachment());
 					}
 				}
 			}
@@ -77,23 +74,23 @@ public class Listener implements Runnable, Closeable {
 	
 	private void onConnect(SocketChannel channel) throws IOException {
 		channel.configureBlocking(false);
-		channel.register(selector, SelectionKey.OP_READ, new Worker(channel));
+		channel.register(selector, SelectionKey.OP_READ, new Response(channel));
 	}
 	
-	private void onRead(Worker session) throws IOException {
+	private void onRead(Response response) throws IOException {
 		this.buffer.clear();
 		
 		// buffer를 재활용하는것이 성능에 좋다는 판단에 인자로 넘겨줌
 		// 추후 확인할것.
-		session.update(this.buffer);
+		if (!response.update(this.buffer)) {
+			SocketChannel channel = response.getChannel();
+			
+			ITAhM.event.cancel(channel);
+			
+			channel.close();
+		}
 	}
 
-	public void onClose(SocketChannel channel) throws IOException {
-		this.itahm.onClose(channel);
-		
-		channel.close();
-	}
-	
 	@Override
 	public void close() throws IOException {
 		if (this.shutdown) {
@@ -121,63 +118,8 @@ public class Listener implements Runnable, Closeable {
 			this.listener.close();
 		}
 		catch(IOException ioe) {
-			this.itahm.onError(ioe);
+			ioe.printStackTrace();
 		}
-	}
-
-	public static void main(String[] args) throws IOException {
-		final Listener listener = new Listener(new EventListener() {
-			@Override
-			public void onConnect(SocketChannel channel) {
-				try {
-					System.out.println("connect >> "+ channel.getRemoteAddress());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-
-			@Override
-			public void onClose(SocketChannel channel) {
-				try {
-					System.out.println("close >> "+ channel.getRemoteAddress());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-
-			@Override
-			public void onRequest(Request request, Response response) {
-				
-			}
-
-			@Override
-			public void onError(Exception e) {
-				e.printStackTrace();
-			}
-
-			@Override
-			public void onEvent(Event event) {
-				// TODO Auto-generated method stub
-				
-			}
-			
-		}, 2015);
-
-		Runtime.getRuntime().addShutdownHook(new Thread()
-        {
-            @Override
-            public void run()
-            {
-            	try {
-					listener.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-	        }
-        });
 	}
 	
 }

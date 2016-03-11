@@ -12,13 +12,13 @@ import com.itahm.json.JSONFile;
 public class Table implements Closeable {
 	
 	private final static File dataRoot = ITAhM.getRoot();
-	protected JSONFile file = new JSONFile();
+	protected JSONFile file;
 	protected JSONObject table;
 	protected int sequence = 0;
 	protected int commit = -1;
 	
 	protected void load(String tableName) throws IOException {
-		this.file.load(new File(dataRoot, tableName));
+		this.file = new JSONFile((new File(dataRoot, tableName)));
 		this.table = file.getJSONObject();
 	}
 	
@@ -28,6 +28,14 @@ public class Table implements Closeable {
 	
 	public JSONObject getJSONObject() {
 		return this.table;
+	}
+	
+	public JSONObject getJSONObject(String key) {
+		if (this.table.has(key)) {
+			return this.table.getJSONObject(key);
+		}
+		
+		return null;
 	}
 	
 	public int lock() {
@@ -44,14 +52,24 @@ public class Table implements Closeable {
 		return false;
 	}
 	
-	protected void save() throws IOException {
-		this.file.save();
+	public void save() {
+		try {
+			this.file.save();
+		} catch (IOException e) {
+			// fatal error
+			e.printStackTrace();
+		}
 	}
 
-	public void save(JSONObject data) throws IOException {
-		this.file.save(data);
-		
-		this.table = data;
+	public void save(JSONObject data) {
+		try {
+			this.file.save(data);
+			
+			this.table = data;
+		} catch (IOException e) {
+			// fatal error
+			e.printStackTrace();
+		}
 	}
 	
 	@Override

@@ -3,9 +3,11 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.net.BindException;
 import java.nio.channels.SocketChannel;
 //import java.util.HashMap;
 //import java.util.Map;
+import java.util.Timer;
 
 //import org.json.JSONObject;
 
@@ -15,25 +17,21 @@ import com.itahm.http.Request;
 import com.itahm.http.Response;
 import com.itahm.table.Table;
 //import com.itahm.command.Command;
-import com.itahm.event.Event;
-import com.itahm.event.EventQueue;
-import com.itahm.event.EventResponder;
-import com.itahm.event.Waiter;
-import com.itahm.event.WaitingQueue;
 
-public class ITAhM implements EventListener, EventResponder, Closeable {
+public class ITAhM extends Timer implements EventListener, Closeable {
 	
 	private static File dataRoot;
 	private static DataBase data;
 	private static SnmpManager snmp;
 	private final Listener http;
-	private final EventQueue eventQueue = new EventQueue();
-	private final WaitingQueue waitingQueue = new WaitingQueue();
+	public static final Event event = new Event();
 	
 	public ITAhM(int tcp) throws IOException, ITAhMException {
 		this(tcp, ".");
 	}
-	public ITAhM(int tcp, String path) throws IOException, ITAhMException {
+	public ITAhM(int tcp, String path) throws IOException {
+		super(true);
+		
 		System.out.println("ITAhM service is started");
 
 		// 초기화 순서 중요함.
@@ -43,16 +41,9 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 				
 		data = new DataBase();
 		
-		snmp = new SnmpManager();
+		http = new Listener(tcp);
 		
-		//http = new Listener(this, tcp);
-		http = new Listener(this, tcp);
-		
-		snmp.initialize();
-	}
-	
-	private void stop() {
-		
+		scheduleAtFixedRate(snmp = new SnmpManager(), 0, 30000);
 	}
 	
 	public static File getRoot() {
@@ -65,45 +56,6 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 	
 	public static Table getTable(String tableName) {
 		return data.getTable(tableName);
-	}
-	
-	public static void postMessage(Event event) {
-		
-	}
-	
-	@Override
-	public void onConnect(SocketChannel channel) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void onClose(SocketChannel channel) {
-		this.waitingQueue.cancel(channel);
-	}
-	
-	@Override
-	public void onRequest(Request request, Response response) {
-		/*try {
-			processRequest(request, response);
-		}
-		catch (IOException ioe) {
-			onError(ioe);
-		}*/
-	}
-
-	@Override
-	public void onEvent(Event event) {
-		this.eventQueue.push(event);
-		
-		this.waitingQueue.each(this);
-	}
-	
-	@Override
-	public void onError(Exception e) {
-		e.printStackTrace();
-		
-		stop();
 	}
 
 	@Override
@@ -154,30 +106,32 @@ public class ITAhM implements EventListener, EventResponder, Closeable {
 				return;
 			}
 		}
-		
-		final ITAhM itahm = new ITAhM(tcp, path);
-		
-		Runtime.getRuntime().addShutdownHook(new Thread()
-        {
-            @Override
-            public void run()
-            {
-            	itahm.close();
-            }
-        });
+		try {
+			final ITAhM itahm = new ITAhM(tcp, path);
+			
+			Runtime.getRuntime().addShutdownHook(new Thread()
+	        {
+	            @Override
+	            public void run()
+	            {
+	            	itahm.close();
+	            }
+	        });
+		}
+		catch (BindException be) {
+			System.out.println("tcp "+ tcp + " is already used.");
+		}
 	}
 
 	@Override
-	public void response(Waiter waiter) {
-		Event event = this.eventQueue.getNext(waiter.index());
+	public void onConnect(SocketChannel channel) {
+		// TODO Auto-generated method stub
 		
-		if (event != null) {
-			try {
-				waiter.checkout(event);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+	}
+	
+	@Override
+	public void onRequest(Request request, Response response) {
+		// TODO Auto-generated method stub
 	}
 	
 }

@@ -5,10 +5,9 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.ITAhM;
 import com.itahm.SnmpManager;
 import com.itahm.http.Response;
-import com.itahm.snmp.RealNode;
+import com.itahm.snmp.Node;
 
 public class Select extends Command {
 	
@@ -16,17 +15,16 @@ public class Select extends Command {
 	}
 
 	@Override
-	protected void execute(JSONObject request, Response response) throws IOException {
-		SnmpManager snmp = ITAhM.getSnmp();
-		
+	protected void execute(JSONObject request, Response response) throws IOException {		
 		try {
-			RealNode node = snmp.getNode(request.getString("ip"));
+			Node node = SnmpManager.getNode(request.getString("ip"));
 			
 			if (node != null) {
 				response.ok(node.getData());
 				
 				if (request.has("trigger") && request.getBoolean("trigger")) {
-					snmp.request(node);
+					//TODO realtime 추후 구현.
+					//ITAhM.getSnmp().request(node);
 				}
 			}
 			else {

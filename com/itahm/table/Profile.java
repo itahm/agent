@@ -12,7 +12,7 @@ public class Profile extends Table {
 		reset();
 	}	
 
-	private void reset() throws IOException {
+	private void reset() {
 		if (isEmpty()) {
 			getJSONObject()
 				.put("public", new JSONObject()
@@ -25,7 +25,7 @@ public class Profile extends Table {
 		}
 	}
 	
-	public void save(JSONObject data) throws IOException {
+	public void save(JSONObject data) {
 		super.save(data);
 		
 		reset();

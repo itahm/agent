@@ -9,13 +9,20 @@ import java.util.Iterator;
 
 import org.json.JSONObject;
 
+import com.itahm.Commander;
+import com.itahm.ITAhMException;
+import com.itahm.command.Command;
+
 public final class Response extends Message {
 
 	public final static String COOKIE = "SESSION=%s; HttpOnly";
-	private final SocketChannel channel;
 	
-	public Response(SocketChannel sock) {
-		channel = sock;
+	private final static String STRING_COMMAND = "command";
+	private final SocketChannel channel;
+	private final Parser parser = new Parser();
+	
+	public Response(SocketChannel sc) {
+		channel = sc;
 	}
 	
 	public Response status(int status, String reason) {
@@ -60,6 +67,111 @@ public final class Response extends Message {
 	
 	public void badRequest() throws IOException {
 		status(400, "Bad request").send();
+	}
+	
+	/**
+	 * 
+	 * @param buffer byte buffer를 재활용하여 사용하면 성능에 좋다는 판단에 인자로 넘겨줌. 향후 판단할것. 
+	 */
+	public boolean update(ByteBuffer buffer) {
+		int bytes = -1;
+
+		// read 중에 client가 소켓을 close 하면 예외 발생
+		try {
+			bytes = this.channel.read(buffer);
+		}
+		catch (IOException ioe) {
+			// bytes = -1
+		}
+		
+		if (bytes > -1) {
+			buffer.flip();
+			
+			try {
+				parse(buffer);
+				
+				return true;
+			} catch (IOException ioe) {
+				// 모든 ioexception은 여기에서 받아야함.
+				ioe.printStackTrace();
+			}
+		}
+		
+		close();
+		
+		return false;
+	}
+	
+	private void parse(ByteBuffer buffer) throws IOException {
+		try {
+			// parser가 request message를 완성하면
+			if (parser.update(buffer)) {
+				processRequest(parser.message());
+				
+				parser.clear();
+			}
+			// else continue
+		}
+		catch (ITAhMException itahme) {
+			clear();
+			
+			status(400, "Bad Request").header("Connection", "Close").send();
+		}
+	}
+	
+	private void processRequest(Request request) throws IOException{
+		clear();
+		
+		String method = request.method();
+		String cookie = request.cookie();
+		
+		if (!"HTTP/1.1".equals(request.version())) {
+			status(505, "HTTP Version Not Supported").send();
+		}
+		else {
+			if ("OPTIONS".equals(method)) {
+				status(200, "OK").header("Allow", "OPTIONS, POST, GET").send();
+			}
+			else if ("POST".equals(method)/* || "GET".equals(method)*/) {
+				JSONObject data = request.getJSONObject();
+				
+				if (data == null) {
+					status(400, "Bad Request").send();
+				}
+				else {
+					if (cookie != null) {
+						Session session = Session.find(cookie);
+						if (session != null) {
+							session.update();
+						}
+					}
+					
+					if (data.has(STRING_COMMAND)) {
+						Command command = Commander.getCommand(data.getString(STRING_COMMAND));
+						
+						command.execute(request, this);
+					}
+					else {
+						status(400, "Bad Request").send();
+					}
+				}
+			}
+			else {
+				status(405, "Method Not Allowed").header("Allow", "OPTIONS, POST").send();
+			}
+		}
+	}
+	
+	public SocketChannel getChannel() {
+		return this.channel;
+	}
+	
+	private void close() {
+		try {
+			this.channel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -116,7 +228,8 @@ public final class Response extends Message {
 		header.append(this.startLine);
 		header.append(String.format(FIELD, "Access-Control-Allow-Headers", "Authorization, Content-Type"));
 		//header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://itahm.com"));
-		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://localhost"));
+		//header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://localhost"));
+		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://local.itahm.com"));
 		header.append(String.format(FIELD, "Access-Control-Allow-Credentials", "true"));
 		header.append(String.format(FIELD, "Content-Length", Long.toString(length)));
 		

@@ -16,13 +16,13 @@ public class Index extends Table {
 		}
 	}
 
-	public int assign() throws IOException {
-		int index;
+	public long assign() throws IOException {
+		long index;
 		
 		JSONObject table = getJSONObject();
 		
 		synchronized(table) {
-			index = table.getInt("index");
+			index = table.getLong("index");
 			table.put("index", index +1);
 			
 			save();

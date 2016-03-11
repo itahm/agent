@@ -18,4 +18,7 @@ public class Message {
 		header = new HashMap<String, String>();
 	}
 	
+	public void clear() {
+		this.header.clear();
+	}
 }

@@ -12,8 +12,6 @@ import java.nio.charset.Charset;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.ITAhMException;
-
 // TODO: Auto-generated Javadoc
 /**
  * The Class JSONFile.
@@ -32,61 +30,46 @@ public class JSONFile implements Closeable{
 	/**
 	 * Instantiates a new JSON file.
 	 */
-	public JSONFile() {
-	}
 	
 	public JSONFile(File file) throws IOException {
-		load(file);
-	}
-	
-	/**
-	 * Load.
-	 *
-	 * @param file the file
-	 * @return the JSON file
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 * @throws ITAhMException the IT ah m exception
-	 * @throws FileNotFoundException 
-	 */
-	public JSONFile load(File file) throws IOException {
-		if (this.file != null) {
-			close();
-		}
-		
 		this.file = new RandomAccessFile(file, "rws");
 		this.channel = this.file.getChannel();
 		
 		try {
-			long size = this.channel.size();
-			if (size != (int)size) {
-				System.out.println("fatal error: too long file size.");
-			}
-			else if (size > 0) {
-				ByteBuffer buffer = ByteBuffer.allocate((int)size);
-				
-				this.channel.read(buffer);
-				buffer.flip();
-				try {
-					this.json = new JSONObject(Charset.defaultCharset().decode(buffer).toString());
-				}
-				catch (JSONException jsone) {
-					System.out.println("fatal error: invalid json file "+ file.getName() +".");
-				}
-			}
-			else {
-				this.json = new JSONObject();
-				
-				save();
-			}
+			load();
 		} catch (IOException ioe) {
 			this.file.close();
 			
 			throw ioe;
 		}
-		
-		return this;
 	}
 
+	private void load() throws IOException {
+		long size = this.channel.size();
+		
+		if (size != (int)size) {
+			throw new IOException("custom ITAhM exception: file size.");
+		}
+		
+		if (size > 0) {
+			ByteBuffer buffer = ByteBuffer.allocate((int)size);
+			
+			this.channel.read(buffer);
+			buffer.flip();
+			try {
+				this.json = new JSONObject(Charset.defaultCharset().decode(buffer).toString());
+			}
+			catch (JSONException jsone) {
+				throw new IOException("custom ITAhM exception: invalid json file.");
+			}
+		}
+		else {
+			this.json = new JSONObject();
+			
+			save();
+		}
+	}
+	
 	/**
 	 * Gets the JSON object.
 	 *
