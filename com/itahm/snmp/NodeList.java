@@ -7,26 +7,25 @@ import java.util.Map;
 import org.json.JSONObject;
 
 public class NodeList {
-
-	private Map<String, Node> active = new HashMap<String, Node>();
-	private Map<String, Node> standby = new HashMap<String, Node>();
-	private Map<Node, JSONObject> deviceList = new HashMap<Node, JSONObject>();
+	
+	private static Map<String, Node> active = new HashMap<String, Node>();
+	private static Map<String, Node> standby = new HashMap<String, Node>();
 	
 	public NodeList() {
 	}
 
-	public Node join(JSONObject device) { 
+	public static Node join(JSONObject device) { 
 		Node node = null;
 		String ip = device.getString("ip");
 		
-		if (this.active.containsKey(ip)) {
-			node = this.active.get(ip);
+		if (active.containsKey(ip)) {
+			node = active.get(ip);
 		}
 		else {
 			try {
-				node = new Node(ip);
+				node = new Node(ip, device);
 				
-				this.active.put(ip, node);
+				active.put(ip, node);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -34,27 +33,31 @@ public class NodeList {
 		
 		if (node != null) {
 			standby.put(ip, node);
-			
-			this.deviceList.put(node, device);
 		}
 		
 		return node;
 	}
 	
-	public void clear() {
-		this.standby = new HashMap<String, Node>();
+	public static void clear() {
+		standby = new HashMap<String, Node>();
 	}
 
-	public void reset() {
-		this.active = this.standby;
+	public static void reset() {
+		active = standby;
 	}
 	
-	public Node getNode(String ip) {
-		return this.active.get(ip);
+	public static Node getNode(String ip) {
+		return active.get(ip);
 	}
 	
-	public JSONObject getDevice(Node node) {
-		return this.deviceList.get(node);
+	public static String findInterface(String ip, String peerIP) {
+		Node node = active.get(ip);
+		Node peerNode = active.get(peerIP);
+		
+		if (node == null || peerNode == null) {
+			return "";
+		}
+		
+		return peerNode.checkInterface(node);
 	}
-	
 }

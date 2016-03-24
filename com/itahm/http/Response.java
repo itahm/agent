@@ -12,6 +12,7 @@ import org.json.JSONObject;
 import com.itahm.Commander;
 import com.itahm.ITAhMException;
 import com.itahm.command.Command;
+import com.itahm.event.Event;
 
 public final class Response extends Message {
 
@@ -69,11 +70,25 @@ public final class Response extends Message {
 		status(400, "Bad request").send();
 	}
 	
+	public void dispatchEvent(JSONObject event) {
+		if (event == null) {
+			return;
+		}
+			
+		try {
+			status(200, "OK").send(event.toString());
+		} catch (IOException e) {
+			e.printStackTrace();
+			
+			close();
+		}
+	}
+	
 	/**
 	 * 
 	 * @param buffer byte buffer를 재활용하여 사용하면 성능에 좋다는 판단에 인자로 넘겨줌. 향후 판단할것. 
 	 */
-	public boolean update(ByteBuffer buffer) {
+	public void update(ByteBuffer buffer) {
 		int bytes = -1;
 
 		// read 중에 client가 소켓을 close 하면 예외 발생
@@ -84,22 +99,25 @@ public final class Response extends Message {
 			// bytes = -1
 		}
 		
-		if (bytes > -1) {
+		if (bytes > 0) {
 			buffer.flip();
 			
 			try {
 				parse(buffer);
 				
-				return true;
+				return;
 			} catch (IOException ioe) {
 				// 모든 ioexception은 여기에서 받아야함.
 				ioe.printStackTrace();
 			}
 		}
+		else if (bytes == 0) {
+			return;
+		}
+		
+		Event.cancel(this);
 		
 		close();
-		
-		return false;
 	}
 	
 	private void parse(ByteBuffer buffer) throws IOException {
@@ -149,11 +167,14 @@ public final class Response extends Message {
 					if (data.has(STRING_COMMAND)) {
 						Command command = Commander.getCommand(data.getString(STRING_COMMAND));
 						
-						command.execute(request, this);
+						if (command != null) {
+							command.execute(request, this);
+							
+							return;
+						}
 					}
-					else {
-						status(400, "Bad Request").send();
-					}
+					
+					status(400, "Bad Request").send();
 				}
 			}
 			else {
@@ -161,11 +182,11 @@ public final class Response extends Message {
 			}
 		}
 	}
-	
+	/*
 	public SocketChannel getChannel() {
 		return this.channel;
 	}
-	
+	*/
 	private void close() {
 		try {
 			this.channel.close();
@@ -227,9 +248,7 @@ public final class Response extends Message {
 		
 		header.append(this.startLine);
 		header.append(String.format(FIELD, "Access-Control-Allow-Headers", "Authorization, Content-Type"));
-		//header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://itahm.com"));
-		//header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://localhost"));
-		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://local.itahm.com"));
+		header.append(String.format(FIELD, "Access-Control-Allow-Origin", "http://itahm.com"));
 		header.append(String.format(FIELD, "Access-Control-Allow-Credentials", "true"));
 		header.append(String.format(FIELD, "Content-Length", Long.toString(length)));
 		

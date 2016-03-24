@@ -5,9 +5,9 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.SnmpManager;
 import com.itahm.http.Response;
 import com.itahm.snmp.Node;
+import com.itahm.snmp.NodeList;
 
 public class Select extends Command {
 	
@@ -17,7 +17,7 @@ public class Select extends Command {
 	@Override
 	protected void execute(JSONObject request, Response response) throws IOException {		
 		try {
-			Node node = SnmpManager.getNode(request.getString("ip"));
+			Node node = NodeList.getNode(request.getString("ip"));
 			
 			if (node != null) {
 				response.ok(node.getData());

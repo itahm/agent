@@ -10,7 +10,8 @@ public enum Commander {
 	PUSH("com.itahm.command.Push"),
 	QUERY("com.itahm.command.Query"),
 	SELECT("com.itahm.command.Select"),
-	LISTEN("com.itahm.command.Listen");
+	LISTEN("com.itahm.command.Listen"),
+	SHUTDOWN("com.itahm.command.ShutDown");
 	
 	private String className;
 	

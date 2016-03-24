@@ -2,14 +2,18 @@ package com.itahm.table;
 
 import java.io.IOException;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.ITAhM;
+import com.itahm.snmp.NodeList;
 
 public class Device extends Table {
 
 	private final static String STRING_SHUTDOWN = "shutdown";
 	private final static String STRING_SNMP = "snmp";
+	private final static String STRING_IFENTRY = "ifEntry";
+	private final static String STRING_IP = "ip";
 	
 	public Device() throws IOException {
 		load("device");
@@ -46,12 +50,16 @@ public class Device extends Table {
 		String [] idArray = JSONObject.getNames(data);
 		JSONObject device;
 		String id;
+		String peerID;
 		
-		for (int i=0, length=idArray.length; i<length; i++) {
+		// 신규로 추가된 device에게 ID 부여하는 역할과
+		// 링크 확인의 역할을 수행함 
+		for (int i=0, _i=idArray.length; i<_i; i++) {
 			id = idArray[i];
 			
 			device = data.getJSONObject(id);
 			
+			// ID 부여
 			if (Long.parseLong(id) < 0) {
 				data.remove(id);
 				
@@ -68,6 +76,28 @@ public class Device extends Table {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+			}
+			
+			if (device.has(STRING_IFENTRY)) {
+				JSONObject ifEntry = device.getJSONObject(STRING_IFENTRY);
+				String [] ifArray = JSONObject.getNames(ifEntry);
+				
+				for (int j=0, _j=ifArray.length; j<_j; j++) {
+					peerID = ifArray[j];
+					
+					if ("".equals(ifEntry.getString(peerID))) {
+						try {
+							ifEntry.put(peerID, NodeList.findInterface(device.getString(STRING_IP), data.getJSONObject(peerID).getString(STRING_IP)));
+						}
+						catch (JSONException jsone) {
+							// 그럴리는 없지만 혹시
+						}
+					}
+				}
+			}
+			// 없으면 안되는 것이지만 개발자 실수에 의해 없는 채로 넘어와서 예외 발생시키는 상황 방지
+			else {
+				device.put(STRING_IFENTRY, new JSONObject());
 			}
 		}
 		

@@ -13,8 +13,6 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.itahm.ITAhM;
-
 public class Listener implements Runnable, Closeable {
 
 	private final ServerSocketChannel channel;
@@ -33,7 +31,7 @@ public class Listener implements Runnable, Closeable {
 		listener = channel.socket();
 		selector = Selector.open();
 		thread = new Thread(this);
-		shutdown = false;
+		//shutdown = false;
 		buffer = ByteBuffer.allocateDirect(1024);
 		
 		listener.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), tcp));
@@ -49,10 +47,10 @@ public class Listener implements Runnable, Closeable {
 		int count;
 		
 		while(!this.shutdown) {
-			count = selector.select();
+			count = this.selector.select();
 			
 			if (count > 0) {
-				selectedKeys = selector.selectedKeys();
+				selectedKeys = this.selector.selectedKeys();
 	
 				iterator = selectedKeys.iterator();
 				while(iterator.hasNext()) {
@@ -69,12 +67,12 @@ public class Listener implements Runnable, Closeable {
 			}
 		}
 		
-		System.out.println("shutdown");
+		System.out.println("shut down http server");
 	}
 	
 	private void onConnect(SocketChannel channel) throws IOException {
 		channel.configureBlocking(false);
-		channel.register(selector, SelectionKey.OP_READ, new Response(channel));
+		channel.register(this.selector, SelectionKey.OP_READ, new Response(channel));
 	}
 	
 	private void onRead(Response response) throws IOException {
@@ -82,13 +80,7 @@ public class Listener implements Runnable, Closeable {
 		
 		// buffer를 재활용하는것이 성능에 좋다는 판단에 인자로 넘겨줌
 		// 추후 확인할것.
-		if (!response.update(this.buffer)) {
-			SocketChannel channel = response.getChannel();
-			
-			ITAhM.event.cancel(channel);
-			
-			channel.close();
-		}
+		response.update(this.buffer);
 	}
 
 	@Override
@@ -100,15 +92,12 @@ public class Listener implements Runnable, Closeable {
 		this.shutdown = true;
 			
 		this.selector.wakeup();
-		
-		try {
-			this.thread.join();
-		} catch (InterruptedException ie) {
-		}
 	}
 
 	@Override
 	public void run() {
+		System.out.println("http server running...");
+		
 		try {
 			listen();
 			

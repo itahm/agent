@@ -11,9 +11,9 @@ import java.util.TimerTask;
 import org.json.JSONObject;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
-import org.snmp4j.event.ResponseListener;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
+import com.itahm.event.Event;
 import com.itahm.snmp.Node;
 import com.itahm.snmp.NodeList;
 import com.itahm.snmp.RequestPDU;
@@ -42,7 +42,7 @@ public class SnmpManager extends TimerTask implements Closeable  {
 		
 		snmp.listen();
 		
-		System.out.println("snmp manager is running");
+		System.out.println("snmp manager running...");
 	}
 	
 	public synchronized void sendRequest(Node node, JSONObject profile) {
@@ -64,16 +64,9 @@ public class SnmpManager extends TimerTask implements Closeable  {
 		}
 	}
 	
-	public static Node getNode(String ip) {
-		return nodeList.getNode(ip);
-	}
-	
-	public void cancel(PDU pdu, ResponseListener node) {
-		this.snmp.cancel(pdu, node);
-	}
 	public void onSuccess(Node node) throws IOException {
 		ArrayList<String> testProfileList = node.test();
-		JSONObject device = nodeList.getDevice(node);
+		JSONObject device = node.getDevice();
 		
 		// 정상 응답
 		if (testProfileList == null) {
@@ -83,9 +76,9 @@ public class SnmpManager extends TimerTask implements Closeable  {
 				
 				System.out.println(node.getAddress()+", "+ "down to up");
 				
-				ITAhM.event.dispatch(new JSONObject()
-						.put("id", device.getString("id"))
-						.put("shutdown", false));
+				Event.dispatch(new JSONObject()
+					.put("id", device.getString("id"))
+					.put("shutdown", false));
 			}
 		}
 		// test 중이었다면
@@ -106,7 +99,7 @@ public class SnmpManager extends TimerTask implements Closeable  {
 	
 	public void onFailure(Node node) {
 		ArrayList<String> testProfileList = node.test();
-		JSONObject device = nodeList.getDevice(node);
+		JSONObject device = node.getDevice();
 		
 		// 정상 응답
 		if (testProfileList == null) {
@@ -115,9 +108,9 @@ public class SnmpManager extends TimerTask implements Closeable  {
 				
 				System.out.println(node.getAddress()+", "+ "up to down");
 				
-				ITAhM.event.dispatch(new JSONObject()
-						.put("id", device.getString("id"))
-						.put("shutdown", true));
+				Event.dispatch(new JSONObject()
+					.put("id", device.getString("id"))
+					.put("shutdown", true));
 			}
 		}
 		// test 중이었다면
@@ -167,12 +160,12 @@ public class SnmpManager extends TimerTask implements Closeable  {
 		String [] profileArray = JSONObject.getNames(profileData);
 		ArrayList<String> testProfileList;
 		
-		nodeList.clear();
+		NodeList.clear();
 		
 		for (int i=0; i<idArrayLength; i++) {
 			device = deviceData.getJSONObject(idArray[i]);
 			
-			node = nodeList.join(device);
+			node = NodeList.join(device);
 			
 			if (node == null) {
 				continue;
@@ -197,6 +190,6 @@ public class SnmpManager extends TimerTask implements Closeable  {
 			}
 		}
 		
-		nodeList.reset();
+		NodeList.reset();
 	}
 }

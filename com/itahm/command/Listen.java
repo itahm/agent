@@ -4,10 +4,7 @@ import java.io.IOException;
 
 import org.json.JSONObject;
 
-import com.itahm.ITAhM;
-import com.itahm.event.Waiter;
-//import com.itahm.event.Event;
-//import com.itahm.event.Waiter;
+import com.itahm.event.Event;
 import com.itahm.http.Response;
 
 public class Listen extends Command {
@@ -25,7 +22,7 @@ public class Listen extends Command {
 			index = request.getInt("index");
 		}
 		
-		ITAhM.event.listen(new Waiter(response, index));
+		Event.listen(response, index);
 	}
 
 }
