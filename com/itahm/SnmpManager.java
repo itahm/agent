@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.TimerTask;
 
 import org.json.JSONObject;
@@ -46,9 +45,7 @@ public class SnmpManager extends TimerTask implements Closeable  {
 	}
 	
 	public synchronized void sendRequest(Node node, JSONObject profile) {
-		node.requestTime = Calendar.getInstance().getTimeInMillis();
-		
-		node.set(profile.getString(STRING_COMMUNITY), profile.getInt(STRING_UDP));
+		node.setRequest(profile.getString(STRING_COMMUNITY), profile.getInt(STRING_UDP));
 		
 		// 중요! 이렇게 하지 않으면 항상 같은 ID로 request 한다.
 		pdu.setRequestID(null);

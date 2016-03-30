@@ -12,7 +12,6 @@ import org.json.JSONObject;
 import com.itahm.Commander;
 import com.itahm.ITAhMException;
 import com.itahm.command.Command;
-import com.itahm.event.Event;
 
 public final class Response extends Message {
 
@@ -86,38 +85,27 @@ public final class Response extends Message {
 	
 	/**
 	 * 
-	 * @param buffer byte buffer를 재활용하여 사용하면 성능에 좋다는 판단에 인자로 넘겨줌. 향후 판단할것. 
+	 * @param buffer byte buffer를 재활용하여 사용하면 성능에 좋다는 판단에 인자로 넘겨줌. 향후 판단할것.
+	 * @return client가 종료했으면 false 아니면 true
+	 * @throws IOException 
 	 */
-	public void update(ByteBuffer buffer) {
+	public boolean update(ByteBuffer buffer) throws IOException {
 		int bytes = -1;
 
 		// read 중에 client가 소켓을 close 하면 예외 발생
-		try {
-			bytes = this.channel.read(buffer);
-		}
-		catch (IOException ioe) {
-			// bytes = -1
+		bytes = this.channel.read(buffer);
+		
+		if (bytes == -1) {
+			return false;
 		}
 		
 		if (bytes > 0) {
 			buffer.flip();
 			
-			try {
-				parse(buffer);
-				
-				return;
-			} catch (IOException ioe) {
-				// 모든 ioexception은 여기에서 받아야함.
-				ioe.printStackTrace();
-			}
+			parse(buffer);
 		}
-		else if (bytes == 0) {
-			return;
-		}
-		
-		Event.cancel(this);
-		
-		close();
+			
+		return true;
 	}
 	
 	private void parse(ByteBuffer buffer) throws IOException {
@@ -187,7 +175,7 @@ public final class Response extends Message {
 		return this.channel;
 	}
 	*/
-	private void close() {
+	public void close() {
 		try {
 			this.channel.close();
 		} catch (IOException e) {

@@ -13,13 +13,15 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
+import com.itahm.event.Event;
+
 public class Listener implements Runnable, Closeable {
 
 	private final ServerSocketChannel channel;
 	private final ServerSocket listener;
 	private final Selector selector;
 	private final Thread thread;
-	private boolean shutdown;
+	private boolean closed;
 	private final ByteBuffer buffer;
 	
 	public Listener() throws IOException {
@@ -31,7 +33,6 @@ public class Listener implements Runnable, Closeable {
 		listener = channel.socket();
 		selector = Selector.open();
 		thread = new Thread(this);
-		//shutdown = false;
 		buffer = ByteBuffer.allocateDirect(1024);
 		
 		listener.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), tcp));
@@ -40,14 +41,74 @@ public class Listener implements Runnable, Closeable {
 		thread.start();
 	}
 	
-	private void listen() throws IOException{
+	private void onConnect() {
+		try {
+			SocketChannel channel = this.channel.accept();
+			
+			channel.configureBlocking(false);
+			channel.register(this.selector, SelectionKey.OP_READ, new Response(channel));
+			
+			return;
+		} catch (IOException e) {
+			// client 문제로 이렇게 될 수도 있는거지만
+		}
+	
+		try {
+			//아직 아무것도 안했으므로 channel만 close
+			channel.close();
+		} catch (IOException e) {
+			// 이건 server 문제이므로 발생하면 안됨.
+			e.printStackTrace();
+		}
+	}
+	
+	private void onRead(Response response) {
+		this.buffer.clear();
+		
+		// buffer를 재활용하는것이 성능에 좋다는 판단에 인자로 넘겨줌
+		// 추후 확인할것.
+		try {
+			if (response.update(this.buffer)) {
+				return;
+			}
+		} catch (IOException e) {
+		}
+		
+		// 예외이거너 update실패 (client가 종료) 시
+		Event.cancel(response);
+		
+		response.close();
+	}
+
+	@Override
+	public synchronized void close() throws IOException {
+		if (this.closed) {
+			return;
+		}
+		
+		this.closed = true;
+			
+		this.selector.wakeup();
+	}
+
+	@Override
+	public void run() {
 		Set<SelectionKey> selectedKeys = null;
 		Iterator<SelectionKey> iterator = null;
 		SelectionKey key = null;
 		int count;
 		
-		while(!this.shutdown) {
-			count = this.selector.select();
+		System.out.println("http server running...");
+		
+		while(!this.closed) {
+			try {
+				count = this.selector.select();
+			} catch (IOException e) {
+				// 이건 발생하면 안될것 같은데...
+				e.printStackTrace();
+				
+				continue;
+			}
 			
 			if (count > 0) {
 				selectedKeys = this.selector.selectedKeys();
@@ -58,7 +119,7 @@ public class Listener implements Runnable, Closeable {
 					iterator.remove();
 					
 					if (key.isAcceptable()) {
-						onConnect(channel.accept());
+						onConnect();
 					}
 					else if (key.isReadable()) {
 						onRead((Response)key.attachment());
@@ -66,49 +127,20 @@ public class Listener implements Runnable, Closeable {
 				}
 			}
 		}
-		
-		System.out.println("shut down http server");
-	}
-	
-	private void onConnect(SocketChannel channel) throws IOException {
-		channel.configureBlocking(false);
-		channel.register(this.selector, SelectionKey.OP_READ, new Response(channel));
-	}
-	
-	private void onRead(Response response) throws IOException {
-		this.buffer.clear();
-		
-		// buffer를 재활용하는것이 성능에 좋다는 판단에 인자로 넘겨줌
-		// 추후 확인할것.
-		response.update(this.buffer);
-	}
-
-	@Override
-	public void close() throws IOException {
-		if (this.shutdown) {
-			return;
-		}
-		
-		this.shutdown = true;
 			
-		this.selector.wakeup();
-	}
-
-	@Override
-	public void run() {
-		System.out.println("http server running...");
+		try {
+			this.selector.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
 		try {
-			listen();
-			
-			this.shutdown = true;
-			
-			this.selector.close();
 			this.listener.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		catch(IOException ioe) {
-			ioe.printStackTrace();
-		}
+		
+		System.out.println("shut down http server");
 	}
 	
 }

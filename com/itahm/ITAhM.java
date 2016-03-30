@@ -10,6 +10,8 @@ import com.itahm.table.Table;
 
 public class ITAhM extends Timer {
 	
+	private final static long REQUEST_INTERVAL = 10000;
+	
 	private static File dataRoot;
 	private static DataBase data;
 	private static SnmpManager snmp;
@@ -29,7 +31,7 @@ public class ITAhM extends Timer {
 		
 		http = new Listener(tcp);
 		
-		scheduleAtFixedRate(snmp = new SnmpManager(), 0, 30000);
+		scheduleAtFixedRate(snmp = new SnmpManager(), 0, REQUEST_INTERVAL);
 	}
 	
 	public static File getRoot() {
@@ -51,13 +53,13 @@ public class ITAhM extends Timer {
 			e.printStackTrace();
 		}
 		
-		try {System.out.println("2");
+		try {
 			snmp.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		try {System.out.println("3");
+		try {
 			data.close();
 		} catch (IOException e) {
 			e.printStackTrace();

@@ -40,10 +40,13 @@ public class Node extends CommunityTarget implements ResponseListener {
 	
 	private static final long TIMEOUT = 5000;
 	private static final String STRING_SNMP = "snmp";
+	private static final String STRING_PROCENTRY = "hrProcessorEntry";
+	private static final String STRING_STRGENTRY = "hrStorageEntry";
 	private static final String STRING_MAC_ADDR = "ifPhysAddress";
 	private static final String STRING_IFINDEX = "ifIndex";
 	private static final String STRING_IFNAME = "ifName";
 	private static final String STRING_IFENTRY = "ifEntry";
+	private static final String STRING_IFSPEED = "ifSpeed";
 	private final JSONObject device;
 	private final JSONObject data;
 	private final UdpAddress address;
@@ -61,7 +64,7 @@ public class Node extends CommunityTarget implements ResponseListener {
 	private final Map<String, Counter> hcInCounter = new HashMap<String, Counter>();
 	private final Map<String, Counter> hcOutCounter = new HashMap<String, Counter>();
 	
-	public long requestTime;
+	private long requestTime;
 	
 	public Node(String ip, JSONObject device) throws IOException {
 		this.device = device;
@@ -82,9 +85,9 @@ public class Node extends CommunityTarget implements ResponseListener {
 		//data = file.getJSONObject();
 		data = new JSONObject();
 		
-		data.put("hrProcessorEntry", hrProcessorEntry = new JSONObject());
+		data.put(STRING_PROCENTRY, hrProcessorEntry = new JSONObject());
 		data.put(STRING_IFENTRY, ifEntry = new JSONObject());
-		data.put("hrStorageEntry", hrStorageEntry = new JSONObject());
+		data.put(STRING_STRGENTRY, hrStorageEntry = new JSONObject());
 		
 		// 기타 초기화
 		hrProcessorIndex = new JSONObject();
@@ -102,7 +105,9 @@ public class Node extends CommunityTarget implements ResponseListener {
 		return this.testList;
 	}
 	
-	public void set(String community, int udp) {
+	public void setRequest(String community, int udp) {
+		this.requestTime = Calendar.getInstance().getTimeInMillis();
+		
 		this.address.setPort(udp);
 		
 		setAddress(this.address);
@@ -222,7 +227,7 @@ public class Node extends CommunityTarget implements ResponseListener {
 			else if (request.startsWith(Constants.ifSpeed) && response.startsWith(Constants.ifSpeed)) {
 				Gauge32 value = (Gauge32)variable;
 				
-				ifData.put("ifSpeed", value.getValue());
+				ifData.put(STRING_IFSPEED, value.getValue());
 				
 				return true;
 			}
