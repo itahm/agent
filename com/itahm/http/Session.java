@@ -15,10 +15,12 @@ public class Session {
 	//static long timeout = 60 * 1000;
 	
 	private final String id;
+	private final int level;
 	private TimerTask task;
 	
-	private Session(String uuid) {
+	private Session(String uuid, int lvl) {
 		id = uuid;
+		level = lvl;
 		
 		update();
 	}
@@ -27,9 +29,9 @@ public class Session {
 		sessions.remove(session.getID());
 	}
 	
-	public static Session getInstance() {
+	public static Session getInstance(int level) {
 		String uuid = UUID.randomUUID().toString();
-		Session session = new Session(uuid);
+		Session session = new Session(uuid, level);
 		
 		sessions.put(uuid, session);
 		
@@ -50,6 +52,10 @@ public class Session {
 	
 	public String getID() {
 		return this.id;
+	}
+	
+	public int getLevel() {
+		return this.level;
 	}
 	
 	public void update() {

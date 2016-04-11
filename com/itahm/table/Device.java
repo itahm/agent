@@ -48,56 +48,62 @@ public class Device extends Table {
 	
 	public void save(JSONObject data) {
 		String [] idArray = JSONObject.getNames(data);
-		JSONObject device;
-		String id;
-		String peerID;
 		
-		// 신규로 추가된 device에게 ID 부여하는 역할과
-		// 링크 확인의 역할을 수행함 
-		for (int i=0, _i=idArray.length; i<_i; i++) {
-			id = idArray[i];
+		// 장비를 모두 삭제한 경우 null
+		if (idArray != null) {
+			JSONObject device;
+			String id;
+			String peerID;
 			
-			device = data.getJSONObject(id);
-			
-			// ID 부여
-			if (Long.parseLong(id) < 0) {
-				data.remove(id);
+			// 신규로 추가된 device에게 ID 부여하는 역할과
+			// 링크 확인의 역할을 수행함 
+			for (int i=0, _i=idArray.length; i<_i; i++) {
+				id = idArray[i];
 				
-				try {
-					id = Long.toString(((Index)ITAhM.getTable("index")).assign());
+				device = data.getJSONObject(id);
+				
+				// ID 부여
+				if (Long.parseLong(id) < 0) {
+					data.remove(id);
 					
-					// snmp 상태가 제거되어야 함을 확인
-					device.remove(STRING_SNMP);
-					
-					device.put("id", id);
-					device.put("shutdown", false);
-					
-					data.put(id, device);
-				} catch (IOException e) {
-					e.printStackTrace();
+					try {
+						id = Long.toString(((Index)ITAhM.getTable("index")).assign());
+						
+						// snmp 상태가 제거되어야 함을 확인
+						device.remove(STRING_SNMP);
+						
+						device.put("id", id);
+						device.put("shutdown", false);
+						
+						data.put(id, device);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
-			}
-			
-			if (device.has(STRING_IFENTRY)) {
-				JSONObject ifEntry = device.getJSONObject(STRING_IFENTRY);
-				String [] ifArray = JSONObject.getNames(ifEntry);
 				
-				for (int j=0, _j=ifArray.length; j<_j; j++) {
-					peerID = ifArray[j];
+				if (device.has(STRING_IFENTRY)) {
+					JSONObject ifEntry = device.getJSONObject(STRING_IFENTRY);
+					String [] ifArray = JSONObject.getNames(ifEntry);
 					
-					if ("".equals(ifEntry.getString(peerID))) {
-						try {
-							ifEntry.put(peerID, NodeList.findInterface(device.getString(STRING_IP), data.getJSONObject(peerID).getString(STRING_IP)));
-						}
-						catch (JSONException jsone) {
-							// 그럴리는 없지만 혹시
+					if (ifArray != null) {
+						for (int j=0, _j=ifArray.length; j<_j; j++) {
+							peerID = ifArray[j];
+							
+							if ("".equals(ifEntry.getString(peerID))) {
+								try {
+									ifEntry.put(peerID, NodeList.findInterface(device.getString(STRING_IP), data.getJSONObject(peerID).getString(STRING_IP)));
+								}
+								catch (JSONException jsone) {
+									// 그럴리는 없지만 혹시
+								}
+							}
 						}
 					}
 				}
-			}
-			// 없으면 안되는 것이지만 개발자 실수에 의해 없는 채로 넘어와서 예외 발생시키는 상황 방지
-			else {
-				device.put(STRING_IFENTRY, new JSONObject());
+				// 없으면 안되는 것이지만 개발자 실수에 의해 없는 채로 넘어와서 예외 발생시키는 상황 방지
+				else {
+					device.put(STRING_IFENTRY, new JSONObject());
+				}
 			}
 		}
 		

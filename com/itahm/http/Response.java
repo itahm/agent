@@ -136,7 +136,8 @@ public final class Response extends Message {
 		}
 		else {
 			if ("OPTIONS".equals(method)) {
-				status(200, "OK").header("Allow", "OPTIONS, POST, GET").send();
+				//status(200, "OK").header("Allow", "OPTIONS, POST, GET").send();
+				status(200, "OK").header("Allow", "OPTIONS, POST").send();
 			}
 			else if ("POST".equals(method)/* || "GET".equals(method)*/) {
 				JSONObject data = request.getJSONObject();

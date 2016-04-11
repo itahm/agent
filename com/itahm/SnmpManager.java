@@ -71,7 +71,7 @@ public class SnmpManager extends TimerTask implements Closeable  {
 			if (device.getBoolean(STRING_SHUTDOWN)) {
 				device.put(STRING_SHUTDOWN, false);
 				
-				System.out.println(node.getAddress()+", "+ "down to up");
+				System.out.println(node.getAddress()+"\t"+ "up");
 				
 				Event.dispatch(new JSONObject()
 					.put("id", device.getString("id"))
@@ -103,7 +103,7 @@ public class SnmpManager extends TimerTask implements Closeable  {
 			if (!device.getBoolean(STRING_SHUTDOWN)) {
 				device.put(STRING_SHUTDOWN, true);
 				
-				System.out.println(node.getAddress()+", "+ "up to down");
+				System.out.println(node.getAddress()+"\t"+ "down");
 				
 				Event.dispatch(new JSONObject()
 					.put("id", device.getString("id"))
@@ -150,40 +150,43 @@ public class SnmpManager extends TimerTask implements Closeable  {
 	public void run() {
 		JSONObject deviceData = this.deviceTable.getJSONObject();
 		String [] idArray = JSONObject.getNames(deviceData);
-		int idArrayLength = idArray.length;
-		JSONObject device;
-		Node node;
-		JSONObject profileData = this.profileTable.getJSONObject();
-		String [] profileArray = JSONObject.getNames(profileData);
-		ArrayList<String> testProfileList;
 		
 		NodeList.clear();
 		
-		for (int i=0; i<idArrayLength; i++) {
-			device = deviceData.getJSONObject(idArray[i]);
+		if (idArray != null) {
+			int idArrayLength = idArray.length;
+			JSONObject device;
+			Node node;
+			JSONObject profileData = this.profileTable.getJSONObject();
+			String [] profileArray = JSONObject.getNames(profileData);
+			ArrayList<String> testProfileList;
 			
-			node = NodeList.join(device);
-			
-			if (node == null) {
-				continue;
-			}
-			
-			// 테스트
-			if (!device.has(STRING_SNMP_STATUS)) {
-				// 테스트 시작
-				if ( node.test() == null) {
-					
-					testProfileList = new ArrayList<String>(Arrays.asList(profileArray));
-					
-					node.test(testProfileList);
-					
-					sendRequest(node, this.profileTable.getJSONObject(testProfileList.get(testProfileList.size() -1)));
+			for (int i=0; i<idArrayLength; i++) {
+				device = deviceData.getJSONObject(idArray[i]);
+				
+				node = NodeList.join(device);
+				
+				if (node == null) {
+					continue;
 				}
-				// else 테스트 중
-			}
-			// 정상 요청.
-			else if (device.getBoolean(STRING_SNMP_STATUS)) {
-				sendRequest(node, profileData.getJSONObject(device.getString("profile")));
+				
+				// 테스트
+				if (!device.has(STRING_SNMP_STATUS)) {
+					// 테스트 시작
+					if ( node.test() == null) {
+						
+						testProfileList = new ArrayList<String>(Arrays.asList(profileArray));
+						
+						node.test(testProfileList);
+						
+						sendRequest(node, this.profileTable.getJSONObject(testProfileList.get(testProfileList.size() -1)));
+					}
+					// else 테스트 중
+				}
+				// 정상 요청.
+				else if (device.getBoolean(STRING_SNMP_STATUS)) {
+					sendRequest(node, profileData.getJSONObject(device.getString("profile")));
+				}
 			}
 		}
 		

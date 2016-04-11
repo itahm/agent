@@ -20,7 +20,7 @@ public class SignOut extends Command {
 			session.close();
 		}
 		
-		response.status(401, "Unauthorized").send();
+		response.ok();
 	}
 		
 	@Override

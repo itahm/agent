@@ -20,6 +20,7 @@ public class ITAhM extends Timer {
 	public ITAhM(int tcp, String path) throws IOException {
 		super(true);
 		
+		System.out.println("ITAhM version 1.0.2.2");
 		System.out.println("start up ITAhM agent");
 
 		// 초기화 순서 중요함.
