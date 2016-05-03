@@ -2,6 +2,7 @@ package com.itahm.http;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -10,80 +11,123 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.itahm.event.Event;
 
-public class Listener implements Runnable, Closeable {
+public abstract class Listener implements Runnable, Closeable {
 
 	private final ServerSocketChannel channel;
 	private final ServerSocket listener;
 	private final Selector selector;
-	private final Thread thread;
-	private boolean closed;
 	private final ByteBuffer buffer;
+	private final Set<SocketChannel> connections = new HashSet<SocketChannel>();
+	
+	private boolean closed;
 	
 	public Listener() throws IOException {
-		this(80);
+		this("0.0.0.0", 80);
 	}
 
+	public Listener(String ip) throws IOException {
+		this(ip, 80);
+	}
+	
 	public Listener(int tcp) throws IOException {
+		this("0.0.0.0", tcp);
+	}
+	
+	public Listener(String ip, int tcp) throws IOException {
+		this(new InetSocketAddress(InetAddress.getByName(ip), tcp));
+	}
+	
+	public Listener(InetSocketAddress addr) throws IOException {
 		channel = ServerSocketChannel.open();
 		listener = channel.socket();
 		selector = Selector.open();
-		thread = new Thread(this);
 		buffer = ByteBuffer.allocateDirect(1024);
 		
-		listener.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), tcp));
+		listener.bind(addr);
 		channel.configureBlocking(false);
 		channel.register(selector, SelectionKey.OP_ACCEPT);
-		thread.start();
+		
+		new Thread(this).start();
+		
+		onStart();
 	}
 	
 	private void onConnect() {
+		SocketChannel channel = null;
+		
 		try {
-			SocketChannel channel = this.channel.accept();
+			channel = this.channel.accept();
 			
 			channel.configureBlocking(false);
-			channel.register(this.selector, SelectionKey.OP_READ, new Response(channel));
+			channel.register(this.selector, SelectionKey.OP_READ, new Request(channel, this));
+			
+			this.connections.add(channel);
 			
 			return;
 		} catch (IOException e) {
-			// client 문제로 이렇게 될 수도 있는거지만
-		}
-	
-		try {
-			//아직 아무것도 안했으므로 channel만 close
-			channel.close();
-		} catch (IOException e) {
-			// 이건 server 문제이므로 발생하면 안됨.
 			e.printStackTrace();
 		}
+		
+		if (channel != null) {
+			try {
+				channel.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
-	private void onRead(Response response) {
+	private void onRead(SelectionKey key) {
+		SocketChannel channel = (SocketChannel)key.channel();
+		Request request = (Request)key.attachment();
+		
 		this.buffer.clear();
 		
-		// buffer를 재활용하는것이 성능에 좋다는 판단에 인자로 넘겨줌
-		// 추후 확인할것.
 		try {
-			if (response.update(this.buffer)) {
+			int bytes = channel.read(buffer);
+			
+			if (bytes > 0) {
+				buffer.flip();
+				
+				request.parse(this.buffer);
+				
 				return;
 			}
-		} catch (IOException e) {
+			else if (bytes == -1) {
+				onClose(request, true);
+			}
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+			
+			onClose(request, false);
 		}
 		
-		// 예외이거너 update실패 (client가 종료) 시
-		Event.cancel(response);
-		
-		response.close();
+		disconnect(channel);
 	}
 
+	protected void disconnect(SocketChannel channel) {
+		try {
+			channel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		this.connections.remove(channel);
+	}
+	
 	@Override
 	public synchronized void close() throws IOException {
 		if (this.closed) {
 			return;
+		}
+		
+		for (SocketChannel channel : this.connections) {
+			channel.close();
 		}
 		
 		this.closed = true;
@@ -93,41 +137,39 @@ public class Listener implements Runnable, Closeable {
 
 	@Override
 	public void run() {
-		Set<SelectionKey> selectedKeys = null;
 		Iterator<SelectionKey> iterator = null;
 		SelectionKey key = null;
 		int count;
-		
-		System.out.println("http server running...");
 		
 		while(!this.closed) {
 			try {
 				count = this.selector.select();
 			} catch (IOException e) {
-				// 이건 발생하면 안될것 같은데...
 				e.printStackTrace();
 				
 				continue;
 			}
 			
 			if (count > 0) {
-				selectedKeys = this.selector.selectedKeys();
-	
-				iterator = selectedKeys.iterator();
+				iterator = this.selector.selectedKeys().iterator();
 				while(iterator.hasNext()) {
 					key = iterator.next();
 					iterator.remove();
+					
+					if (!key.isValid()) {
+						continue;
+					}
 					
 					if (key.isAcceptable()) {
 						onConnect();
 					}
 					else if (key.isReadable()) {
-						onRead((Response)key.attachment());
+						onRead(key);
 					}
 				}
 			}
 		}
-			
+		
 		try {
 			this.selector.close();
 		} catch (IOException e) {
@@ -140,7 +182,96 @@ public class Listener implements Runnable, Closeable {
 			e.printStackTrace();
 		}
 		
-		System.out.println("shut down http server");
+		onStop();
 	}
 	
+	abstract protected void onRequest(Request request);
+	abstract protected void onClose(Request request, boolean closed);
+	abstract protected void onStart();
+	abstract protected void onStop();
+	
+	public static void main(String [] args) throws IOException {
+		final Listener server = new Listener(2015) {
+
+			@Override
+			protected void onRequest(Request request) {
+				
+				request.getRequestURI();
+				request.getRequestMethod();
+				
+				try {
+					
+					request.sendResponse(Response.getInstance(200, "OK",
+						"<!DOCTYPE html><html><head><title>test</title></head></html>")
+							.setResponseHeader("Connection", "Close"));
+
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+			@Override
+			protected void onClose(Request request, boolean closed) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			protected void onStart() {
+				System.out.println("HTTP Server running...");
+			}
+
+			@Override
+			protected void onStop() {
+				System.out.println("stop HTTP Server.");
+			}
+			
+		};
+		
+		
+		try {
+			Thread.sleep(100000);
+		} catch (InterruptedException e) {
+		}
+		
+		server.close();
+	}
+	
+	public static void main() throws IOException {
+		Listener l = new Listener(2015) {
+
+			@Override
+			protected void onRequest(Request request) {
+				try {
+					System.out.println(new String(request.getRequestBody(), "UTF-8"));
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				}
+			}
+
+			@Override
+			protected void onClose(Request request, boolean closed) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			protected void onStart() {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			protected void onStop() {
+				// TODO Auto-generated method stub
+				
+			}
+			
+		};
+		
+		System.in.read();
+	
+		l.close();
+	}
 }

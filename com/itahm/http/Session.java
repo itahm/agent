@@ -11,27 +11,23 @@ public class Session {
 	private static final Map<String, Session> sessions = new ConcurrentHashMap<String, Session>();
 	private static final Timer timer = new Timer(true);
 	
-	static long timeout = 60 * 30 * 1000;
+	private static long timeout = 30*60*1000;
 	//static long timeout = 60 * 1000;
 	
-	private final String id;
-	private final int level;
+	private final String cookie;
+	private final Object extras;
 	private TimerTask task;
 	
-	private Session(String uuid, int lvl) {
-		id = uuid;
-		level = lvl;
+	private Session(String uuid, Object extras) {
+		cookie = uuid;
+		this.extras = extras;
 		
 		update();
 	}
-
-	public static void remove(Session session) {
-		sessions.remove(session.getID());
-	}
 	
-	public static Session getInstance(int level) {
+	public static Session getInstance(Object extras) {
 		String uuid = UUID.randomUUID().toString();
-		Session session = new Session(uuid, level);
+		Session session = new Session(uuid, extras);
 		
 		sessions.put(uuid, session);
 		
@@ -42,24 +38,24 @@ public class Session {
 		return sessions.size();
 	}
 	
-	public static Session find(String id) {
-		return sessions.get(id);
+	public static Session find(String cookie) {
+		return sessions.get(cookie);
 	}
 	
 	public static void setTimeout(long newTimeout) {
 		timeout = newTimeout;
 	}
 	
-	public String getID() {
-		return this.id;
+	public String getCookie() {
+		return this.cookie;
 	}
 	
-	public int getLevel() {
-		return this.level;
+	public Object getExtras() {
+		return this.extras;
 	}
 	
 	public void update() {
-		final String id = this.id;
+		final String cookie = this.cookie;
 		
 		if (this.task != null) {
 			this.task.cancel();
@@ -69,7 +65,7 @@ public class Session {
 
 			@Override
 			public void run() {
-				sessions.remove(id);
+				sessions.remove(cookie);
 			}
 		};
 		
@@ -79,10 +75,7 @@ public class Session {
 	public void close() {
 		this.task.cancel();
 		
-		remove(this);
-	}
-	
-	public static void main(String [] args) {
+		sessions.remove(cookie);
 	}
 	
 }

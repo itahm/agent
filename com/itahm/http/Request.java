@@ -1,120 +1,197 @@
 package com.itahm.http;
 
-import java.nio.charset.Charset;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+public class Request {
 
-public final class Request extends Message {
-
-	public final static String CRLF = "\r\n";
 	public final static byte CR = (byte)'\r';
 	public final static byte LF = (byte)'\n';
-	public final static String FIELD = "%s: %s"+ CRLF;
+	public final static String GET = "GET";
+	public final static String POST = "POST";
+	public final static String HEAD = "HEAD";
+	public final static String OPTIONS = "OPTIONS";
+	public final static String DELETE = "DELETE";
+	public final static String TRACE = "TRACE";
+	public final static String CONNECT = "CONNECT";
 	
-	private Session session;
+	protected Map<String, String> header;
+	private final SocketChannel channel;
+	private final Listener listener;
+	private byte [] buffer;
 	private String method;
+	private String uri;
 	private String version;
-	private String cookie;
+	private int length;
+	private ByteArrayOutputStream body;
 	
-	public Request() {
+	public Request(SocketChannel channel, Listener listener) {
+		this.channel = channel;
+		this.listener = listener;
 	}
 	
-	public Request header(String fieldName, String fieldValue) {
-		fieldName = fieldName.toLowerCase();
-		
-		if ("cookie".equals(fieldName)) {
-			String [] cookies = fieldValue.split("; ");
-			String [] token;
+	public void parse(ByteBuffer src) throws IOException {
+		if (this.body == null) {
+			String line;
 			
-			for(int i=0, length=cookies.length; i<length; i++) {
-				token = cookies[i].split("=");
-				
-				if (token.length == 2 && "SESSION".equals(token[0])) {
-					this.session = Session.find(this.cookie= token[1]);
+			while ((line = readLine(src)) != null) {
+				if (parseHeader(line)) {
+					src.compact().flip();
 					
-					if (this.session != null) {
-						this.session.update();
+					parseBody(src);
+					
+					break;
+				};
+			}
+		}
+		else {
+			parseBody(src);
+		}
+	}
+	
+	public byte [] getRequestBody() {
+		return this.body.toByteArray();
+	}
+	
+	private void parseBody(ByteBuffer src) throws IOException {
+		byte [] bytes = new byte[src.limit()];
+		int length;
+		
+		src.get(bytes);
+		this.body.write(bytes);
+		
+		length = this.body.size();
+		if (this.length == length) {
+			this.listener.onRequest(this);
+			
+			this.body = null;
+			this.header = null;
+		}
+		else if (this.length < length){
+			throw new IOException("malformed http request.");
+		}
+		
+	}
+	
+	private boolean parseHeader(String line) throws IOException {
+		if (this.header == null) {
+			parseStartLine(line);
+		}
+		else {
+			if ("".equals(line)) {
+				try {
+					String length = this.header.get("content-length");
+					
+					if (length == null) {
+						if (POST.equals(this.method)) {
+							throw new IOException("malformed http request.");
+						}
+						
+						listener.onRequest(this);
 					}
+					
+					this.length = Integer.parseInt(length);
+				}
+				catch (NumberFormatException nfe) {
+					throw new IOException("malformed http request.");
+				}
+				
+				this.body = new ByteArrayOutputStream();
+				
+				return true;
+			}
+			else {
+				int index = line.indexOf(":");
+				
+				if (index == -1) {
+					throw new IOException("malformed http request.");
+				}
+				
+				this.header.put(line.substring(0, index).toLowerCase(), line.substring(index + 1).trim());
+			}
+		}
+		
+		return false;
+	}
+	
+	private void parseStartLine(String line) throws IOException {
+		if (line.length() == 0) {
+			//규약에 의해 request-line 이전의 빈 라인은 무시한다.
+			return;
+		}
+		
+		String [] token = line.split(" ");
+		if (token.length != 3) {
+			throw new IOException("malformed http request.");
+		}
+		
+		this.method = token[0];
+		this.uri = token[1];
+		this.version = token[2];
+		
+		this.header = new HashMap<String, String>();
+	}
+	
+	private String readLine(ByteBuffer src) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		
+		if (this.buffer != null) {
+			baos.write(this.buffer);
+			
+			this.buffer = null;
+		}
+		
+		int b;
+		
+		while(src.hasRemaining()) {
+			b = src.get();
+			baos.write(b);
+			
+			if (b == LF) {
+				String line = readLine(baos.toByteArray());
+				if (line != null) {
+					return line;
 				}
 			}
 		}
 		
-		this.header.put(fieldName, fieldValue);
+		this.buffer = baos.toByteArray();
 		
-		return this;
+		return null;
 	}
 	
-	public boolean request(String requestLine) {
-		String [] token = requestLine.split(" ");
-		if (token.length != 3) {
-			return false;
-		}
+	public static String readLine(byte [] src) throws IOException {
+		int length = src.length;
 		
-		this.method = token[0];
-		this.version = token[2];
-		
-		return true;
-	}
-	
-	public int length() {
-		String length = this.header.get("content-length");
-		
-		if (length != null) {
-			try {
-				return Integer.parseInt(length);
-			}
-			catch(NumberFormatException nfe) {
-			}
-		}
-		
-		return -1;
-	}
-	
-	public String method() {
-		return this.method;
-	}
-	
-	public String version() {
-		return this.version;
-	}
-	
-	public String cookie() {
-		return this.cookie;
-	}
-	
-	public String header(String name) {
-		return this.header.get(name);
-	}
-	
-	public Session session() {
-		return this.session;
-	}
-	
-	public void body(byte [] body) {
-		int length = body.length;
-		
-		this.body = new byte[length];
-		
-		System.arraycopy(body, 0, this.body, 0, length);
-	}
-	
-	public JSONObject getJSONObject() {
-		try {
-			return new JSONObject(new String(this.body, Charset.forName("UTF-8")));
-		}
-		catch (JSONException jsone) {
-			return null;
-		}
-	}
-	
-	public String toJSONString() {
-		JSONObject jo = getJSONObject();
-		
-		if (jo != null) {
-			return getJSONObject().toString();
+		if (length > 1 && src[length - 2] == CR) {
+			return new String(src, 0, length -2);
 		}
 		
 		return null;
 	}
+	
+	public String getRequestMethod() {
+		return this.method;
+	}
+	
+	public String getRequestURI() {
+		return this.uri;
+	}
+	
+	public String getRequestVersion() {
+		return this.version;
+	}
+	
+	public String getRequestHeader(String name) {
+		return this.header.get(name.toLowerCase());
+	}
+	
+	public void sendResponse(Response response) throws IOException {
+		this.channel.write(response.build());
+	}
+	
 }

@@ -13,18 +13,20 @@ import com.itahm.http.Session;
 
 public class SignIn extends Command {
 	
+	public final static String COOKIE = "SESSION=%s; HttpOnly";
+	
 	public SignIn() {
 	}
 
-	public void execute(Request request, Response response) throws IOException {
-		execute(request.getJSONObject(), response);
+	public void execute(Request request, JSONObject data, Session session) throws IOException {
+		execute(request, data);
 	}
 		
 	@Override
-	protected void execute(JSONObject request, Response response) throws IOException {
+	protected void execute(Request request, JSONObject data) throws IOException {
 		try {
-			String username = request.getString(Constant.STRING_USER);
-			String password = request.getString(Constant.STRING_PWORD);
+			String username = data.getString(Constant.STRING_USER);
+			String password = data.getString(Constant.STRING_PWORD);
 			JSONObject accountData = ITAhM.getTable("account").getJSONObject();
 			
 			if (accountData.has(username)) {
@@ -34,18 +36,19 @@ public class SignIn extends Command {
 					// signin 성공, cookie 발행
 					Session session = Session.getInstance(account.getInt(Constant.STRING_LEVEL));
 					
-					response.header("Set-Cookie", String.format(Response.COOKIE, session.getID()))
-						.ok(new JSONObject()
-							.put(Constant.STRING_LEVEL, session.getLevel()));
+					request.sendResponse(Response.getInstance(200, Response.OK,
+						new JSONObject().put(Constant.STRING_LEVEL, (Integer)session.getExtras()).toString())
+							.setResponseHeader("Set-Cookie", String.format(COOKIE, session.getCookie())));
 					
 					return;
 				 }
 			}
 			
-			response.unauthorized();
+			request.sendResponse(Response.getInstance(401, Response.UNAUTHORIZED, ""));
 		}
 		catch (JSONException jsone) {
-			response.badRequest(new JSONObject().put(Constant.STRING_ERROR, "invalid json request"));
+			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
+					new JSONObject().put("error", "invalid json request").toString()));
 		}
 	}
 

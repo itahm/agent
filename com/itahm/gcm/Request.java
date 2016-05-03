@@ -1,0 +1,132 @@
+package com.itahm.gcm;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+class Request implements DownStream.Sender {
+
+	private final static String INVALREG = "InvalidRegistration";
+	private final static String UNAVAILABLE = "Unavailable";
+	private final static String MISSINGREG = "MissingRegistration";
+	private final static String MISMATCHSENDER= "MismatchSenderId";
+	private final static String NOTREG = "NotRegistered";
+	private final static String BIGMSG = "MessageTooBig"; // 4096bytes
+	private final static String INVALKEY = "InvalidDataKey";
+	private final static String INVALTTL = "InvalidTtl"; // < 2,419,200 (4week)
+	private final static String INVALPACKAGE = "InvalidPackageName";
+	private final static String MSGEXCEEDED = "DeviceMessageRateExceeded";
+	
+	private final DownStream downstream;
+	private final HttpURLConnection connection;
+	private final JSONObject message;
+	private final JSONObject data;
+	
+	public Request(DownStream ds, String to, String title, String body, String host) throws IOException {
+		downstream = ds;
+		connection = ds.getConnection();
+		message = new JSONObject();
+		data = new JSONObject();
+		
+		message.put("to", to);
+		message.put("data", data);
+		
+		if (title.length() > 64) {
+			title = title.substring(0, 63);
+		}
+		
+		if (body.length() > 1024) {
+			body = body.substring(0, 1023);
+		}
+		
+		data.put("title", title);
+		data.put("body", body);
+		data.put("host", host);
+	}
+	
+	private int getResponseStatus() throws IOException {
+		int status = this.connection.getResponseCode();
+		InputStream is = null;
+		
+		switch (status) {
+		case 200:
+			JSONObject response;
+			
+			try {
+				response = new JSONObject(new JSONTokener(is = this.connection.getInputStream()));
+			}
+			catch (IOException ioe) {
+				this.connection.getErrorStream();
+				
+				throw ioe;
+			}
+			finally {
+				if (is != null) {
+					is.close();
+				}
+			}
+			
+			if (response.getInt("failure") > 0) {
+				String error = response.getJSONArray("results").getJSONObject(0).getString("error");
+				
+				switch(error) {
+				case INVALREG: // reg id의 포멧이 잘못되었음. 삭제할것
+				case NOTREG: // unregister
+					this.downstream.onUnRegister(this.message.getString("to"));
+					break;
+				case UNAVAILABLE:
+					status = 0; // 구글문제.
+					break;
+				case MISSINGREG:
+				case MSGEXCEEDED: // 스팸
+				case MISMATCHSENDER:	
+				case BIGMSG:
+				case INVALKEY:
+				case INVALTTL:
+				case INVALPACKAGE:
+					throw new IOException("GCM_ERROR: "+ error);
+				}
+			}
+			else if (response.getInt("canonical_ids") > 0){
+				this.downstream.onRefresh(this.message.getString("to"), response.getJSONArray("results").getJSONObject(0).getString("registration_id"));
+			}
+		}
+		
+		return status;
+	}
+	
+	@Override
+	public void send() throws IOException {
+		OutputStream os = null;
+		try {
+			os = this.connection.getOutputStream();
+			os.write(this.message.toString().getBytes("UTF-8"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		finally {
+			if (os != null) {
+				os.close();
+			}
+		}
+		
+		int status = 0;
+		
+		try {
+			status = getResponseStatus();
+		}
+		catch(JSONException jsone) {
+			status = 0; // 구글이 잘못된 json 보냈음 발생하면 안됨.
+		}
+		
+		this.connection.disconnect();
+		
+		this.downstream.onComplete(status);
+	}
+	
+}

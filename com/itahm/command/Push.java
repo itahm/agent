@@ -7,37 +7,35 @@ import org.json.JSONObject;
 
 import com.itahm.ITAhM;
 import com.itahm.table.Table;
+import com.itahm.http.Request;
 import com.itahm.http.Response;
 
 public class Push extends Command {
 	
-	public Push() {
-	}
-
 	@Override
-	protected void execute(JSONObject request, Response response) throws IOException {
+	protected void execute(Request request, JSONObject data) throws IOException {
 		try {
-			Table table = ITAhM.getTable(request.getString("database"));
+			Table table = ITAhM.getTable(data.getString("database"));
 			
 			if (table == null) {
-				response.badRequest(new JSONObject().put("error", "database not found"));
+				request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
+					new JSONObject().put("error", "database not found").toString()));
 			}
 			else {
-				if (table.commit(request.getInt("sequence"))) {
-					table.save(request.getJSONObject("data"));
+				if (table.commit(data.getInt("sequence"))) {
+					table.save(data.getJSONObject("data"));
 					
-					response.ok();
+					request.sendResponse(Response.getInstance(200, Response.OK, data.toString()));
 				}
 				else {
-					response.badRequest(new JSONObject().put("error", "database lock"));
+					request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
+						new JSONObject().put("error", "database lock").toString()));
 				}
 			}
 		}
 		catch (JSONException jsone) {
-			response.badRequest(new JSONObject().put("error", "invalid json request"));
-		}
-		catch (IllegalArgumentException iae) {
-			response.badRequest(new JSONObject().put("error", "database not found"));
+			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
+				new JSONObject().put("error", "invalid json request").toString()));
 		}
 	}
 	

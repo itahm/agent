@@ -11,7 +11,10 @@ public enum Commander {
 	QUERY("com.itahm.command.Query"),
 	SELECT("com.itahm.command.Select"),
 	LISTEN("com.itahm.command.Listen"),
-	SHUTDOWN("com.itahm.command.ShutDown");
+	SHUTDOWN("com.itahm.command.ShutDown"),
+	REGISTER("com.itahm.command.Register"),
+	UNREGISTER("com.itahm.command.UnRegister"),
+	MESSAGE("com.itahm.command.Message");
 	
 	private String className;
 	

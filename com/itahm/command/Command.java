@@ -2,7 +2,6 @@ package com.itahm.command;
 
 import java.io.IOException;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.http.Request;
@@ -10,21 +9,14 @@ import com.itahm.http.Response;
 import com.itahm.http.Session;
 
 public abstract class Command {
-	public void execute(Request request, Response response) throws IOException {
-		Session session = request.session();
-		
+	public void execute(Request request, JSONObject data, Session session) throws IOException {
 		if (session == null) {
-			response.unauthorized();
+			request.sendResponse(Response.getInstance(401, Response.UNAUTHORIZED, ""));
 		}
 		else {
-			try {
-				execute(request.getJSONObject(), response);
-			}
-			catch (JSONException jsone) {
-				response.badRequest(new JSONObject().put("error", "invalid json request"));
-			}
+			execute(request, data);
 		}
 	}
 	
-	protected abstract void execute(JSONObject data, Response response) throws IOException;
+	protected abstract void execute(Request request, JSONObject data) throws IOException;
 }

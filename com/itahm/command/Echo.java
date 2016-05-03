@@ -16,19 +16,18 @@ public class Echo extends Command {
 	public Echo() {
 	}
 
-	public void execute(Request request, Response response) throws IOException {
-		Session session = request.session();
-		
+	public void execute(Request request, JSONObject data, Session session) throws IOException {
 		if (session != null) {
-			this.level = session.getLevel();
+			this.level = (Integer)session.getExtras();
 		}
 		
-		super.execute(request, response);
+		super.execute(request, data, session);
 	}
 	
 	@Override
-	protected void execute(JSONObject data, Response response) throws IOException {
-		response.ok(new JSONObject().put(Constant.STRING_LEVEL, this.level));
+	protected void execute(Request request, JSONObject data) throws IOException {
+		request.sendResponse(Response.getInstance(200, Response.OK, new JSONObject()
+			.put(Constant.STRING_LEVEL, this.level).toString()));
 	}
 
 }

@@ -7,32 +7,32 @@ import org.json.JSONObject;
 
 import com.itahm.table.Table;
 import com.itahm.ITAhM;
+import com.itahm.http.Request;
 import com.itahm.http.Response;
 
 public class Pull extends Command {
 	
-	public Pull() {
-	}
-
 	@Override
-	protected void execute(JSONObject request, Response response) throws IOException {
+	protected void execute(Request request, JSONObject data) throws IOException {
 		try {
-			Table table = ITAhM.getTable(request.getString("database"));
+			Table table = ITAhM.getTable(data.getString("database"));
 			
 			if (table == null) {
-				response.badRequest(new JSONObject().put("error", "database not found"));
+				request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
+					new JSONObject().put("error", "database not found").toString()));
 			}
 			else {
-				JSONObject data = new JSONObject();
+				data = new JSONObject();
 				
 				data.put("sequence", table.lock());
 				data.put("data", table.getJSONObject());
 				
-				response.ok(data);
+				request.sendResponse(Response.getInstance(200, Response.OK, data.toString()));
 			}
 		}
 		catch (JSONException jsone) {
-			response.badRequest(new JSONObject().put("error", "invalid json request"));
+			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
+				new JSONObject().put("error", "invalid json request").toString()));
 		}
 	}
 	

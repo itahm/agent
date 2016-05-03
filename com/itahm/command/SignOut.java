@@ -13,18 +13,16 @@ public class SignOut extends Command {
 	public SignOut() {
 	}
 	
-	public void execute(Request request, Response response) throws IOException {
-		Session session = request.session();
-		
+	public void execute(Request request, JSONObject data, Session session) throws IOException {
 		if (session != null) {
 			session.close();
 		}
 		
-		response.ok();
+		request.sendResponse(Response.getInstance(200, Response.OK, ""));
 	}
 		
 	@Override
-	protected void execute(JSONObject request, Response response) throws IOException {
+	protected void execute(Request request, JSONObject data) throws IOException {
 	}
 
 }
