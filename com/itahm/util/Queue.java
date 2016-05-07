@@ -1,12 +1,10 @@
-package com.itahm.event;
-
-import org.json.JSONObject;
+package com.itahm.util;
 
 public class Queue {
 
 	private static final int QUEUE_SIZE = 1024;
 	
-	private final JSONObject [] queue;
+	private final String [] queue;
 	private final int capacity;
 	private int position = -1;
 	
@@ -16,17 +14,15 @@ public class Queue {
 	
 	public Queue(int size) {
 		capacity = size;
-		queue = new JSONObject [size];
+		queue = new String [size];
 	}
 
-	public synchronized JSONObject push(JSONObject event) {
+	public synchronized int push(String message) {
 		this.position = ++this.position % this.capacity;
 		
-		event.put("index", this.position);
+		this.queue[this.position] = message;
 		
-		this.queue[this.position] = event;
-		
-		return event;
+		return this.position;
 	}
 	
 	/**
@@ -37,7 +33,7 @@ public class Queue {
 		return (this.position + 1) % this.capacity;
 	}
 	
-	public synchronized JSONObject get(int index) {
+	public synchronized String get(int index) {
 		try {
 			return this.queue[index];
 		}
@@ -50,7 +46,7 @@ public class Queue {
 	 * 
 	 * @return 가장 마지막 작성된 event
 	 */
-	public synchronized JSONObject get() {
+	public synchronized String pop() {
 		return get(this.position);		
 	}
 	

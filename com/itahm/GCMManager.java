@@ -95,19 +95,19 @@ public class GCMManager extends DownStream implements Closeable {
 	}
 	
 	@Override
-	public void onUnRegister(String id) {
-		String token;
+	public void onUnRegister(String token) {
+		String id;
 		
-		synchronized (this.idMapping) {
-			token = this.idMapping.remove(id);
+		synchronized (this.tokenMapping) {
+			id = this.tokenMapping.remove(token);
 		}
 		
-		if (token == null) {
-			System.out.println("unregister failed: no such Instance ID\n"+ token);
+		if (id == null) {
+			System.out.println("unregister failed: no such token\n"+ token);
 		}
 		else {
 			synchronized (this.tokenMapping) {
-				this.tokenMapping.remove(token);
+				this.idMapping.remove(id);
 			}
 			
 			save();

@@ -31,7 +31,6 @@ import org.snmp4j.smi.VariableBinding;
 
 import com.itahm.ITAhM;
 import com.itahm.SnmpManager;
-import com.itahm.event.Event;
 import com.itahm.json.RollingFile;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.json.RollingMap;
@@ -245,15 +244,7 @@ public class Node extends CommunityTarget implements ResponseListener {
 			int intValue = value.getValue();
 			
 			if (ifData.has(STRING_IFADMINSTAT) && ifData.getInt(STRING_IFADMINSTAT) != intValue) {
-				String msg = ifData.getString(STRING_IFNAME) + (intValue == 1? "\tup": intValue == 2? "\tdown": "\ttesting");
-				
-				System.out.println(getAddress()+"\t"+ msg);
-				
-				Event.dispatch(new JSONObject()
-					.put("id", device.getString("id"))
-					.put(STRING_IFADMINSTAT, msg)
-				);
-					
+				// TODO event 줄지 말지 결정할것
 			}
 			
 			ifData.put(STRING_IFADMINSTAT, value.getValue());

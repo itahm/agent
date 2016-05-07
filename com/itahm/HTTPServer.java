@@ -6,7 +6,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.command.Command;
-import com.itahm.event.Event;
 import com.itahm.http.Listener;
 import com.itahm.http.Request;
 import com.itahm.http.Response;

@@ -27,9 +27,9 @@ class Request implements DownStream.Sender {
 	private final JSONObject message;
 	private final JSONObject data;
 	
-	public Request(DownStream ds, String to, String title, String body, String host) throws IOException {
-		downstream = ds;
-		connection = ds.getConnection();
+	public Request(DownStream downstream, String to, String title, String body, String host) throws IOException {
+		this.downstream = downstream;
+		connection = downstream.getConnection();
 		message = new JSONObject();
 		data = new JSONObject();
 		
@@ -47,6 +47,7 @@ class Request implements DownStream.Sender {
 		data.put("title", title);
 		data.put("body", body);
 		data.put("host", host);
+		data.put("date", System.currentTimeMillis());
 	}
 	
 	private int getResponseStatus() throws IOException {

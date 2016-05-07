@@ -5,7 +5,6 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.GCMManager;
 import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
@@ -20,13 +19,13 @@ public class UnRegister extends Command {
 	@Override
 	protected void execute(Request request, JSONObject data) throws IOException {
 		try {
-			String id = data.getString(GCMManager.ID);
+			String token = data.getString("token");
 			
-			if (id.length() == 0) {
+			if (token.length() == 0) {
 				throw new JSONException("");
 			}
 			
-			ITAhM.gcmm.onUnRegister(id);
+			ITAhM.gcmm.onUnRegister(token);
 			
 			request.sendResponse(Response.getInstance(200, Response.OK, ""));
 		}

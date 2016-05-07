@@ -1,4 +1,4 @@
-package com.itahm.event;
+package com.itahm;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -7,14 +7,12 @@ import java.util.Map;
 
 import org.json.JSONObject;
 
-import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
+import com.itahm.util.Queue;
 
 public class Event {
 
-	private final static String STRING_DATA = "data";
-	
 	private final static Map<Request, Integer> waiter = new HashMap<Request, Integer> ();
 	private final static Queue eventQueue = new Queue();
 	
@@ -27,13 +25,15 @@ public class Event {
 	 * @throws IOException 
 	 */
 	public static synchronized void listen(Request request, int index) throws IOException {
-		JSONObject event = eventQueue.get(index);
+		String message = eventQueue.get(index);
 		
-		if (event == null) {
+		if (message == null) {
 			waiter.put(request, eventQueue.next());
 		}
 		else {
-			request.sendResponse(Response.getInstance(200, "OK", event.toString()));
+			request.sendResponse(Response.getInstance(200, "OK"
+				, new JSONObject()
+					.toString()));
 		}
 	}
 	
@@ -41,10 +41,15 @@ public class Event {
 		waiter.remove(request);
 	}
 	
-	public static synchronized void dispatch(JSONObject data) {
-		JSONObject event = eventQueue.push(new JSONObject().put(STRING_DATA, data));
+	public static synchronized void dispatch(String ip, boolean status, String message) {
 		Iterator<Request> it = waiter.keySet().iterator();		
-		
+		int index = eventQueue.push(message);
+		JSONObject event = new JSONObject()
+			.put("message", message)
+			.put("ip", ip)
+			.put("status", status)
+			.put("index", index);
+		// TODO 지금은 ip와 status 정보까지 주지만 향후 message와 index만 주는 것으로 수정할것
 		while (it.hasNext()) {
 			try {
 				it.next().sendResponse(Response.getInstance(200, "OK", event.toString()));
@@ -55,7 +60,7 @@ public class Event {
 			it.remove();
 		}
 		
-		ITAhM.gcmm.broadcast(data.toString());
+		ITAhM.gcmm.broadcast(message);
 	}
 	
 }

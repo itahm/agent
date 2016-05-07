@@ -13,7 +13,7 @@ public class Message extends Command {
 
 	@Override
 	protected void execute(Request request, JSONObject data) throws IOException {
-		try {System.out.println("got message");
+		try {
 			ITAhM.gcmm.broadcast(data.getString("message"));
 			
 			request.sendResponse(Response.getInstance(200, Response.OK, ""));

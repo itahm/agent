@@ -2,7 +2,6 @@ package com.itahm.http;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -243,11 +242,6 @@ public abstract class Listener implements Runnable, Closeable {
 
 			@Override
 			protected void onRequest(Request request) {
-				try {
-					System.out.println(new String(request.getRequestBody(), "UTF-8"));
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-				}
 			}
 
 			@Override

@@ -64,7 +64,7 @@ public class Response {
 		byte [] message;
 		
 		sb.append(this.startLine);
-		sb.append(String.format(FIELD, "Content-Length", String.format("%d", body.length)));
+		sb.append(String.format(FIELD, "Content-Length", String.valueOf(this.body.length)));
 		
 		iterator = this.header.keySet().iterator();
 		while(iterator.hasNext()) {
@@ -77,10 +77,10 @@ public class Response {
 		
 		header = sb.toString().getBytes("US-ASCII");
 		
-		message = new byte [header.length + body.length];
+		message = new byte [header.length + this.body.length];
 		
 		System.arraycopy(header, 0, message, 0, header.length);
-		System.arraycopy(body, 0, message, header.length, body.length);
+		System.arraycopy(this.body, 0, message, header.length, this.body.length);
 		
 		return ByteBuffer.wrap(message);
 	}

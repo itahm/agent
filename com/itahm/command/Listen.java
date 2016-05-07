@@ -5,7 +5,7 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.itahm.event.Event;
+import com.itahm.Event;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 

@@ -12,7 +12,6 @@ import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-import com.itahm.event.Event;
 import com.itahm.snmp.Node;
 import com.itahm.snmp.NodeList;
 import com.itahm.snmp.RequestPDU;
@@ -71,11 +70,18 @@ public class SnmpManager extends TimerTask implements Closeable  {
 			if (device.getBoolean(STRING_SHUTDOWN)) {
 				device.put(STRING_SHUTDOWN, false);
 				
-				System.out.println(node.getAddress()+"\t"+ "up");
+				String ip = device.getString("ip");				
+				String name = device.getString("name");
+				String message = "down to up.";
 				
-				Event.dispatch(new JSONObject()
-					.put("id", device.getString("id"))
-					.put("shutdown", false));
+				if ("".equals(name)) {
+					message = String.format("%s %s", ip, message);
+				}
+				else {
+					message = String.format("%s[%s] %s", ip, name, message);
+				}
+				
+				Event.dispatch(ip, true, message);
 			}
 		}
 		// test 중이었다면
@@ -103,11 +109,18 @@ public class SnmpManager extends TimerTask implements Closeable  {
 			if (!device.getBoolean(STRING_SHUTDOWN)) {
 				device.put(STRING_SHUTDOWN, true);
 				
-				System.out.println(node.getAddress()+"\t"+ "down");
+				String ip = device.getString("ip");				
+				String name = device.getString("name");
+				String message = "up to down.";
 				
-				Event.dispatch(new JSONObject()
-					.put("id", device.getString("id"))
-					.put("shutdown", true));
+				if ("".equals(name)) {
+					message = String.format("%s %s", ip, message);
+				}
+				else {
+					message = String.format("%s[%s] %s", ip, name, message);
+				}
+				
+				Event.dispatch(ip, false, message);
 			}
 		}
 		// test 중이었다면

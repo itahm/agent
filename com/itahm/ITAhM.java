@@ -25,7 +25,7 @@ public class ITAhM extends Timer {
 	public ITAhM(int tcp, String path, String host) throws IOException {
 		super(true);
 		
-		System.out.println("ITAhM version 1.1.0.3");
+		System.out.println("ITAhM version 1.1.0.4");
 		System.out.println("start up ITAhM agent");
 
 		// 초기화 순서 중요함.
@@ -76,6 +76,10 @@ public class ITAhM extends Timer {
 		gcmm.close();
 		
 		System.out.println("shut down ITAhM agent");
+	}
+	
+	public static void debug(String debug) {
+		System.out.println(debug);
 	}
 	
 	public static void main(String[] args) throws IOException {

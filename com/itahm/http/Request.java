@@ -191,7 +191,11 @@ public class Request {
 	}
 	
 	public void sendResponse(Response response) throws IOException {
-		this.channel.write(response.build());
+		ByteBuffer message = response.build();
+		
+		while(message.remaining() > 0) {			
+			this.channel.write(message);
+		}
 	}
 	
 }
