@@ -15,7 +15,7 @@ public class Table implements Closeable {
 	protected JSONFile file;
 	protected JSONObject table;
 	protected int sequence = 0;
-	protected int commit = -1;
+	protected int commit = 0;
 	
 	protected void load(String tableName) throws IOException {
 		this.file = new JSONFile((new File(dataRoot, tableName)));
@@ -43,8 +43,8 @@ public class Table implements Closeable {
 	}
 	
 	public boolean commit(int sequence) {
-		if (sequence - commit > 0) {
-			commit = this.sequence++;
+		if (sequence - this.commit >= 0) {
+			this.commit = this.sequence;
 			
 			return true;
 		}

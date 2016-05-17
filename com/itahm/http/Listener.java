@@ -84,27 +84,34 @@ public abstract class Listener implements Runnable, Closeable {
 	private void onRead(SelectionKey key) {
 		SocketChannel channel = (SocketChannel)key.channel();
 		Request request = (Request)key.attachment();
+		int bytes ;
 		
 		this.buffer.clear();
 		
 		try {
-			int bytes = channel.read(buffer);
+			bytes = channel.read(buffer);
 			
 			if (bytes > 0) {
 				buffer.flip();
 				
-				request.parse(this.buffer);
-				
+				try {
+					request.parse(this.buffer);
+					
+					return;
+				} catch (IOException ioe) {
+					// Debug 할것.
+					ioe.printStackTrace();
+				}
+			}
+			else if (bytes == 0) {
 				return;
 			}
-			else if (bytes == -1) {
-				onClose(request, true);
-			}
+			// else if (bytes == -1) disconnected
 		} catch (IOException ioe) {
-			ioe.printStackTrace();
-			
-			onClose(request, false);
+			// RESET에 의한 예외일 수 있음.
 		}
+		
+		onClose(request, true);
 		
 		disconnect(channel);
 	}
@@ -190,7 +197,7 @@ public abstract class Listener implements Runnable, Closeable {
 	abstract protected void onStop();
 	
 	public static void main(String [] args) throws IOException {
-		final Listener server = new Listener(2015) {
+		final Listener server = new Listener() {
 
 			@Override
 			protected void onRequest(Request request) {
@@ -228,44 +235,9 @@ public abstract class Listener implements Runnable, Closeable {
 			
 		};
 		
-		
-		try {
-			Thread.sleep(100000);
-		} catch (InterruptedException e) {
-		}
+		System.in.read();
 		
 		server.close();
 	}
 	
-	public static void main() throws IOException {
-		Listener l = new Listener(2015) {
-
-			@Override
-			protected void onRequest(Request request) {
-			}
-
-			@Override
-			protected void onClose(Request request, boolean closed) {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			protected void onStart() {
-				// TODO Auto-generated method stub
-				
-			}
-
-			@Override
-			protected void onStop() {
-				// TODO Auto-generated method stub
-				
-			}
-			
-		};
-		
-		System.in.read();
-	
-		l.close();
-	}
 }

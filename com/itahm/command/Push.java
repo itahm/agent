@@ -19,23 +19,24 @@ public class Push extends Command {
 			
 			if (table == null) {
 				request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "database not found").toString()));
+					new JSONObject().put("error", "database not found")));
 			}
 			else {
 				if (table.commit(data.getInt("sequence"))) {
 					table.save(data.getJSONObject("data"));
 					
-					request.sendResponse(Response.getInstance(200, Response.OK, data.toString()));
+					request.sendResponse(Response.getInstance(200, Response.OK,
+						new JSONObject().put("sequence", table.lock())));
 				}
 				else {
-					request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-						new JSONObject().put("error", "database lock").toString()));
+					request.sendResponse(Response.getInstance(409, Response.CONFLICT,
+						new JSONObject().put("error", "database lock")));
 				}
 			}
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-				new JSONObject().put("error", "invalid json request").toString()));
+				new JSONObject().put("error", "invalid json request")));
 		}
 	}
 	

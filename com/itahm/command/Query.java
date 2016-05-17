@@ -26,21 +26,21 @@ public class Query extends Command {
 					, data.has("summary")? data.getBoolean("summary"): false);
 				
 				if (data != null) {
-					request.sendResponse(Response.getInstance(200, Response.OK, data.toString()));
+					request.sendResponse(Response.getInstance(200, Response.OK, data));
 				}
 				else {
 					request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-						new JSONObject().put("error", "database not found").toString()));
+						new JSONObject().put("error", "database not found")));
 				}
 			}
 			else {
 				request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "node not found").toString()));
+					new JSONObject().put("error", "node not found")));
 			}
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request").toString()));
+					new JSONObject().put("error", "invalid json request")));
 		}
 	}
 

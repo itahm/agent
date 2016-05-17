@@ -16,11 +16,11 @@ public class Message extends Command {
 		try {
 			ITAhM.gcmm.broadcast(data.getString("message"));
 			
-			request.sendResponse(Response.getInstance(200, Response.OK, ""));
+			request.sendResponse(Response.getInstance(200, Response.OK));
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request").toString()));
+					new JSONObject().put("error", "invalid json request")));
 		}
 	}
 

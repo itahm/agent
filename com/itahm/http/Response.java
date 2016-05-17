@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.json.JSONObject;
+
 public class Response {
 
 	public final static String CRLF = "\r\n";
@@ -15,12 +17,22 @@ public class Response {
 	public final static String UNAUTHORIZED = "Unauthorized";
 	public final static String BADREQUEST = "Bad request";
 	public final static String VERSIONNOTSUP = "HTTP Version Not Supported";
+	public static final String CONFLICT = "Conflict";
+	
 	private Map<String, String> header;
 	private String startLine;
 	private byte [] body;
 	
 	private Response () {
 		header = new HashMap<String, String>();
+	}
+	
+	public static Response getInstance(int status, String reason) {
+		return getInstance(status, reason, "");
+	}
+	
+	public static Response getInstance(int status, String reason, JSONObject body) {
+		return getInstance(status, reason, body.toString());
 	}
 	
 	public static Response getInstance(int status, String reason, String body) {

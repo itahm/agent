@@ -19,7 +19,7 @@ public class Pull extends Command {
 			
 			if (table == null) {
 				request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "database not found").toString()));
+					new JSONObject().put("error", "database not found")));
 			}
 			else {
 				data = new JSONObject();
@@ -27,12 +27,12 @@ public class Pull extends Command {
 				data.put("sequence", table.lock());
 				data.put("data", table.getJSONObject());
 				
-				request.sendResponse(Response.getInstance(200, Response.OK, data.toString()));
+				request.sendResponse(Response.getInstance(200, Response.OK, data));
 			}
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-				new JSONObject().put("error", "invalid json request").toString()));
+				new JSONObject().put("error", "invalid json request")));
 		}
 	}
 	
