@@ -77,12 +77,12 @@ public abstract class Node implements ResponseListener {
 		}
 		
 		completed = false;
-		
+		/*
 		this.data.put("hrProcessorEntry", new JSONObject(hrProcessorEntry));
 		this.data.put("hrStorageEntry", new JSONObject(hrStorageEntry));
 		this.data.put("ifEntry", new JSONObject(ifEntry));
 		this.data.put("arpTable", new JSONObject(arpTable));
-		
+		*/
 		hrProcessorEntry = new HashMap<String, Integer>();
 		hrStorageEntry = new HashMap<String, JSONObject>();
 		ifEntry = new HashMap<String, JSONObject>();

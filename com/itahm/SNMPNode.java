@@ -112,14 +112,14 @@ public class SNMPNode extends Node {
 					out = data.getLong(Constant.STRING_IFHCOUT);
 				}
 				else {
-					out = data.getInt(Constant.STRING_IFOUT);
+					out = data.getLong(Constant.STRING_IFOUT);
 				}
 				
 				if (oldData.has(Constant.STRING_IFHCOUT)) {
 					out -= oldData.getLong(Constant.STRING_IFHCOUT);
 				}
 				else {
-					out -= data.getInt(Constant.STRING_IFOUT);
+					out -= oldData.getLong(Constant.STRING_IFOUT);
 				}
 				
 				this.rollingMap.put(Resource.IFOUTOCTETS, index, out *8 / interval);
@@ -128,14 +128,14 @@ public class SNMPNode extends Node {
 					in = data.getLong(Constant.STRING_IFHCIN);
 				}
 				else {
-					in = data.getInt(Constant.STRING_IFIN);
+					in = data.getLong(Constant.STRING_IFIN);
 				}
 				
 				if (oldData.has(Constant.STRING_IFHCIN)) {
 					in -= oldData.getLong(Constant.STRING_IFHCIN);
 				}
 				else {
-					in -= data.getInt(Constant.STRING_IFIN);
+					in -= oldData.getLong(Constant.STRING_IFIN);
 				}
 				
 				this.rollingMap.put(Resource.IFINOCTETS, index, in *8 / interval);
