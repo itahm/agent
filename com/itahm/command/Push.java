@@ -23,10 +23,13 @@ public class Push extends Command {
 			}
 			else {
 				if (table.commit(data.getInt("sequence"))) {
-					table.save(data.getJSONObject("data"));
+					data = data.getJSONObject("data");
+					table.save(data);
 					
 					request.sendResponse(Response.getInstance(200, Response.OK,
-						new JSONObject().put("sequence", table.lock())));
+						new JSONObject()
+							.put("sequence", table.lock())
+							.put("data", data)));
 				}
 				else {
 					request.sendResponse(Response.getInstance(409, Response.CONFLICT,

@@ -40,15 +40,25 @@ public class RollingMap {
 		}
 	}
 
-	public void put(Resource resource, String index, long value) throws IOException {
+	public void put(Resource resource, String index, long value) {
 		Map<String, RollingFile> map = this.map.get(resource);
 		RollingFile rollingFile = map.get(index);
 		
 		if (rollingFile == null) {
-			map.put(index, rollingFile = new RollingFile(new File(this.root, resource.toString()), index));
+			try {
+				map.put(index, rollingFile = new RollingFile(new File(this.root, resource.toString()), index));
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+				
+				return;
+			}
 		}
 		
-		rollingFile.roll(value);
+		try {
+			rollingFile.roll(value);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**

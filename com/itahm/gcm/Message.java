@@ -9,7 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-class Request implements DownStream.Sender {
+class Message implements DownStream.Request {
 
 	private final static String INVALREG = "InvalidRegistration";
 	private final static String UNAVAILABLE = "Unavailable";
@@ -23,13 +23,13 @@ class Request implements DownStream.Sender {
 	private final static String MSGEXCEEDED = "DeviceMessageRateExceeded";
 	
 	private final DownStream downstream;
-	private final HttpURLConnection connection;
+	private HttpURLConnection connection;
 	private final JSONObject message;
 	private final JSONObject data;
 	
-	public Request(DownStream downstream, String to, String title, String body, String host) throws IOException {
+	public Message(DownStream downstream, String to, String title, String body, String host) {
 		this.downstream = downstream;
-		connection = downstream.getConnection();
+
 		message = new JSONObject();
 		data = new JSONObject();
 		
@@ -103,7 +103,9 @@ class Request implements DownStream.Sender {
 	
 	@Override
 	public void send() throws IOException {
+		this.connection = downstream.getConnection();
 		OutputStream os = null;
+		
 		try {
 			os = this.connection.getOutputStream();
 			os.write(this.message.toString().getBytes("UTF-8"));

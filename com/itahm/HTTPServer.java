@@ -17,6 +17,14 @@ public class HTTPServer extends Listener {
 		super(ip, tcp);
 	}
 	
+	public void close() {
+		try {
+			super.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	@Override
 	protected void onStart() {
 		System.out.println("HTTP Server running...");
@@ -24,7 +32,7 @@ public class HTTPServer extends Listener {
 	
 	@Override
 	protected void onStop() {
-		System.out.println("stop HTTP Server.");
+		System.out.println("Stop HTTP Server.");
 	}
 
 	@Override
@@ -35,7 +43,7 @@ public class HTTPServer extends Listener {
 			e.printStackTrace();
 		}
 	}
-
+	
 	@Override
 	protected void onClose(Request request, boolean closed) {
 		Event.cancel(request);

@@ -5,88 +5,86 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 
-import com.itahm.http.Listener;
+import com.itahm.table.Account;
+import com.itahm.table.Device;
+import com.itahm.table.Icon;
+import com.itahm.table.Index;
+import com.itahm.table.Profile;
 import com.itahm.table.Table;
 
 public class ITAhM extends Timer {
 	
-	private final static long REQUEST_INTERVAL = 10000;
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
 	
 	private static File dataRoot;
-	private static DataBase data;
-	private static SnmpManager snmp;
-	private static Listener http;
+	private static HTTPServer http;
 	
+	public static SNMPAgent snmp;
 	public static GCMManager gcmm;
+	
+	private static Map<String, Table> tableMap;
 	
 	public ITAhM(int tcp, String path, String host) throws IOException {
 		super(true);
 		
-		System.out.println("ITAhM version 1.1.0.4");
+		System.out.println("ITAhM version 1.1.3.10");
 		System.out.println("start up ITAhM agent");
-
-		// 초기화 순서 중요함.
 		
 		dataRoot = new File(path, "data");
 		dataRoot.mkdir();
 		
 		gcmm = new GCMManager(API_KEY, host);
-				
-		data = new DataBase();
+		
+		tableMap = new HashMap<String, Table>();
+		tableMap.put("account", new Account());
+		tableMap.put("profile", new Profile());
+		tableMap.put("device", new Device());
+		tableMap.put("index", new Index());
+		tableMap.put("icon", new Icon());
 		
 		http = new HTTPServer("0.0.0.0", tcp);
 		
-		scheduleAtFixedRate(snmp = new SnmpManager(), 0, REQUEST_INTERVAL);
+		snmp = new SNMPAgent();
 	}
 	
 	public static File getRoot() {
 		return dataRoot;
 	}
 	
-	public static SnmpManager getSnmp() {
-		return snmp;
+	public static void debug(String msg) {
+		System.out.println(msg);
 	}
 	
 	public static Table getTable(String tableName) {
-		return data.getTable(tableName);
+		return tableMap.get(tableName);
 	}
 	
 	public static void shutdown() {
-		try {
-			http.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		http.close();
 		
-		try {
-			snmp.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		try {
-			data.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}	
+		snmp.close();
 		
 		gcmm.close();
 		
+		for (Table table : tableMap.values()) {
+			try {
+				table.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
 		System.out.println("shut down ITAhM agent");
-	}
-	
-	public static void debug(String debug) {
-		System.out.println(debug);
 	}
 	
 	public static void main(String[] args) throws IOException {
 		String path = ".";
 		int tcp = 2014;
 		String host = InetAddress.getLocalHost().getHostAddress();
-		
 		
 		for(int i=0, length = args.length; i<length;) {
 			if (args[i].equals("-host")) {

@@ -13,10 +13,10 @@ public abstract class DownStream implements Runnable, Closeable {
 	private final String host;
 	private final URL url;
 	private final String auth;
-	private final LinkedList<Sender> queue;
+	private final LinkedList<Request> queue;
 	private boolean stop;
 	
-	interface Sender {
+	interface Request {
 		public void send() throws IOException;
 	}
 	
@@ -24,7 +24,7 @@ public abstract class DownStream implements Runnable, Closeable {
 		this.host = host;
 		url = new URL(GCMURL);
 		
-		queue = new LinkedList<Sender>();
+		queue = new LinkedList<Request>();
 		
 		auth = "key="+ apiKey;
 		
@@ -45,7 +45,7 @@ public abstract class DownStream implements Runnable, Closeable {
 	}	
 	
 	public void send(String to, String title, String body) throws IOException {
-		this.queue.add(new Request(this, to, title, body, this.host));
+		this.queue.add(new Message(this, to, title, body, this.host));
 	}
 	
 	@Override
@@ -57,16 +57,18 @@ public abstract class DownStream implements Runnable, Closeable {
 	public void run() {
 		onStart();
 		
-		Sender sender;
+		Request request;
 		
 		while (!this.stop) {
 			if (queue.size() > 0) {
-				sender = queue.pop();
+				request = queue.peek();
 				
 				try {
-					sender.send();
-				} catch (IOException e) {
-					e.printStackTrace();
+					request.send();
+					
+					queue.pop();
+				} catch (IOException ioe) {
+					// GCM 문제일것.
 				}
 			}
 			else {

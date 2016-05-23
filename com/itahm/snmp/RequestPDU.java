@@ -13,7 +13,6 @@ public class RequestPDU extends PDU {
 		add(new VariableBinding(Constants.sysObjectID));
 		add(new VariableBinding(Constants.sysName));
 		add(new VariableBinding(Constants.sysServices));
-		add(new VariableBinding(Constants.ifIndex));
 		add(new VariableBinding(Constants.ifDescr));
 		add(new VariableBinding(Constants.ifType));
 		add(new VariableBinding(Constants.ifSpeed));
@@ -30,7 +29,6 @@ public class RequestPDU extends PDU {
 		add(new VariableBinding(Constants.ipNetToMediaPhysAddress));
 		add(new VariableBinding(Constants.hrSystemUptime));
 		add(new VariableBinding(Constants.hrProcessorLoad));
-		add(new VariableBinding(Constants.hrStorageIndex));
 		add(new VariableBinding(Constants.hrStorageType));
 		add(new VariableBinding(Constants.hrStorageDescr));
 		add(new VariableBinding(Constants.hrStorageAllocationUnits));

@@ -5,10 +5,10 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.itahm.ITAhM;
+import com.itahm.SNMPNode;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
-import com.itahm.snmp.Node;
-import com.itahm.snmp.NodeList;
 
 public class Query extends Command {
 	
@@ -16,11 +16,11 @@ public class Query extends Command {
 	protected void execute(Request request, JSONObject data) throws IOException {
 		
 		try {
-			Node node = NodeList.getNode(data.getString("ip"));
+			SNMPNode node = ITAhM.snmp.getNode(data.getString("ip"));
 			
 			if (node != null) {
 				data = node.getData(data.getString("database")
-					, String.format("%d", data.getInt("index"))
+					, String.valueOf(data.getInt("index"))
 					, data.getLong("start")
 					, data.getLong("end")
 					, data.has("summary")? data.getBoolean("summary"): false);
@@ -42,6 +42,7 @@ public class Query extends Command {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
 					new JSONObject().put("error", "invalid json request")));
 		}
+		
 	}
 
 }

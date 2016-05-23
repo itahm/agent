@@ -2,8 +2,8 @@ package com.itahm.snmp;
 
 import java.io.File;
 import java.io.IOException;
+
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,6 +11,7 @@ import java.util.Vector;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
@@ -28,275 +29,127 @@ import org.snmp4j.smi.TimeTicks;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
 
+import com.itahm.Constant;
 import com.itahm.ITAhM;
-import com.itahm.SnmpManager;
-import com.itahm.json.RollingFile;
-import com.itahm.json.RollingMap.Resource;
-import com.itahm.json.RollingMap;
 
-public class Node extends CommunityTarget implements ResponseListener {
-
-	private static final long serialVersionUID = 7479923177197300424L;
+public abstract class Node implements ResponseListener {
 	
 	private static final long TIMEOUT = 5000;
-	private static final String STRING_SNMP = "snmp";
-	private static final String STRING_SYSUPTIME = "hrSystemUptime";
-	private static final String STRING_PROCENTRY = "hrProcessorEntry";
-	private static final String STRING_STRGENTRY = "hrStorageEntry";
-	private static final String STRING_MAC_ADDR = "ifPhysAddress";
-	private static final String STRING_IFINDEX = "ifIndex";
-	private static final String STRING_IFNAME = "ifName";
-	private static final String STRING_IFENTRY = "ifEntry";
-	private static final String STRING_IFSPEED = "ifSpeed";
-	private static final String STRING_IFALIAS = "ifAlias";
-	private static final String STRING_IFHCIN = "ifHCInOctets";
-	private static final String STRING_IFHCOUT = "ifHCOutOctets";
-	private static final String STRING_IFADMINSTAT = "ifAdminStatus";
-	private final JSONObject device;
-	private final JSONObject data;
-	private final UdpAddress address;
-	private ArrayList<String> testList; 
-	private final JSONObject hrProcessorEntry;
-	private JSONObject hrProcessorIndex;
-	private final JSONObject ifEntry;
-	private JSONObject ifIndex;
-	private final JSONObject hrStorageEntry;
-	private JSONObject hrStorageIndex;
-	private RollingMap rollingMap;
-	private final AddrMap addrMapping = new AddrMap();
-	private final Map<String, Counter> inCounter = new HashMap<String, Counter>();
-	private final Map<String, Counter> outCounter = new HashMap<String, Counter>();
-	private final Map<String, Counter> hcInCounter = new HashMap<String, Counter>();
-	private final Map<String, Counter> hcOutCounter = new HashMap<String, Counter>();
+	
+	private final Snmp snmp;
+	private final CommunityTarget target;
 	
 	private long requestTime;
+	protected long responseTime;
+	private boolean completed;
 	
-	public Node(String ip, JSONObject device) throws IOException {
-		this.device = device;
+	protected final JSONObject data;
+	
+	protected Map<String, Integer> hrProcessorEntry;
+	protected Map<String, JSONObject> hrStorageEntry;
+	protected Map<String, JSONObject> ifEntry;
+	protected Map<String, Integer> arpTable;
+	
+	public Node(Snmp snmp, String ip, int udp, String community) throws IOException {
+		this.snmp = snmp;
 		
-		// target 설정
-		setVersion(SnmpConstants.version2c);
-		setTimeout(TIMEOUT);
-		
-		address = new UdpAddress();
-		address.setInetAddress(InetAddress.getByName(ip));
-		
-		// file 및 json 초기화
-		File nodeRoot = new File(new File(ITAhM.getRoot(), STRING_SNMP), ip);
-		nodeRoot.mkdirs();
-		
-		//file = new JSONFile(new File(nodeRoot, STRING_NODE));
-		
-		//data = file.getJSONObject();
 		data = new JSONObject();
 		
-		data.put(STRING_PROCENTRY, hrProcessorEntry = new JSONObject());
-		data.put(STRING_IFENTRY, ifEntry = new JSONObject());
-		data.put(STRING_STRGENTRY, hrStorageEntry = new JSONObject());
+		completed = true;
 		
-		// 기타 초기화
-		hrProcessorIndex = new JSONObject();
-		hrStorageIndex = new JSONObject();
-		ifIndex = new JSONObject();
+		// target 설정
+		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
+		target.setVersion(SnmpConstants.version2c);
+		target.setTimeout(TIMEOUT);
 		
-		rollingMap = new RollingMap(nodeRoot);
+		// file 및 json 초기화
+		File nodeRoot = new File(new File(ITAhM.getRoot(), Constant.STRING_SNMP), ip);
+		nodeRoot.mkdirs();
 	}
 	
-	public void test (ArrayList<String> profileList) {
-		this.testList = profileList;
-	}
-	
-	public ArrayList<String> test () {
-		return this.testList;
-	}
-	
-	public void setRequest(String community, int udp) {
-		this.requestTime = Calendar.getInstance().getTimeInMillis();
-		
-		this.address.setPort(udp);
-		
-		setAddress(this.address);
-		setCommunity(new OctetString(community));
-	}
-	
-	public JSONObject getDevice() {
-		return this.device;
-	}
-	
-	public String check(String mac) {
-		int index = this.addrMapping.getIndex(mac);
-		
-		return index > -1? this.ifEntry.getJSONObject(Integer.toString(index)).getString(STRING_IFNAME): null;
-	}
-	
-	public String checkInterface(Node peer){
-		String [] indexArray = JSONObject.getNames(this.data.getJSONObject(STRING_IFINDEX));
-		
-		if (indexArray != null) {
-			String index;
-			String address;
-			String peerIndex;
+	public void request (PDU pdu) {
+		if (!completed) {
+			ITAhM.debug("delay");
 			
-			for (int i=0, _i=indexArray.length; i<_i; i++) {
-				index = indexArray[i];
-				
-				address = this.ifEntry.getJSONObject(index).getString(STRING_MAC_ADDR);
-				
-				if (!"".equals(address)) {
-					
-					peerIndex = peer.check(address);
-					
-					if (peerIndex != null) {
-						return peerIndex;
-					}
-				}
-			}
+			return;
 		}
 		
-		return "";
+		completed = false;
+		
+		this.data.put("hrProcessorEntry", new JSONObject(hrProcessorEntry));
+		this.data.put("hrStorageEntry", new JSONObject(hrStorageEntry));
+		this.data.put("ifEntry", new JSONObject(ifEntry));
+		this.data.put("arpTable", new JSONObject(arpTable));
+		
+		hrProcessorEntry = new HashMap<String, Integer>();
+		hrStorageEntry = new HashMap<String, JSONObject>();
+		ifEntry = new HashMap<String, JSONObject>();
+		arpTable = new HashMap<String, Integer>();
+		
+		this.requestTime = Calendar.getInstance().getTimeInMillis();
+		
+		sendRequest(pdu);
 	}
 	
-	public void requestCompleted() throws IOException {
-		long currentTime = Calendar.getInstance().getTimeInMillis();
-		long responseTime = currentTime - this.requestTime;
-		
-		this.data.put("lastResponse", currentTime);
-		this.data.put("responseTime", responseTime);
-		
-		this.rollingMap.put(Resource.RESPONSETIME, "0", responseTime);
+	public JSONObject getData() {		
+		return this.data;
+	}
+	
+	private final void sendRequest(PDU pdu) {
+		try {
+			this.snmp.send(pdu, this.target, null, this);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private final boolean parseSystem(OID response, Variable variable, OID request) {
 		if (request.startsWith(Constants.sysDescr) && response.startsWith(Constants.sysDescr)) {
-			OctetString value = (OctetString)variable;
-			
-			this.data.put("sysDescr", new String(value.getValue()));
+			this.data.put("sysDescr", new String(((OctetString)variable).getValue()));
 		}
 		else if (request.startsWith(Constants.sysObjectID) && response.startsWith(Constants.sysObjectID)) {
-			OID value = (OID)variable;
-			
-			this.data.put("sysObjectID", value.toDottedString());
+			this.data.put("sysObjectID", ((OID)variable).toDottedString());
 		}
 		else if (request.startsWith(Constants.sysName) && response.startsWith(Constants.sysName)) {
-			OctetString value = (OctetString)variable;
-			
-			this.data.put("sysName", new String(value.getValue()));
+			this.data.put("sysName", new String(((OctetString)variable).getValue()));
 		}
 		
 		return false;
 	}
 	
 	private final boolean parseIFEntry(OID response, Variable variable, OID request) throws IOException {
-		JSONObject ifData;
 		String index = Integer.toString(response.last());
+		JSONObject ifData = this.ifEntry.get(index);
 		
-		if (!this.ifEntry.has(index)) {
+		if(ifData == null) {
 			this.ifEntry.put(index, ifData = new JSONObject());
 		}
-		else {
-			ifData = this.ifEntry.getJSONObject(index);
-		}
 		
-		if (request.startsWith(Constants.ifIndex)) {
-			 if(response.startsWith(Constants.ifIndex)) {
-				Integer32 value = (Integer32)variable;
-				
-				this.ifIndex.put(index, value.getValue());
-			 }
-			 else {
-				this.data.put(STRING_IFINDEX, this.ifIndex);
-				
-				this.ifIndex = new JSONObject();
-				
-				return false;
-			 }
+		if (request.startsWith(Constants.ifDescr) && response.startsWith(Constants.ifDescr)) {
+			ifData.put("ifDescr", new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(Constants.ifDescr) && response.startsWith(Constants.ifDescr)) {
-			OctetString value = (OctetString)variable;
-			
-			ifData.put("ifDescr", new String(value.getValue()));
+		else if (request.startsWith(Constants.ifType) && response.startsWith(Constants.ifType)) {			
+			ifData.put("ifType", ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(Constants.ifType) && response.startsWith(Constants.ifType)) {
-			Integer32 value = (Integer32)variable;
-			
-			ifData.put("ifType", value.getValue());
-		}
-		else if (request.startsWith(Constants.ifSpeed) && response.startsWith(Constants.ifSpeed)) {
-			Gauge32 value = (Gauge32)variable;
-			
-			ifData.put(STRING_IFSPEED, value.getValue());
+		else if (request.startsWith(Constants.ifSpeed) && response.startsWith(Constants.ifSpeed)) {			
+			ifData.put(Constant.STRING_IFSPEED, ((Gauge32)variable).getValue());
 		}
 		else if (request.startsWith(Constants.ifPhysAddress) && response.startsWith(Constants.ifPhysAddress)) {
-			OctetString value = (OctetString)variable;
-			
-			ifData.put(STRING_MAC_ADDR, new String(value.getValue()));
+			ifData.put(Constant.STRING_MAC_ADDR, new String(((OctetString)variable).getValue()));
 		}
-		
-		/**
-		 * ifAdminStatus
-		 * 1: "up"
-		 * 2: "down",
-		 * 3: "testing"
-		 */
 		else if (request.startsWith(Constants.ifAdminStatus) && response.startsWith(Constants.ifAdminStatus)) {
-			Integer32 value = (Integer32)variable;
-			int intValue = value.getValue();
-			
-			if (ifData.has(STRING_IFADMINSTAT) && ifData.getInt(STRING_IFADMINSTAT) != intValue) {
-				// TODO event 줄지 말지 결정할것
-			}
-			
-			ifData.put(STRING_IFADMINSTAT, value.getValue());
+			ifData.put(Constant.STRING_IFADMINSTAT, ((Integer32)variable).getValue());
 		}
-		
-		/**
-		 * ifOperStatus
-		 * 1: "up",
-		 *	2: "down",
-		 *	3: "testing",
-		 *	4: "unknown",
-		 *	5: "dormant",
-		 *	6: "notPresent",
-		 *	7: "lowerLayerDown"
-		 */
-		else if (request.startsWith(Constants.ifOperStatus) && response.startsWith(Constants.ifOperStatus)) {
-			Integer32 value = (Integer32)variable;
-			
-			ifData.put("ifOperStatus", value.getValue());
+		else if (request.startsWith(Constants.ifOperStatus) && response.startsWith(Constants.ifOperStatus)) {			
+			ifData.put("ifOperStatus", ((Integer32)variable).getValue());
 		}
-		
 		else if (request.startsWith(Constants.ifInOctets) && response.startsWith(Constants.ifInOctets)) {
-			Counter32 value = (Counter32)variable;
-			long longValue = value.getValue() *8;
-			Counter inCounter = 	this.inCounter.get(index);
-			
-			if (inCounter == null) {
-				this.inCounter.put(index, new Counter(longValue));
-			}
-			else {
-				longValue = inCounter.count(longValue);
-				
-				this.rollingMap.put(Resource.IFINOCTETS, index, longValue);
-				
-				ifData.put("ifInOctets", longValue);
-			}
+			ifData.put("ifInOctets", ((Counter32)variable).getValue());
 		}
 		else if (request.startsWith(Constants.ifOutOctets) && response.startsWith(Constants.ifOutOctets)) {
-			Counter32 value = (Counter32)variable;
-			long longValue = value.getValue() *8;
-			Counter outCounter = 	this.outCounter.get(index);
-			
-			if (outCounter == null) {
-				this.outCounter.put(index, new Counter(longValue));
-			}
-			else {
-				longValue = outCounter.count(longValue);
-				
-				this.rollingMap.put(Resource.IFOUTOCTETS, index, longValue);
-				
-				ifData.put("ifOutOctets", longValue);
-			}
+			ifData.put("ifOutOctets", ((Counter32)variable).getValue());
 		}
 		else {
 			return false;
@@ -306,57 +159,24 @@ public class Node extends CommunityTarget implements ResponseListener {
 	}
 	
 	private final boolean parseIFXEntry(OID response, Variable variable, OID request) throws IOException {
-		JSONObject ifData;
 		String index = Integer.toString(response.last());
+		JSONObject ifData = this.ifEntry.get(index);
 		
-		if (!this.ifEntry.has(index)) {
+		if(ifData == null) {
 			this.ifEntry.put(index, ifData = new JSONObject());
-		}
-		else {
-			ifData = this.ifEntry.getJSONObject(index);
 		}
 		
 		if (request.startsWith(Constants.ifName) && response.startsWith(Constants.ifName)) {
-			OctetString value = (OctetString)variable;
-			
-			ifData.put(STRING_IFNAME, new String(value.getValue()));
+			ifData.put(Constant.STRING_IFNAME, new String(((OctetString)variable).getValue()));
 		}
 		else if (request.startsWith(Constants.ifAlias) && response.startsWith(Constants.ifAlias)) {
-			OctetString value = (OctetString)variable;
-			
-			ifData.put(STRING_IFALIAS, new String(value.getValue()));
+			ifData.put(Constant.STRING_IFALIAS, new String(((OctetString)variable).getValue()));
 		}
 		else if (request.startsWith(Constants.ifHCInOctets) && response.startsWith(Constants.ifHCInOctets)) {
-			Counter64 value = (Counter64)variable;
-			long longValue = value.getValue() *8;
-			Counter hcInCounter = 	this.hcInCounter.get(index);
-			
-			if (hcInCounter == null) {
-				this.hcInCounter.put(index, new Counter(longValue));
-			}
-			else {
-				longValue = hcInCounter.count(longValue);
-				
-				this.rollingMap.put(Resource.IFINOCTETS, index, longValue);
-				
-				ifData.put(STRING_IFHCIN, longValue);
-			}
+			ifData.put(Constant.STRING_IFHCIN, ((Counter64)variable).getValue());
 		}
 		else if (request.startsWith(Constants.ifHCOutOctets) && response.startsWith(Constants.ifHCOutOctets)) {
-			Counter64 value = (Counter64)variable;
-			long longValue = value.getValue() *8;
-			Counter hcOutCounter = 	this.hcOutCounter.get(index);
-			
-			if (hcOutCounter == null) {
-				this.hcOutCounter.put(index, new Counter(longValue));
-			}
-			else {
-				longValue = hcOutCounter.count(longValue);
-				
-				this.rollingMap.put(Resource.IFOUTOCTETS, index, longValue);
-				
-				ifData.put(STRING_IFHCOUT, longValue);
-			}
+			ifData.put(Constant.STRING_IFHCOUT, ((Counter64)variable).getValue());
 		}
 		else {
 			return false;
@@ -367,96 +187,68 @@ public class Node extends CommunityTarget implements ResponseListener {
 	
 	private final boolean parseHost(OID response, Variable variable, OID request) throws JSONException, IOException {
 		if (request.startsWith(Constants.hrSystemUptime) && response.startsWith(Constants.hrSystemUptime)) {
-			TimeTicks value = (TimeTicks)variable; 
-			
-			this.data.put(STRING_SYSUPTIME, value.toMilliseconds());
+			this.data.put(Constant.STRING_SYSUPTIME, ((TimeTicks)variable).toMilliseconds());
 			
 			return false;
 		}
-		else if (request.startsWith(Constants.hrProcessorLoad)) {
-			if (response.startsWith(Constants.hrProcessorLoad)) {
-				Integer32 value = (Integer32)variable;
-				String index = Integer.toString(response.last());
-				int intValue = value.getValue();
+		
+		String index = Integer.toString(response.last());
+		
+		if (request.startsWith(Constants.hrProcessorLoad) && response.startsWith(Constants.hrProcessorLoad)) {
+			this.hrProcessorEntry.put(index, ((Integer32)variable).getValue());
+		}
+		else if (request.startsWith(Constants.hrStorageEntry) && response.startsWith(Constants.hrStorageEntry)) {
+			JSONObject storageData = this.hrStorageEntry.get(index);
+			
+			if (storageData == null) {
+				storageData = new JSONObject();
 				
-				this.rollingMap.put(Resource.HRPROCESSORLOAD, index, intValue);
-				
-				this.hrProcessorEntry.put(index, intValue);
-				this.hrProcessorIndex.put(index, Integer.parseInt(index));
+				this.hrStorageEntry.put(index, storageData = new JSONObject());
+			}
+			
+			if (request.startsWith(Constants.hrStorageType) && response.startsWith(Constants.hrStorageType)) {
+				storageData.put("hrStorageType", ((OID)variable).last());
+			}
+			else if (request.startsWith(Constants.hrStorageDescr) && response.startsWith(Constants.hrStorageDescr)) {
+				storageData.put("hrStorageDescr", new String(((OctetString)variable).getValue()));
+			}
+			else if (request.startsWith(Constants.hrStorageAllocationUnits) && response.startsWith(Constants.hrStorageAllocationUnits)) {
+				storageData.put("hrStorageAllocationUnits", ((Integer32)variable).getValue());
+			}
+			else if (request.startsWith(Constants.hrStorageSize) && response.startsWith(Constants.hrStorageSize)) {
+				storageData.put("hrStorageSize", ((Integer32)variable).getValue());
+			}
+			else if (request.startsWith(Constants.hrStorageUsed) && response.startsWith(Constants.hrStorageUsed)) {
+				storageData.put("hrStorageUsed", ((Integer32)variable).getValue());
 			}
 			else {
-				this.data.put("hrProcessorIndex", hrProcessorIndex);
-				
-				this.hrProcessorIndex = new JSONObject();
-				
 				return false;
 			}
 		}
-		else if (request.startsWith(Constants.hrStorageEntry) && response.startsWith(Constants.hrStorageEntry)) {
-			JSONObject storageData;
-			String index = Integer.toString(response.last());
-			
-			if (!this.hrStorageEntry.has(index)) {
-				this.hrStorageEntry.put(index, storageData = new JSONObject());
-			}
-			else {
-				storageData = this.hrStorageEntry.getJSONObject(index);
-			}
-			
-			if (request.startsWith(Constants.hrStorageIndex)) {
-				if (response.startsWith(Constants.hrStorageIndex)) {
-					Integer32 value = (Integer32)variable;
-					
-					hrStorageIndex.put(index, value.getValue());
-				}
-				else {
-					this.data.put("hrStorageIndex", hrStorageIndex);
-					
-					hrStorageIndex = new JSONObject();
-					
-					return false;
-				}
-			}
-			else if (request.startsWith(Constants.hrStorageType) && response.startsWith(Constants.hrStorageType)) {
-				OID value = (OID)variable;
-				
-				if (value.startsWith(Constants.hrStorageTypes)) {
-					storageData.put("hrStorageType", value.last());
-				}
-			}
-			else if (request.startsWith(Constants.hrStorageDescr) && response.startsWith(Constants.hrStorageDescr)) {
-				OctetString value = (OctetString)variable;
-				
-				storageData.put("hrStorageDescr", new String(value.getValue()));
-			}
-			else if (request.startsWith(Constants.hrStorageAllocationUnits) && response.startsWith(Constants.hrStorageAllocationUnits)) {
-				Integer32 value = (Integer32)variable;
-				
-				storageData.put("hrStorageAllocationUnits", value.getValue());
-			}
-			else if (request.startsWith(Constants.hrStorageSize) && response.startsWith(Constants.hrStorageSize)) {
-				Integer32 value = (Integer32)variable;
-				
-				storageData.put("hrStorageSize", value.getValue());
-			}
-			else if (request.startsWith(Constants.hrStorageUsed) && response.startsWith(Constants.hrStorageUsed)) {
-				Integer32 value = (Integer32)variable;
-				int intValue = value.getValue();
-				
-				if (storageData.has("hrStorageAllocationUnits")) {
-					this.rollingMap.put(Resource.HRSTORAGEUSED, index, 1L* intValue * storageData.getInt("hrStorageAllocationUnits"));
-				}
-				
-				storageData.put("hrStorageUsed", intValue);
-			}
-			else {
-				return false;
-			}
+		else {
+			return false;
 		}
 		
 		return true;
 	}
 	
+	private final boolean parseIPNetToMediaTable(OID response, Variable variable, OID request) {
+		int [] array = response.getValue();
+		int index = array[array.length -5];
+		
+		if (request.startsWith(Constants.ipNetToMediaPhysAddress) && response.startsWith(Constants.ipNetToMediaPhysAddress)) {
+			OctetString value = (OctetString)variable;
+			
+			if (value.length() > 0) {
+				this.arpTable.put(new String(value.getValue()), index);
+			}
+		}
+		else {
+			return false;
+		}
+		
+		return true;
+	}
 	
 	/**
 	 * Parse.
@@ -481,27 +273,10 @@ public class Node extends CommunityTarget implements ResponseListener {
 			return parseHost(response, variable, request);
 		}
 		else if (request.startsWith(Constants.ipNetToMediaTable)) {
-			int [] array = response.getValue();
-			int index = array[array.length -5];
-			
-			if (request.startsWith(Constants.ipNetToMediaPhysAddress) && response.startsWith(Constants.ipNetToMediaPhysAddress)) {
-				OctetString value = (OctetString)variable;
-				
-				if (!value.equals("")) {
-					this.addrMapping.update(index, new String(value.getValue()));
-				}
-			}
-			else {
-				return false;
-			}
-			
-			return true;
+			return parseIPNetToMediaTable(response, variable, request);
 		}
-		else {
-			// 발생하면 안됨
-			
-			return false;
-		}
+		
+		return false;
 	}
 
 	public final PDU getNextRequest(PDU request, PDU response) throws IOException {
@@ -509,19 +284,21 @@ public class Node extends CommunityTarget implements ResponseListener {
 		Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
 		Vector<VariableBinding> nextRequests = new Vector<VariableBinding>();
 		VariableBinding requestVB, responseVB;
+		Variable value;
 		
 		for (int i=0, length = responseVBs.size(); i<length; i++) {
 			requestVB = (VariableBinding)requestVBs.get(i);
 			responseVB = (VariableBinding)responseVBs.get(i);
+			value = responseVB.getVariable();
+			
+			if (value == Null.endOfMibView) {
+				continue;
+			}
+			
 			try {
-				if (parseResponse(responseVB.getOid(), responseVB.getVariable(), requestVB.getOid())) {
-					if (!responseVB.equals(Null.endOfMibView)) {
-						nextRequests.add(responseVB);
-					}
-					else {
-						System.out.println("end of mib view.");
-					}
-				}
+				if (parseResponse(responseVB.getOid(), value, requestVB.getOid())) {
+					nextRequests.add(responseVB);
+				}				
 			} catch(Exception jsone) {
 				jsone.printStackTrace();
 			}
@@ -529,40 +306,18 @@ public class Node extends CommunityTarget implements ResponseListener {
 		
 		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
 	}
-	
-	public JSONObject getData() {
-		return this.data;
-	}
-	
-	public JSONObject getData(String database, String index, long start, long end, boolean summary) {
-		JSONObject data = null;
-	
-		try {
-			RollingFile rollingFile = this.rollingMap.getFile(Resource.valueOf(database.toUpperCase()), index);
-			
-			if (rollingFile != null) {
-				data = rollingFile.getData(start, end, summary);
-			}
-		}
-		catch (IllegalArgumentException iae) {
-		}
 		
-		return data;
-	}
-	
 	@Override
 	public void onResponse(ResponseEvent event) {
 		PDU request = event.getRequest();
 		PDU response = event.getResponse();
-		SnmpManager snmp = ((SnmpManager)event.getUserObject());
 		
 		((Snmp)event.getSource()).cancel(request, this);
+
+		completed = true;
 		
-		// request 보냈다는것은 snmp true 이거나 notfound (테스트)
-		// snmp false 에서는 request 하지 않음.
-		if (response == null) {
-			// response timed out
-			snmp.onFailure(this);
+		if (response == null) { // response timed out
+			onFailure();
 			
 			return;
 		}
@@ -574,11 +329,22 @@ public class Node extends CommunityTarget implements ResponseListener {
 				PDU nextRequest = getNextRequest(request, response);
 				
 				if (nextRequest == null) {
-					// end of get-next request
-					snmp.onSuccess(this);
+					long current = Calendar.getInstance().getTimeInMillis();
+					
+					responseTime = current - this.requestTime;
+					
+					this.data.put("responseTime", responseTime);
+					this.data.put("lastResponse", current);
+					
+					onSuccess();
+										
+					this.data.put("hrProcessorEntry", this.hrProcessorEntry);
+					this.data.put("hrStorageEntry", this.hrStorageEntry);
+					this.data.put("ifEntry", this.ifEntry);
+					this.data.put("arpTable", this.arpTable);
 				}
 				else {
-					snmp.sendNextRequest(this, nextRequest);
+					sendRequest(nextRequest);
 				}
 			} catch (IOException e) {
 				// TODO fatal error
@@ -588,5 +354,43 @@ public class Node extends CommunityTarget implements ResponseListener {
 		else {
 			new Exception().printStackTrace();
 		}
-	}	
+	}
+	
+	abstract protected void onSuccess();
+	abstract protected void onFailure();
+	
+	public static void main(String [] args) throws IOException {
+		final Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+		
+		snmp.listen();
+		
+		new Node(snmp, "127.0.0.1", 161, "itahm2014") {
+
+			@Override
+			public void onSuccess() {
+				System.out.println("completed!");
+				
+				try {
+					snmp.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
+			@Override
+			public void onFailure() {
+				System.out.println("timeout.");
+				
+				try {
+					snmp.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}.request(new RequestPDU());
+		
+		System.in.read();
+	}
+	
 }
