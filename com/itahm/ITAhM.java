@@ -12,7 +12,6 @@ import java.util.Timer;
 import com.itahm.table.Account;
 import com.itahm.table.Device;
 import com.itahm.table.Icon;
-import com.itahm.table.Index;
 import com.itahm.table.Profile;
 import com.itahm.table.Table;
 
@@ -31,7 +30,7 @@ public class ITAhM extends Timer {
 	public ITAhM(int tcp, String path, String host) throws IOException {
 		super(true);
 		
-		System.out.println("ITAhM version 1.1.3.11");
+		System.out.println("ITAhM version 1.1.3.12");
 		System.out.println("start up ITAhM agent");
 		
 		dataRoot = new File(path, "data");
@@ -43,7 +42,6 @@ public class ITAhM extends Timer {
 		tableMap.put("account", new Account());
 		tableMap.put("profile", new Profile());
 		tableMap.put("device", new Device());
-		tableMap.put("index", new Index());
 		tableMap.put("icon", new Icon());
 		
 		http = new HTTPServer("0.0.0.0", tcp);
@@ -56,7 +54,7 @@ public class ITAhM extends Timer {
 	}
 	
 	public static void debug(String msg) {
-		//System.out.println(msg);
+		System.out.println(msg);
 	}
 	
 	public static Table getTable(String tableName) {

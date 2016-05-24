@@ -7,6 +7,7 @@ public class Constant {
 	public static final String STRING_LEVEL = "level";
 	public static final String STRING_ERROR = "error";
 	public static final String STRING_ROOT = "root";
+	public static final String STRING_NAME = "name";
 	public final static String STRING_SNMP_STATUS = "snmp";
 	public final static String STRING_SHUTDOWN = "shutdown";
 	public final static String STRING_PROFILE = "profile";
@@ -18,7 +19,6 @@ public class Constant {
 	public static final String STRING_PROCENTRY = "hrProcessorEntry";
 	public static final String STRING_STRGENTRY = "hrStorageEntry";
 	public static final String STRING_MAC_ADDR = "ifPhysAddress";
-	public static final String STRING_IFINDEX = "ifIndex";
 	public static final String STRING_IFNAME = "ifName";
 	public static final String STRING_IFENTRY = "ifEntry";
 	public static final String STRING_IFSPEED = "ifSpeed";

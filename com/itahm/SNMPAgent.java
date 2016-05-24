@@ -3,7 +3,7 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -18,6 +18,8 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.snmp.RequestPDU;
 import com.itahm.snmp.TmpNode;
+import com.itahm.table.Device;
+import com.itahm.table.Profile;
 import com.itahm.table.Table;
 
 public class SNMPAgent extends Timer implements Closeable {
@@ -94,23 +96,23 @@ public class SNMPAgent extends Timer implements Closeable {
 			this.deviceData = this.deviceTable.getJSONObject();
 			this.profileData = this.profileTable.getJSONObject();
 			
-			for (Object id : deviceData.keySet()) {
-				device = deviceData.getJSONObject((String)id);
-			
-				ip = device.getString(Constant.STRING_IP);
+			for (Object key : deviceData.keySet()) {
+				ip = (String)key;
+				
+				device = deviceData.getJSONObject(ip);
 				
 				this.deviceList.put(ip, device);
 				
-				if (!device.has(Constant.STRING_SNMP_STATUS)) {
+				if (!device.has(Device.SNMP)) {
 					testNode(ip);
 				}
-				else if (device.getBoolean(Constant.STRING_SNMP_STATUS)) {
-					profileName = device.getString(Constant.STRING_PROFILE);
+				else if (device.getBoolean(Device.SNMP)) {
+					profileName = device.getString(Device.PROFILE);
 					
 					if (this.profileData.has(profileName)) {
 						profile = this.profileData.getJSONObject(profileName);
 						
-						addNode(ip, profile.getInt(Constant.STRING_UDP), profile.getString(Constant.STRING_COMMUNITY));
+						addNode(ip, profile.getInt(Constant.STRING_UDP), profile.getString(Profile.COMMUNITY));
 					}
 					else {
 						testNode(ip);
@@ -157,11 +159,17 @@ public class SNMPAgent extends Timer implements Closeable {
 			@Override
 			public void onTest(String ip, String profileName) {
 				JSONObject device = deviceList.get(ip);
+				String sysName;
 				
 				if (profileName != null) {
 					JSONObject profile = profileData.getJSONObject(profileName);
 				
 					addNode(ip, profile.getInt(Constant.STRING_UDP), profile.getString(Constant.STRING_COMMUNITY));
+					
+					sysName = device.getString(Constant.STRING_NAME);
+					if (sysName.length() == 0) {
+						device.put(Constant.STRING_NAME, this.sysName);
+					}
 					
 					device.put(Constant.STRING_PROFILE, profileName);
 					device.put(Constant.STRING_SNMP_STATUS, true);
@@ -177,7 +185,11 @@ public class SNMPAgent extends Timer implements Closeable {
 		for (Object name : profileData.keySet()) {
 			profile = profileData.getJSONObject((String)name);
 			
-			node.addProfile((String)name, profile.getInt(Constant.STRING_UDP), profile.getString(Constant.STRING_COMMUNITY));
+			try {
+				node.addProfile((String)name, profile.getInt(Constant.STRING_UDP), profile.getString(Constant.STRING_COMMUNITY));
+			} catch (UnknownHostException | JSONException e) {
+				return;
+			}
 		}
 		
 		node.test();

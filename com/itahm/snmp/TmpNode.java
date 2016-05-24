@@ -6,6 +6,7 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Vector;
 
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
@@ -28,9 +29,13 @@ private static final long TIMEOUT = 5000;
 	private final LinkedList<CommunityTarget> list;
 	private final Map<CommunityTarget, String> profileMap;
 	
+	protected String sysName;
+	
 	public TmpNode(Snmp snmp, String ip) {
 		this.snmp = snmp;
 		this.ip = ip;
+		
+		sysName = "";
 		
 		list = new LinkedList<CommunityTarget>();
 		
@@ -41,20 +46,15 @@ private static final long TIMEOUT = 5000;
 		pdu.add(new VariableBinding(Constants.sysName));
 	}
 	
-	public TmpNode addProfile(String name, int udp, String community) {
+	public TmpNode addProfile(String name, int udp, String community) throws UnknownHostException{
 		CommunityTarget target;
+			
+		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(this.ip), udp), new OctetString(community));
+		target.setVersion(SnmpConstants.version2c);
+		target.setTimeout(TIMEOUT);
 		
-		try {
-			target = new CommunityTarget(new UdpAddress(InetAddress.getByName(this.ip), udp), new OctetString(community));
-			target.setVersion(SnmpConstants.version2c);
-			target.setTimeout(TIMEOUT);
-			
-			this.list.add(target);
-			this.profileMap.put(target, name);
-			
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
+		this.list.add(target);
+		this.profileMap.put(target, name);	
 		
 		return this;
 	}
@@ -73,7 +73,7 @@ private static final long TIMEOUT = 5000;
 			}
 		}
 	}
-
+	
 	abstract public void onTest(String ip, String profileName);
 	
 	@Override
@@ -86,6 +86,17 @@ private static final long TIMEOUT = 5000;
 			test();
 		}
 		else {
+			PDU response = event.getResponse();
+			int status = response.getErrorStatus();
+			
+			if (status == PDU.noError) {
+				Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
+				VariableBinding responseVB = (VariableBinding)responseVBs.get(0);
+				if (responseVB.getOid().startsWith(Constants.sysName)) {
+					this.sysName = ((OctetString)responseVB.getVariable()).toString();
+				}
+				
+			}
 			onTest(this.ip, this.profileMap.get(this.list.peek()));
 		}
 	}

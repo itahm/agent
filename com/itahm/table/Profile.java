@@ -7,7 +7,13 @@ import org.json.JSONObject;
 import com.itahm.ITAhM;
 
 public class Profile extends Table {
-
+	
+	public final static String COMMUNITY = "community";
+	public final static String NAME = "name";
+	public final static String VERSION = "version";
+	public final static String UDP = "udp";
+	public final static String PUBLIC = "public";
+	
 	public Profile() throws IOException {
 		load("profile");
 		
@@ -17,11 +23,11 @@ public class Profile extends Table {
 	private void reset() {
 		if (isEmpty()) {
 			getJSONObject()
-				.put("public", new JSONObject()
-					.put("name", "public")
-					.put("version", "v2c")
-					.put("community", "public")
-					.put("udp", 161));
+				.put(PUBLIC, new JSONObject()
+					.put(NAME, "public")
+					.put(VERSION, "v2c")
+					.put(COMMUNITY, "public")
+					.put(UDP, 161));
 			
 			super.save();
 		}

@@ -5,91 +5,75 @@ import java.io.IOException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.itahm.Constant;
 import com.itahm.ITAhM;
 
 public class Device extends Table {
 
-	private final static String STRING_SHUTDOWN = "shutdown";
-	private final static String STRING_SNMP = "snmp";
-	private final static String STRING_IFENTRY = "ifEntry";
-	private final static String STRING_IP = "ip";
+	public final static String SHUTDOWN = "shutdown";
+	public final static String IFENTRY = "ifEntry";
+	public final static String IP = "ip";
+	public final static String NAME = "name";
+	public final static String SNMP = "snmp";
+	public final static String PROFILE = "profile";
+	public final static String TYPE = "type";
+	public final static String X = "x";
+	public final static String Y = "y";
+	public final static String LOCALHOST = "127.0.0.1";
 	
 	public Device() throws IOException {
 		load("device");
 		
 		if (isEmpty()) {
-			getJSONObject().put("0", new JSONObject()
-				.put("id", "0")
-				.put("ip", "127.0.0.1")
-				.put("x", 0).put("y", 0)
-				.put("name", "localhost")
-				.put("snmp", true)
-				.put("profile", "public")
-				.put("type", "server")
-				.put("shutdown", false)
-				.put("ifEntry", new JSONObject())
+			getJSONObject().put(LOCALHOST, new JSONObject()
+				.put(IP, LOCALHOST)
+				.put(X, 0)
+				.put(Y, 0)
+				.put(NAME, "localhost")
+				.put(TYPE, "server")
+				.put(IFENTRY, new JSONObject())
 			);
 			
 			save();
 		}
 		else {
-			String [] idArray = JSONObject.getNames(this.table);
+			String [] ipArray = JSONObject.getNames(this.table);
 			JSONObject device;
 			
 			// 모든 device는 active 하다고 가정하고 시작. shutdown 상태의 변화는 저장하지 않기 때문 
-			for (int i=0, length=idArray.length; i<length; i++) {
-				device = this.table.getJSONObject(idArray[i]);
+			for (int i=0, length=ipArray.length; i<length; i++) {
+				device = this.table.getJSONObject(ipArray[i]);
 				
-				device.put(STRING_SHUTDOWN, false);
+				device.put(SHUTDOWN, false);
 			}
 		}
 	}
 	
 	public void save(JSONObject data) {
 		JSONObject device;
-		String peerID;
-		String id;
+		String peerIP;
+		String ip;
 		
-		// 신규로 추가된 device에게 ID 부여하는 역할과
 		// 링크 확인의 역할
 		// SNMPAgent reload
 		for (Object key : data.keySet()) {
-			id = (String)key;
+			ip = (String)key;
 			
-			device = data.getJSONObject(id);
-		
-			// ID 부여
-			if (Long.parseLong(id) < 0) {
-				data.remove(id);
-				
-				try {
-					id = Long.toString(((Index)ITAhM.getTable("index")).assign());
-					
-					// snmp 상태가 제거되어야 함을 확인
-					device.remove(STRING_SNMP);
-					
-					device.put("id", id);
-					device.put("shutdown", false);
-					
-					data.put(id, device);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
+			device = data.getJSONObject(ip);
 			
-			if (device.has(STRING_IFENTRY)) {
-				JSONObject ifEntry = device.getJSONObject(STRING_IFENTRY);
+			if (device.has(IFENTRY)) {
+				JSONObject ifEntry = device.getJSONObject(IFENTRY);
 				String [] ifArray = JSONObject.getNames(ifEntry);
 				JSONObject peerDevice;
 				
 				if (ifArray != null) {
 					for (int j=0, _j=ifArray.length; j<_j; j++) {
-						peerID = ifArray[j];
-						peerDevice = data.getJSONObject(peerID);
+						peerIP = ifArray[j];
+						peerDevice = data.getJSONObject(peerIP);
 						
-						if ("".equals(ifEntry.getString(peerID))) {
+						if ("".equals(ifEntry.getString(peerIP))) {
 							try {
-								ifEntry.put(peerID, ITAhM.snmp.getPeerIFName(device.getString(STRING_IP), peerDevice.getString(STRING_IP)));
+								ifEntry.put(peerIP, ITAhM.snmp.getPeerIFName(device.getString(Constant.STRING_IP), peerDevice.getString(Constant.STRING_IP)));
 							}
 							catch (JSONException jsone) {
 								// 그럴리는 없지만 혹시
@@ -101,7 +85,7 @@ public class Device extends Table {
 			}
 			// 없으면 안되는 것이지만 개발자 실수에 의해 없는 채로 넘어와서 예외 발생시키는 상황 방지
 			else {
-				device.put(STRING_IFENTRY, new JSONObject());
+				device.put(IFENTRY, new JSONObject());
 			}
 		}
 		

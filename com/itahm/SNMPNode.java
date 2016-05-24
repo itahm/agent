@@ -52,7 +52,7 @@ public class SNMPNode extends Node {
 		
 		if (arpTable.has(mac)) {
 			JSONObject ifEntry = this.data.getJSONObject("ifEntry");
-			String index = arpTable.getString(mac);
+			String index = String.valueOf(arpTable.getInt(mac));
 			
 			return ifEntry.getJSONObject(index).getString(Constant.STRING_IFNAME);
 		}
@@ -61,7 +61,7 @@ public class SNMPNode extends Node {
 	}
 	
 	public String getPeerIFName(SNMPNode peer){
-		JSONObject ifEntry = this.data.getJSONObject(Constant.STRING_IFINDEX);
+		JSONObject ifEntry = this.data.getJSONObject(Constant.STRING_IFENTRY);
 		String mac;
 		String name;
 		
