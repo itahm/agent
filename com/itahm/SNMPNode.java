@@ -100,13 +100,15 @@ public class SNMPNode extends Node {
 		}
 		
 		if (lastRolling > 0) {
+			long interval = this.data.getLong("lastResponse") - lastRolling;
+			JSONObject ifEntry = this.data.getJSONObject("ifEntry");
 			long in;
 			long out;
-			long interval = this.data.getLong("lastResponse") - lastRolling;
+			long bps;
 			
 			for(String index: this.ifEntry.keySet()) {
 				data = this.ifEntry.get(index);
-				oldData = this.data.getJSONObject("ifEntry").getJSONObject(index);
+				oldData = ifEntry.getJSONObject(index);
 				
 				if (data.has(Constant.STRING_IFHCOUT)) {
 					out = data.getLong(Constant.STRING_IFHCOUT);
@@ -122,7 +124,11 @@ public class SNMPNode extends Node {
 					out -= oldData.getLong(Constant.STRING_IFOUT);
 				}
 				
-				this.rollingMap.put(Resource.IFOUTOCTETS, index, out *8 / interval);
+				bps = out *8000 / interval;
+				
+				data.put("ifOutBPS", bps);
+				
+				this.rollingMap.put(Resource.IFOUTOCTETS, index, bps);
 				
 				if (data.has(Constant.STRING_IFHCIN)) {
 					in = data.getLong(Constant.STRING_IFHCIN);
@@ -138,7 +144,11 @@ public class SNMPNode extends Node {
 					in -= oldData.getLong(Constant.STRING_IFIN);
 				}
 				
-				this.rollingMap.put(Resource.IFINOCTETS, index, in *8 / interval);
+				bps = in *8000 / interval;
+				
+				data.put("ifInBPS", bps);
+				
+				this.rollingMap.put(Resource.IFINOCTETS, index, bps);
 			}
 		}
 		
