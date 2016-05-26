@@ -30,7 +30,7 @@ public class ITAhM extends Timer {
 	public ITAhM(int tcp, String path, String host) throws IOException {
 		super(true);
 		
-		System.out.println("ITAhM version 1.1.3.12");
+		System.out.println("ITAhM version 1.1.3.13");
 		System.out.println("start up ITAhM agent");
 		
 		dataRoot = new File(path, "data");
