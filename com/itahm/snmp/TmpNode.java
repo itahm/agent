@@ -19,6 +19,8 @@ import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
+import com.itahm.ITAhM;
+
 abstract public class TmpNode implements ResponseListener {
 
 private static final long TIMEOUT = 5000;
@@ -96,8 +98,11 @@ private static final long TIMEOUT = 5000;
 					this.sysName = ((OctetString)responseVB.getVariable()).toString();
 				}
 				
+				onTest(this.ip, this.profileMap.get(this.list.peek()));
 			}
-			onTest(this.ip, this.profileMap.get(this.list.peek()));
+			else {
+				ITAhM.debug("알수 없는 오류. 개발자에게 문의 바랍니다.");
+			}
 		}
 	}
 	

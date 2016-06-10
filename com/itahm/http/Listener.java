@@ -65,6 +65,7 @@ public abstract class Listener implements Runnable, Closeable {
 			channel.configureBlocking(false);
 			channel.register(this.selector, SelectionKey.OP_READ, new Request(channel, this));
 			
+			// 이것 제대로 지워주지 않으면 메모리 릭!
 			this.connections.add(channel);
 			
 			return;
@@ -91,22 +92,15 @@ public abstract class Listener implements Runnable, Closeable {
 		try {
 			bytes = channel.read(buffer);
 			
-			if (bytes > 0) {
-				buffer.flip();
-				
-				try {
-					request.parse(this.buffer);
+			if (bytes != -1) {
+				if (bytes > 0) {
+					buffer.flip();
 					
-					return;
-				} catch (IOException ioe) {
-					// Debug 할것.
-					ioe.printStackTrace();
+					request.parse(this.buffer);
 				}
-			}
-			else if (bytes == 0) {
+				
 				return;
 			}
-			// else if (bytes == -1) disconnected
 		} catch (IOException ioe) {
 			// RESET에 의한 예외일 수 있음.
 		}
