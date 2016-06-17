@@ -21,7 +21,7 @@ public class ITAhM extends Timer {
 	
 	private static File dataRoot;
 	private static HTTPServer http;
-	
+	public static Log log;
 	public static SNMPAgent snmp;
 	public static GCMManager gcmm;
 	
@@ -30,11 +30,13 @@ public class ITAhM extends Timer {
 	public ITAhM(int tcp, String path, String host) throws IOException {
 		super(true);
 		
-		System.out.println("ITAhM version 1.1.3.14");
+		System.out.println("ITAhM version 1.1.3.15");
 		System.out.println("start up ITAhM agent");
 		
 		dataRoot = new File(path, "data");
 		dataRoot.mkdir();
+		
+		log = new Log(dataRoot);
 		
 		gcmm = new GCMManager(API_KEY, host);
 		
@@ -65,6 +67,8 @@ public class ITAhM extends Timer {
 		http.close();
 		
 		snmp.close();
+		
+		log.close();
 		
 		gcmm.close();
 		

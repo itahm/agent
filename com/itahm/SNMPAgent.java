@@ -215,7 +215,11 @@ public class SNMPAgent extends Timer implements Closeable {
 				message = String.format("%s[%s] %s", ip, name, message);
 			}
 			
-			Event.dispatch(ip, true, message);
+			try {
+				ITAhM.log.write(ip, false, true, message);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
 	}
@@ -236,7 +240,11 @@ public class SNMPAgent extends Timer implements Closeable {
 				message = String.format("%s[%s] %s", ip, name, message);
 			}
 			
-			Event.dispatch(ip, false, message);
+			try {
+				ITAhM.log.write(ip, false, false, message);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	

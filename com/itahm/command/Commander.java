@@ -1,6 +1,4 @@
-package com.itahm;
-
-import com.itahm.command.Command;
+package com.itahm.command;
 
 public enum Commander {
 	ECHO("com.itahm.command.Echo"),
@@ -14,7 +12,8 @@ public enum Commander {
 	SHUTDOWN("com.itahm.command.ShutDown"),
 	REGISTER("com.itahm.command.Register"),
 	UNREGISTER("com.itahm.command.UnRegister"),
-	MESSAGE("com.itahm.command.Message");
+	MESSAGE("com.itahm.command.Message"),
+	LOG("com.itahm.command.Log");
 	
 	private String className;
 	

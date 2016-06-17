@@ -6,6 +6,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.itahm.command.Command;
+import com.itahm.command.Commander;
 import com.itahm.http.Listener;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
@@ -46,7 +47,7 @@ public class HTTPServer extends Listener {
 	
 	@Override
 	protected void onClose(Request request, boolean closed) {
-		Event.cancel(request);
+		ITAhM.log.cancel(request);
 	}
 	
 	private void processRequest(Request request) throws IOException{
