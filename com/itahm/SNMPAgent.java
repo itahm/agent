@@ -32,8 +32,7 @@ public class SNMPAgent extends Timer implements Closeable {
 	private final Map<String, JSONObject> deviceList;
 	private final Table deviceTable;
 	private final Table profileTable;
-	private JSONObject deviceData;
-	private JSONObject profileData; 
+	private final Table criticalTable;
 	
 	private final static PDU pdu = new RequestPDU();
 	
@@ -48,12 +47,14 @@ public class SNMPAgent extends Timer implements Closeable {
 		
 		profileTable = ITAhM.getTable("profile");
 		
+		criticalTable = ITAhM.getTable("critical");
+		
 		snmpRoot = new File(ITAhM.getRoot(), "snmp");
 		snmpRoot.mkdir();
 		
 		snmp.listen();
 		
-		reload();
+		reStart();
 		
 		scheduleAtFixedRate(
 			new TimerTask() {
@@ -83,18 +84,22 @@ public class SNMPAgent extends Timer implements Closeable {
 		return this.snmp;
 	}
 	
-	public void reload() {
+	public void reStart() {
 		JSONObject device;
 		String ip;
 		JSONObject profile;
 		String profileName;
+		JSONObject deviceData;
+		JSONObject profileData;
+		JSONObject criticalData;
 		
 		synchronized(this.nodeList) {
 			this.nodeList.clear();
 			this.deviceList.clear();
 			
-			this.deviceData = this.deviceTable.getJSONObject();
-			this.profileData = this.profileTable.getJSONObject();
+			deviceData = this.deviceTable.getJSONObject();
+			profileData = this.profileTable.getJSONObject();
+			criticalData = this.criticalTable.getJSONObject();
 			
 			for (Object key : deviceData.keySet()) {
 				ip = (String)key;
@@ -109,10 +114,11 @@ public class SNMPAgent extends Timer implements Closeable {
 				else if (device.getBoolean(Device.SNMP)) {
 					profileName = device.getString(Device.PROFILE);
 					
-					if (this.profileData.has(profileName)) {
-						profile = this.profileData.getJSONObject(profileName);
+					if (profileData.has(profileName)) {
+						profile = profileData.getJSONObject(profileName);
 						
-						addNode(ip, profile.getInt(Constant.STRING_UDP), profile.getString(Profile.COMMUNITY));
+						addNode(ip, profile.getInt(Constant.STRING_UDP), profile.getString(Profile.COMMUNITY)
+							, criticalData.has(ip)? criticalData.getJSONObject(ip): null);
 					}
 					else {
 						testNode(ip);
@@ -133,11 +139,11 @@ public class SNMPAgent extends Timer implements Closeable {
 		return peerNode.getPeerIFName(node);
 	}
 	
-	private SNMPNode addNode(String ip, int udp, String community) {
+	private SNMPNode addNode(String ip, int udp, String community, JSONObject critical) {
 		SNMPNode node;
 		
 		try {
-			node = new SNMPNode(this, ip, udp, community);
+			node = new SNMPNode(this, ip, udp, community, critical);
 		
 			synchronized(this.nodeList) {
 				this.nodeList.put(ip, node);
@@ -151,6 +157,22 @@ public class SNMPAgent extends Timer implements Closeable {
 		return null;
 	}
 	
+	private JSONObject getDevice(String ip) {
+		return this.deviceList.get(ip);
+	}
+	
+	private String getNodeName(String ip) {
+		JSONObject device = getDevice(ip);
+		String name = device.getString("name");
+		
+		if ("".equals(name)) {
+			return ip;
+		}
+		else {
+			return String.format("%s[%s]", ip, name);
+		}
+	}
+	
 	public void testNode(String ip) {
 		final JSONObject profileData = this.profileTable.getJSONObject();
 		JSONObject profile;
@@ -158,13 +180,13 @@ public class SNMPAgent extends Timer implements Closeable {
 		TmpNode node = new TmpNode(this.snmp, ip) {
 			@Override
 			public void onTest(String ip, String profileName) {
-				JSONObject device = deviceList.get(ip);
+				JSONObject device = getDevice(ip);
 				String sysName;
 				
 				if (profileName != null) {
 					JSONObject profile = profileData.getJSONObject(profileName);
 				
-					addNode(ip, profile.getInt(Constant.STRING_UDP), profile.getString(Constant.STRING_COMMUNITY));
+					addNode(ip, profile.getInt(Constant.STRING_UDP), profile.getString(Constant.STRING_COMMUNITY), null);
 					
 					sysName = device.getString(Constant.STRING_NAME);
 					if (sysName.length() == 0) {
@@ -200,23 +222,13 @@ public class SNMPAgent extends Timer implements Closeable {
 	}
 	
 	public void onSuccess(String ip) {
-		JSONObject device = this.deviceList.get(ip);
+		JSONObject device = getDevice(ip);
 		
 		if (device.getBoolean(Constant.STRING_SHUTDOWN)) {
 			device.put(Constant.STRING_SHUTDOWN, false);
 			
-			String name = device.getString("name");
-			String message = "down to up.";
-			
-			if ("".equals(name)) {
-				message = String.format("%s %s", ip, message);
-			}
-			else {
-				message = String.format("%s[%s] %s", ip, name, message);
-			}
-			
 			try {
-				ITAhM.log.write(ip, false, true, message);
+				ITAhM.log.write(ip, false, true, getNodeName(ip) +" down to up.");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -225,26 +237,28 @@ public class SNMPAgent extends Timer implements Closeable {
 	}
 	
 	public void onFailure(String ip) {
-		JSONObject device = this.deviceList.get(ip);
+		JSONObject device = getDevice(ip);
 
 		if (!device.getBoolean(Constant.STRING_SHUTDOWN)) {
 			device.put(Constant.STRING_SHUTDOWN, true);
 			
-			String name = device.getString("name");
-			String message = "up to down.";
-			
-			if ("".equals(name)) {
-				message = String.format("%s %s", ip, message);
-			}
-			else {
-				message = String.format("%s[%s] %s", ip, name, message);
-			}
-			
 			try {
-				ITAhM.log.write(ip, false, false, message);
+				ITAhM.log.write(ip, false, false, getNodeName(ip) +" up to down.");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		}
+	}
+	
+	public void onCritical(String ip, boolean status, String message) {
+		JSONObject device = getDevice(ip);
+		
+		device.put("status", status);
+		
+		try {
+			ITAhM.log.write(ip, true, status, getNodeName(ip) +" "+ message);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	

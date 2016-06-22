@@ -36,11 +36,8 @@ import com.itahm.ITAhM;
 
 public abstract class Node implements ResponseListener {
 	
-	private static final long TIMEOUT = 5000;
-	
 	private final Snmp snmp;
 	private final CommunityTarget target;
-	
 	private long requestTime;
 	protected long responseTime;
 	private boolean completed;
@@ -52,7 +49,7 @@ public abstract class Node implements ResponseListener {
 	protected Map<String, JSONObject> ifEntry;
 	protected Map<String, Integer> arpTable;
 	
-	public Node(Snmp snmp, String ip, int udp, String community) throws IOException {
+	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {
 		this.snmp = snmp;
 		
 		data = new JSONObject();
@@ -62,7 +59,7 @@ public abstract class Node implements ResponseListener {
 		// target 설정
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
 		target.setVersion(SnmpConstants.version2c);
-		target.setTimeout(TIMEOUT);
+		target.setTimeout(timeout);
 		
 		// file 및 json 초기화
 		File nodeRoot = new File(new File(ITAhM.getRoot(), Constant.STRING_SNMP), ip);
@@ -335,7 +332,7 @@ public abstract class Node implements ResponseListener {
 					this.data.put("lastResponse", current);
 					
 					onSuccess();
-										
+					
 					this.data.put("hrProcessorEntry", this.hrProcessorEntry);
 					this.data.put("hrStorageEntry", this.hrStorageEntry);
 					this.data.put("ifEntry", this.ifEntry);
@@ -362,7 +359,7 @@ public abstract class Node implements ResponseListener {
 		
 		snmp.listen();
 		
-		new Node(snmp, "127.0.0.1", 161, "itahm2014") {
+		new Node(snmp, "127.0.0.1", 161, "itahm2014", 5000) {
 
 			@Override
 			public void onSuccess() {

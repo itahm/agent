@@ -32,6 +32,8 @@ public class Device extends Table {
 				.put(NAME, "localhost")
 				.put(TYPE, "server")
 				.put(IFENTRY, new JSONObject())
+				.put(SHUTDOWN, false)
+				.put("status", true)
 			);
 			
 			save();
@@ -45,6 +47,7 @@ public class Device extends Table {
 				device = this.table.getJSONObject(ipArray[i]);
 				
 				device.put(SHUTDOWN, false);
+				device.put("status", true);
 			}
 		}
 	}
@@ -91,6 +94,6 @@ public class Device extends Table {
 		
 		super.save(data);
 		
-		ITAhM.snmp.reload();
+		ITAhM.snmp.reStart();
 	}
 }

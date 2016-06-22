@@ -44,7 +44,6 @@ public class Log implements Closeable {
 		}
 		else {
 			this.log = new JSONObject(new String(bytes));
-			System.out.println(this.log);
 		}
 		
 		this.indexFile = new RandomAccessFile(indexFile, "rws");
@@ -74,8 +73,6 @@ public class Log implements Closeable {
 			this.indexObject = new JSONObject(new String(bytes));
 			this.index = this.indexObject.getLong("index");
 		}
-		
-		System.out.println("Log index ready: "+ this.index);
 	}
 	
 	private synchronized long getIndex() {

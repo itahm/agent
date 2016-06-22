@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Timer;
 
 import com.itahm.table.Account;
+import com.itahm.table.Critical;
 import com.itahm.table.Device;
 import com.itahm.table.Icon;
 import com.itahm.table.Profile;
@@ -30,7 +31,7 @@ public class ITAhM extends Timer {
 	public ITAhM(int tcp, String path, String host) throws IOException {
 		super(true);
 		
-		System.out.println("ITAhM version 1.1.3.15");
+		System.out.println("ITAhM version 1.1.3.17");
 		System.out.println("start up ITAhM agent");
 		
 		dataRoot = new File(path, "data");
@@ -45,6 +46,7 @@ public class ITAhM extends Timer {
 		tableMap.put("profile", new Profile());
 		tableMap.put("device", new Device());
 		tableMap.put("icon", new Icon());
+		tableMap.put("critical", new Critical());
 		
 		http = new HTTPServer("0.0.0.0", tcp);
 		
