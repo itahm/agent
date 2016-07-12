@@ -18,6 +18,10 @@ import com.itahm.util.DailyFile;
 
 public class Log implements Closeable {
 
+	public final static String SHUTDOWN = "shutdown";
+	public final static String CRITICAL = "critical";
+	public final static String TEST = "test";
+	
 	private final Set<Request> waiter;
 	
 	private DailyFile dailyFile;
@@ -91,15 +95,15 @@ public class Log implements Closeable {
 		return index; 
 	}
 	
-	public void write(String ip, boolean custom, boolean status, String message) throws IOException {
+	public void write(String ip, String type, boolean value, String message) throws IOException {
 		JSONObject logData = new JSONObject();
 		long index = getIndex();
 		
 		logData
 			.put("index", index)
 			.put("ip", ip)
-			.put("custom", custom)
-			.put("status", status)
+			.put("type", type)
+			.put("value", value)
 			.put("message", message)
 			.put("date", Calendar.getInstance().getTimeInMillis());
 		
@@ -113,7 +117,7 @@ public class Log implements Closeable {
 		
 		dispatch(logData);
 	}
-
+	
 	public String read(long mills) throws IOException {
 		byte [] bytes = this.dailyFile.read(mills);
 		

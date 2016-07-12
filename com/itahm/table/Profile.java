@@ -16,29 +16,12 @@ public class Profile extends Table {
 	
 	public Profile() throws IOException {
 		load("profile");
-		
-		reset();
 	}	
 
-	private void reset() {
-		if (isEmpty()) {
-			getJSONObject()
-				.put(PUBLIC, new JSONObject()
-					.put(NAME, "public")
-					.put(VERSION, "v2c")
-					.put(COMMUNITY, "public")
-					.put(UDP, 161));
-			
-			super.save();
-		}
-	}
-	
 	public void save(JSONObject data) {
 		super.save(data);
 		
 		ITAhM.snmp.reStart();
-		
-		reset();
 	}
 	
 }

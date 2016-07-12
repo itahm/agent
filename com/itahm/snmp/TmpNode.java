@@ -26,10 +26,11 @@ abstract public class TmpNode implements ResponseListener {
 private static final long TIMEOUT = 5000;
 	
 	private final Snmp snmp;
-	private final String ip;
 	private final PDU pdu;
 	private final LinkedList<CommunityTarget> list;
 	private final Map<CommunityTarget, String> profileMap;
+	
+	protected final String ip;
 	
 	protected String sysName;
 	
@@ -65,7 +66,7 @@ private static final long TIMEOUT = 5000;
 		CommunityTarget target = this.list.peek();
 		
 		if (target == null) {
-			onTest(this.ip, null);
+			onTest(null);
 		}
 		else {
 			try {
@@ -76,7 +77,7 @@ private static final long TIMEOUT = 5000;
 		}
 	}
 	
-	abstract public void onTest(String ip, String profileName);
+	abstract public void onTest(String profileName);
 	
 	@Override
 	public void onResponse(ResponseEvent event) {
@@ -98,7 +99,7 @@ private static final long TIMEOUT = 5000;
 					this.sysName = ((OctetString)responseVB.getVariable()).toString();
 				}
 				
-				onTest(this.ip, this.profileMap.get(this.list.peek()));
+				onTest(this.profileMap.get(this.list.peek()));
 			}
 			else {
 				ITAhM.debug("알수 없는 오류. 개발자에게 문의 바랍니다.");
@@ -113,7 +114,7 @@ private static final long TIMEOUT = 5000;
 		
 		new TmpNode(snmp, "192.168.0.20") {
 			@Override
-			public void onTest(String ip, String profileName) {
+			public void onTest(String profileName) {
 				try {
 					if (profileName == null) {
 						System.out.println("실패");

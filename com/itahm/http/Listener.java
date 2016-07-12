@@ -2,28 +2,32 @@ package com.itahm.http;
 
 import java.io.Closeable;
 import java.io.IOException;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.Timer;
 
 
-public abstract class Listener implements Runnable, Closeable {
+public abstract class Listener extends Timer implements Runnable, Closeable {
 
 	private final ServerSocketChannel channel;
 	private final ServerSocket listener;
 	private final Selector selector;
 	private final ByteBuffer buffer;
-	private final Set<SocketChannel> connections = new HashSet<SocketChannel>();
+	private final Set<Request> connections = new HashSet<Request>();
 	
-	private boolean closed;
+	private Boolean closed = false;
 	
 	public Listener() throws IOException {
 		this("0.0.0.0", 80);
@@ -58,15 +62,16 @@ public abstract class Listener implements Runnable, Closeable {
 	
 	private void onConnect() {
 		SocketChannel channel = null;
+		Request request;
 		
 		try {
 			channel = this.channel.accept();
+			request = new Request(channel, this);
 			
 			channel.configureBlocking(false);
-			channel.register(this.selector, SelectionKey.OP_READ, new Request(channel, this));
+			channel.register(this.selector, SelectionKey.OP_READ, request);
 			
-			// 이것 제대로 지워주지 않으면 메모리 릭!
-			this.connections.add(channel);
+			this.connections.add(request);
 			
 			return;
 		} catch (IOException e) {
@@ -94,7 +99,7 @@ public abstract class Listener implements Runnable, Closeable {
 			
 			if (bytes != -1) {
 				if (bytes > 0) {
-					buffer.flip();
+					this.buffer.flip();
 					
 					request.parse(this.buffer);
 				}
@@ -105,33 +110,43 @@ public abstract class Listener implements Runnable, Closeable {
 			// RESET에 의한 예외일 수 있음.
 		}
 		
-		onClose(request, true);
-		
-		disconnect(channel);
-	}
-
-	protected void disconnect(SocketChannel channel) {
 		try {
-			channel.close();
+			request.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		this.connections.remove(channel);
+		onClose(request, true);
+		
+		clearRequest(request);
+	}
+
+	public void clearRequest(Request request) {
+		this.connections.remove(request);
+	}
+	
+	public int getConnectionSize() {
+		return this.connections.size();
 	}
 	
 	@Override
-	public synchronized void close() throws IOException {
-		if (this.closed) {
-			return;
+	public void close() throws IOException {
+		synchronized (this.closed) {
+			if (this.closed) {
+				return;
+			}
+		
+			this.closed = true;
 		}
 		
-		for (SocketChannel channel : this.connections) {
-			channel.close();
+		for (Request request : this.connections) {
+			request.close();
 		}
 		
-		this.closed = true;
-			
+		this.connections.clear();
+		
+		cancel();
+		
 		this.selector.wakeup();
 	}
 

@@ -23,7 +23,7 @@ public class SNMPNode extends Node {
 	private CriticalData critical;
 	
 	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
-		super(agent.getSNMP(), ip, udp, community, TIMEOUT);
+		super(agent, ip, udp, community, TIMEOUT);
 		
 		this.agent = agent;
 		this.ip = ip;
@@ -86,11 +86,14 @@ public class SNMPNode extends Node {
 		return "";
 	}
 	
-	@Override
-	public void onSuccess() {
-		try {
+	private void parseResponse() {
 		JSONObject data;
 		JSONObject oldData;
+		long max;
+		long maxRate;
+		long value;
+		long capacity;
+		long tmpValue;
 		
 		this.agent.onSuccess(ip);
 		
@@ -98,21 +101,54 @@ public class SNMPNode extends Node {
 		
 		this.critical.analyze(CriticalData.RESPONSETIME, "0", TIMEOUT, super.responseTime);
 		
+		this.agent.onSubmitTop(ip, "responseTime", super.responseTime);
+		
+		max = 0;
 		for(String index: super.hrProcessorEntry.keySet()) {
-			this.rollingMap.put(Resource.HRPROCESSORLOAD, index, super.hrProcessorEntry.get(index));
+			value = super.hrProcessorEntry.get(index);
 			
-			this.critical.analyze(CriticalData.PROCESSOR, index, 100, super.hrProcessorEntry.get(index));
+			this.rollingMap.put(Resource.HRPROCESSORLOAD, index, value);
+			
+			this.critical.analyze(CriticalData.PROCESSOR, index, 100, value);
+			
+			max = Math.max(max, value);
 		}
 		
+		this.agent.onSubmitTop(ip, "processor", max);
+		
+		max = 0;
+		maxRate = 0;
 		for(String index: super.hrStorageEntry.keySet()) {
 			data = super.hrStorageEntry.get(index);
 			
-			this.rollingMap.put(Resource.HRSTORAGEUSED, index, 1L* data.getInt("hrStorageUsed") * data.getInt("hrStorageAllocationUnits"));
+			capacity = data.getInt("hrStorageSize");
+			tmpValue = data.getInt("hrStorageUsed");
 			
-			if (data.getInt("hrStorageSize") > 0) {
-				this.critical.analyze(CriticalData.STORAGE, index, data.getInt("hrStorageSize"), data.getInt("hrStorageUsed"));
+			if (capacity <= 0) {
+				continue;
+			}
+			
+			value = 1L* tmpValue * data.getInt("hrStorageAllocationUnits");
+			this.rollingMap.put(Resource.HRSTORAGEUSED, index, value);
+			
+			switch(data.getInt("hrStorageType")) {
+			case 2:
+				this.critical.analyze(CriticalData.MEMORY, index, capacity, tmpValue);
+				
+				this.agent.onSubmitTop(ip, "memory", value);
+				this.agent.onSubmitTop(ip, "memoryRate", tmpValue *100L / capacity);
+				
+				break;
+			case 4:
+				this.critical.analyze(CriticalData.STORAGE, index, capacity, tmpValue);
+				
+				max = Math.max(max, value);
+				maxRate = Math.max(maxRate, tmpValue *100L / capacity);
 			}
 		}
+		
+		this.agent.onSubmitTop(ip, "storage", max);
+		this.agent.onSubmitTop(ip, "storageRate", maxRate);
 		
 		if (lastRolling > 0) {
 			long interval = super.data.getLong("lastResponse") - lastRolling;
@@ -121,8 +157,17 @@ public class SNMPNode extends Node {
 			long in;
 			long out;
 			
+			max = 0;
+			maxRate = 0;
 			for(String index: super.ifEntry.keySet()) {
 				data = super.ifEntry.get(index);
+				
+				capacity = data.getInt("ifSpeed");
+				
+				if (!ifEntry.has(index) || capacity <= 0) {
+					continue;
+				}
+				
 				oldData = ifEntry.getJSONObject(index);
 				
 				if (data.has(Constant.STRING_IFHCOUT)) {
@@ -145,6 +190,9 @@ public class SNMPNode extends Node {
 				
 				this.rollingMap.put(Resource.IFOUTOCTETS, index, in);
 				
+				max = Math.max(max, in);
+				maxRate = Math.max(maxRate, in *100L / capacity);
+				
 				if (data.has(Constant.STRING_IFHCIN)) {
 					bytes = data.getLong(Constant.STRING_IFHCIN);
 				}
@@ -165,11 +213,20 @@ public class SNMPNode extends Node {
 				
 				this.rollingMap.put(Resource.IFINOCTETS, index, out);
 				
-				if (data.getInt("ifSpeed") > 0) {
-					this.critical.analyze(CriticalData.THROUGHPUT, index, data.getInt("ifSpeed"), Math.max(out, in));
-				}
+				max = Math.max(max, out);
+				maxRate = Math.max(maxRate, out *100L / capacity);
+				
+				this.critical.analyze(CriticalData.THROUGHPUT, index, capacity, Math.max(out, in));
 			}
+			
+			this.agent.onSubmitTop(ip, "throughput", max);
+			this.agent.onSubmitTop(ip, "throughputRate", maxRate);
 		}
+	}
+	@Override
+	public void onSuccess() {
+		try {
+			parseResponse();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -252,7 +309,7 @@ public class SNMPNode extends Node {
 				if (PROCESSOR.equals(resource)) {
 					mapping = this.processor;
 					
-					resource = "Processor "+ index +" load";
+					resource = "Processor load";
 				}
 				else if (MEMORY.equals(resource)) {
 					mapping = this.storage;
@@ -277,10 +334,10 @@ public class SNMPNode extends Node {
 			
 			if (critical != null) {
 				long rate = current *100 / max;
-				boolean status = !critical.isCritical(rate);
+				boolean criticalStatus = critical.isCritical(rate);
 				
-				if (!critical.compare(status)) {
-					agent.onCritical(ip, status, String.format("%s %d%% %s", resource, rate, status? "": " exceed the limit"));
+				if (!critical.compare(criticalStatus)) {
+					agent.onCritical(ip, criticalStatus, String.format("%s index[%s] %d%% %s", resource, index, rate, criticalStatus? " 성능 임계 초과.": " 성능 정상."));
 				}
 			}
 		}
@@ -289,19 +346,19 @@ public class SNMPNode extends Node {
 	class Critical {
 		
 		private final int limit;
-		private boolean status;
+		private boolean criticalStatus;
 		
 		public String tmp;
 		
-		public Critical(JSONObject critical) {
-			this.limit = critical.getInt("limit");
-			this.status = true;
+		public Critical(JSONObject criticalData) {
+			this.limit = criticalData.getInt("limit");
+			this.criticalStatus = false;
 			
 		}
 		
 		public boolean compare(boolean status) {
-			if (this.status != status) {
-				this.status = status;
+			if (this.criticalStatus != status) {
+				this.criticalStatus = status;
 				
 				return false;
 			}

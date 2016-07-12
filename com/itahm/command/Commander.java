@@ -13,7 +13,9 @@ public enum Commander {
 	REGISTER("com.itahm.command.Register"),
 	UNREGISTER("com.itahm.command.UnRegister"),
 	MESSAGE("com.itahm.command.Message"),
-	LOG("com.itahm.command.Log");
+	TOP("com.itahm.command.Top"),
+	LOG("com.itahm.command.Log"),
+	AGENT("com.itahm.command.Agent");
 	
 	private String className;
 	

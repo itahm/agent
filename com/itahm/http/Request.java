@@ -1,13 +1,18 @@
 package com.itahm.http;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
+
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimerTask;
 
-public class Request {
+public class Request implements Closeable {
 
 	public final static byte CR = (byte)'\r';
 	public final static byte LF = (byte)'\n';
@@ -23,6 +28,7 @@ public class Request {
 	private final SocketChannel channel;
 	private final Listener listener;
 	private byte [] buffer;
+	private TimerTask task;
 	private String method;
 	private String uri;
 	private String version;
@@ -32,9 +38,13 @@ public class Request {
 	public Request(SocketChannel channel, Listener listener) {
 		this.channel = channel;
 		this.listener = listener;
+		
+		setTimeout();
 	}
 	
 	public void parse(ByteBuffer src) throws IOException {
+		setTimeout();
+		
 		if (this.body == null) {
 			String line;
 			
@@ -55,6 +65,25 @@ public class Request {
 	
 	public byte [] getRequestBody() {
 		return this.body.toByteArray();
+	}
+	
+	private void setTimeout() {
+		if (this.task != null) {
+			this.task.cancel();
+		}
+		
+		this.task = new TimerTask() {
+
+			@Override
+			public void run() {
+				timeout();
+			}
+		};
+		
+		Calendar c = Calendar.getInstance();
+		
+		c.add(Calendar.HOUR, 1);
+		this.listener.schedule(this.task, c.getTime());
 	}
 	
 	private void parseBody(ByteBuffer src) throws IOException {
@@ -174,6 +203,18 @@ public class Request {
 		return null;
 	}
 	
+	public void timeout() {
+		try {
+			this.channel.socket().setSoLinger(true, 0);
+			
+			this.channel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		this.listener.clearRequest(this);
+	}
+	
 	public String getRequestMethod() {
 		return this.method;
 	}
@@ -196,6 +237,15 @@ public class Request {
 		while(message.remaining() > 0) {			
 			this.channel.write(message);
 		}
+	}
+
+	@Override
+	public void close() throws IOException {
+		if (this.task != null) {
+			this.task.cancel();
+		}
+		
+		this.channel.close();
 	}
 	
 }

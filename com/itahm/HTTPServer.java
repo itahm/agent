@@ -58,37 +58,34 @@ public class HTTPServer extends Listener {
 		}
 		else {
 			if ("OPTIONS".equals(method)) {
-				request.sendResponse(Response.getInstance(200, "OK", "")
-					.setResponseHeader("Allow", "OPTIONS, POST"));
+				request.sendResponse(Response.getInstance(200, "OK", "").setResponseHeader("Allow", "OPTIONS, POST"));
 			}
-			else if ("POST".equals(method)/* || "GET".equals(method)*/) {
-				String body = new String(request.getRequestBody(), "UTF-8");
-				JSONObject data = null;
+			else if ("POST".equals(method)) {
 				try {
-					data = new JSONObject(body);
-				}
-				catch (JSONException jsone) {
-				}
-				
-				if (data != null) {
+					JSONObject data = new JSONObject(new String(request.getRequestBody(), "UTF-8"));
+					
 					Session session = getSession(request);
 					
-					if (data.has("command")) {
+					if (!data.has("command")) {
+						request.sendResponse(Response.getInstance(400, "Bad Request", new JSONObject().put("error", "command not found")));
+					}
+					else {
 						Command command = Commander.getCommand(data.getString("command"));
 						
 						if (command != null) {
 							command.execute(request, data, session);
-							
-							return;
+						}
+						else {
+							request.sendResponse(Response.getInstance(400, "Bad Request", new JSONObject().put("error", "invalid command")));
 						}
 					}
 				}
-				
-				request.sendResponse(Response.getInstance(400, "Bad Request", ""));
+				catch (JSONException jsone) {
+					request.sendResponse(Response.getInstance(400, Response.BADREQUEST, new JSONObject().put("error", "invalid json request")));
+				}
 			}
 			else {
-				request.sendResponse(Response.getInstance(400, "Bad Request", "")
-					.setResponseHeader("Allow", "OPTIONS, POST"));
+				request.sendResponse(Response.getInstance(405, "Method Not Allowed").setResponseHeader("Allow", "OPTIONS, POST"));
 			}
 		}
 	}

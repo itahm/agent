@@ -11,6 +11,7 @@ import com.itahm.ITAhM;
 public class Device extends Table {
 
 	public final static String SHUTDOWN = "shutdown";
+	public final static String CRITICAL = "critical";
 	public final static String IFENTRY = "ifEntry";
 	public final static String IP = "ip";
 	public final static String NAME = "name";
@@ -33,7 +34,7 @@ public class Device extends Table {
 				.put(TYPE, "server")
 				.put(IFENTRY, new JSONObject())
 				.put(SHUTDOWN, false)
-				.put("status", true)
+				.put(CRITICAL, true)
 			);
 			
 			save();
@@ -47,7 +48,7 @@ public class Device extends Table {
 				device = this.table.getJSONObject(ipArray[i]);
 				
 				device.put(SHUTDOWN, false);
-				device.put("status", true);
+				device.put(CRITICAL, false);
 			}
 		}
 	}

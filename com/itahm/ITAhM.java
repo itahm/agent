@@ -21,7 +21,7 @@ public class ITAhM extends Timer {
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
 	
 	private static File dataRoot;
-	private static HTTPServer http;
+	public static HTTPServer http;
 	public static Log log;
 	public static SNMPAgent snmp;
 	public static GCMManager gcmm;
@@ -31,7 +31,7 @@ public class ITAhM extends Timer {
 	public ITAhM(int tcp, String path, String host) throws IOException {
 		super(true);
 		
-		System.out.println("ITAhM version 1.1.3.17");
+		System.out.println("ITAhM version 1.1.3.18");
 		System.out.println("start up ITAhM agent");
 		
 		dataRoot = new File(path, "data");

@@ -12,10 +12,6 @@ public class Account extends Table {
 	public Account() throws IOException {
 		load("account");
 		
-		reset();
-	}
-	
-	private void reset() {
 		if (isEmpty()) {
 			getJSONObject()
 				.put(Constant.STRING_ROOT, new JSONObject()
@@ -25,11 +21,5 @@ public class Account extends Table {
 		
 			super.save();
 		}
-	}
-	
-	public void save(JSONObject data) {
-		super.save(data);
-		
-		reset();
 	}
 }

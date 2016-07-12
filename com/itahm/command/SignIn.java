@@ -44,7 +44,7 @@ public class SignIn extends Command {
 				 }
 			}
 			
-			request.sendResponse(Response.getInstance(401, Response.UNAUTHORIZED, ""));
+			request.sendResponse(Response.getInstance(401, Response.UNAUTHORIZED));
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
