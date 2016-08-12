@@ -13,43 +13,21 @@ public class JSONSummary implements Data {
 	private final File root;
 	
 	private Calendar date;
-	private final long end;
+	private long end;
 	private long nextDay;
 	private JSONObject data = null;
-	private final JSONObject result;
 	
-	public JSONSummary(JSONObject json, File rollingRoot, long startDate, long endDate) {
-		Calendar calendar = Calendar.getInstance();
-		
-		date = Calendar.getInstance();
-		
-		result = json;
-		root = rollingRoot;
-		date.setTimeInMillis(startDate);
-		end = endDate;
-		
-		date.set(Calendar.MILLISECOND, 0);
-		date.set(Calendar.SECOND, 0);
-		date.set(Calendar.MINUTE, 0);
-		
-		calendar.setTimeInMillis(startDate);
-		calendar.set(Calendar.MILLISECOND, 0);
-		calendar.set(Calendar.SECOND, 0);
-		calendar.set(Calendar.MINUTE, 0);
-		calendar.set(Calendar.HOUR_OF_DAY, 0);
-		
-		nextDay = calendar.getTimeInMillis();
-		
-		nextDate();
+	public JSONSummary(File rollingRoot) {
+		this.root = rollingRoot;
 	}
 	
-	public boolean next() {
-		if (this.end < this.date.getTimeInMillis()) {
-			return false;
-		}
-		
+	public JSONObject getJSON(JSONObject json) {
 		long date = this.date.getTimeInMillis();
 		String key = Long.toString(date);
+		
+		if (this.end < date) {
+			return json;
+		}
 		
 		if (date >= this.nextDay) {
 			nextDate();
@@ -57,7 +35,7 @@ public class JSONSummary implements Data {
 		
 		try {
 			if (this.data != null && this.data.has(key)) {
-				this.result.put(key, this.data.getJSONObject(key));
+				json.put(key, this.data.getJSONObject(key));
 			}
 		}
 		catch (JSONException jsone) {
@@ -65,7 +43,7 @@ public class JSONSummary implements Data {
 		
 		this.date.add(Calendar.HOUR_OF_DAY, 1);
 		
-		return true;
+		return getJSON(json);
 	}
 	
 	private void nextDate() {
@@ -87,6 +65,32 @@ public class JSONSummary implements Data {
 			
 			this.date.setTimeInMillis(this.nextDay);
 		}
+	}
+
+	@Override
+	public JSONObject getJSON(long startMills, long endMills) {
+		Calendar calendar = Calendar.getInstance();
+		
+		this.date = Calendar.getInstance();
+		
+		this.date.setTimeInMillis(startMills);
+		this.end = endMills;
+		
+		this.date.set(Calendar.MILLISECOND, 0);
+		this.date.set(Calendar.SECOND, 0);
+		this.date.set(Calendar.MINUTE, 0);
+		
+		calendar.setTimeInMillis(startMills);
+		calendar.set(Calendar.MILLISECOND, 0);
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
+		
+		nextDay = calendar.getTimeInMillis();
+		
+		nextDate();
+		
+		return getJSON(new JSONObject());
 	}
 	
 }

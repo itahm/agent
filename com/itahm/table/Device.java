@@ -54,28 +54,35 @@ public class Device extends Table {
 	}
 	
 	public void save(JSONObject data) {
-		JSONObject device;
-		String peerIP;
-		String ip;
+		JSONObject device = null;
 		
-		// 링크 확인의 역할
-		// SNMPAgent reload
-		for (Object key : data.keySet()) {
-			ip = (String)key;
+		if (data.has("target")) {
+			String ip = (String)data.remove("target");
 			
-			device = data.getJSONObject(ip);
+			if (data.has(ip)) {
+				device = data.getJSONObject(ip);
+			}
 			
-			if (device.has(IFENTRY)) {
-				JSONObject ifEntry = device.getJSONObject(IFENTRY);
-				String [] ifArray = JSONObject.getNames(ifEntry);
-				JSONObject peerDevice;
+			ITAhM.snmp.reload(ip, device);
+		}
+		else {
+			JSONObject ifEntry;
+			JSONObject peerDevice;
+			String peerIP;
+			
+			// 링크 확인의 역할
+			for (Object ip : data.keySet()) {
+				device = data.getJSONObject((String)ip);
 				
-				if (ifArray != null) {
-					for (int j=0, _j=ifArray.length; j<_j; j++) {
-						peerIP = ifArray[j];
-						peerDevice = data.getJSONObject(peerIP);
+				if (device.has(IFENTRY)) {
+					ifEntry = device.getJSONObject(IFENTRY);
+					
+					for (Object key : ifEntry.keySet()) {
+						peerIP = (String)key;
 						
 						if ("".equals(ifEntry.getString(peerIP))) {
+							peerDevice = data.getJSONObject(peerIP);
+							
 							try {
 								ifEntry.put(peerIP, ITAhM.snmp.getPeerIFName(device.getString(Constant.STRING_IP), peerDevice.getString(Constant.STRING_IP)));
 							}
@@ -84,17 +91,18 @@ public class Device extends Table {
 								jsone.printStackTrace();
 							}
 						}
-					}
+					}				
+				}
+				// 없으면 안되는 것이지만 개발자 실수에 의해 없는 채로 넘어와서 예외 발생시키는 상황 방지
+				else {
+					device.put(IFENTRY, new JSONObject());
 				}
 			}
-			// 없으면 안되는 것이지만 개발자 실수에 의해 없는 채로 넘어와서 예외 발생시키는 상황 방지
-			else {
-				device.put(IFENTRY, new JSONObject());
-			}
+			
+			ITAhM.snmp.reload();
 		}
 		
 		super.save(data);
-		
-		ITAhM.snmp.reStart();
 	}
+	
 }

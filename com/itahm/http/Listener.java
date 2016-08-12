@@ -25,7 +25,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 	private final ServerSocket listener;
 	private final Selector selector;
 	private final ByteBuffer buffer;
-	private final Set<Request> connections = new HashSet<Request>();
+	private static final Set<Request> connections = new HashSet<Request>();
 	
 	private Boolean closed = false;
 	
@@ -71,7 +71,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 			channel.configureBlocking(false);
 			channel.register(this.selector, SelectionKey.OP_READ, request);
 			
-			this.connections.add(request);
+			connections.add(request);
 			
 			return;
 		} catch (IOException e) {
@@ -90,7 +90,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 	private void onRead(SelectionKey key) {
 		SocketChannel channel = (SocketChannel)key.channel();
 		Request request = (Request)key.attachment();
-		int bytes ;
+		int bytes = 0;
 		
 		this.buffer.clear();
 		
@@ -107,26 +107,23 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 				return;
 			}
 		} catch (IOException ioe) {
-			// RESET에 의한 예외일 수 있음.
+			// RESET에 의한 예외일 수 있음. client의 reset을 막을수는 없기에...
+			System.out.println(ioe.getMessage());
 		}
 		
-		try {
-			request.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		onClose(request, true);
-		
-		clearRequest(request);
+		closeRequest(request);
 	}
 
-	public void clearRequest(Request request) {
-		this.connections.remove(request);
+	public void closeRequest(Request request) {
+		request.close();
+		
+		connections.remove(request);
+		
+		onClose(request);
 	}
 	
 	public int getConnectionSize() {
-		return this.connections.size();
+		return connections.size();
 	}
 	
 	@Override
@@ -139,11 +136,11 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 			this.closed = true;
 		}
 		
-		for (Request request : this.connections) {
+		for (Request request : connections) {
 			request.close();
 		}
-		
-		this.connections.clear();
+			
+		connections.clear();
 		
 		cancel();
 		
@@ -201,12 +198,14 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 	}
 	
 	abstract protected void onRequest(Request request);
-	abstract protected void onClose(Request request, boolean closed);
+	abstract protected void onClose(Request request);
 	abstract protected void onStart();
 	abstract protected void onStop();
 	
 	public static void main(String [] args) throws IOException {
-		final Listener server = new Listener() {
+		final Set<Request> req = new HashSet<Request>();
+		
+		final Listener server = new Listener(2015) {
 
 			@Override
 			protected void onRequest(Request request) {
@@ -216,20 +215,19 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 				
 				try {
 					
-					request.sendResponse(Response.getInstance(200, "OK",
-						"<!DOCTYPE html><html><head><title>test</title></head></html>")
-							.setResponseHeader("Connection", "Close"));
+					request.sendResponse(Response.getInstance(200, "OK","{\"test\":\"good\"}"));
 
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				
+				req.add(request);
 			}
 
 			@Override
-			protected void onClose(Request request, boolean closed) {
-				// TODO Auto-generated method stub
-				
+			protected void onClose(Request request) {
+				req.remove(request);
 			}
 
 			@Override

@@ -3,7 +3,7 @@ package com.itahm.http;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
-
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
@@ -23,8 +23,9 @@ public class Request implements Closeable {
 	public final static String DELETE = "DELETE";
 	public final static String TRACE = "TRACE";
 	public final static String CONNECT = "CONNECT";
-	
+
 	protected Map<String, String> header;
+	
 	private final SocketChannel channel;
 	private final Listener listener;
 	private byte [] buffer;
@@ -34,6 +35,7 @@ public class Request implements Closeable {
 	private String version;
 	private int length;
 	private ByteArrayOutputStream body;
+	private Boolean closed = false;
 	
 	public Request(SocketChannel channel, Listener listener) {
 		this.channel = channel;
@@ -101,7 +103,7 @@ public class Request implements Closeable {
 			this.header = null;
 		}
 		else if (this.length < length){
-			throw new IOException("malformed http request.");
+			throw new IOException("malformed http request");
 		}
 		
 	}
@@ -111,23 +113,16 @@ public class Request implements Closeable {
 			parseStartLine(line);
 		}
 		else {
-			if ("".equals(line)) {
+			if ("".equals(line)) {			
+				String length = this.header.get("content-length");
+				
 				try {
-					String length = this.header.get("content-length");
-					
-					if (length == null) {
-						if (POST.equals(this.method)) {
-							throw new IOException("malformed http request.");
-						}
-						
-						listener.onRequest(this);
-					}
-					
 					this.length = Integer.parseInt(length);
+				} catch (NumberFormatException nfe) {
+					this.length = 0;
 				}
-				catch (NumberFormatException nfe) {
-					throw new IOException("malformed http request.");
-				}
+					
+				listener.onRequest(this);
 				
 				this.body = new ByteArrayOutputStream();
 				
@@ -137,7 +132,7 @@ public class Request implements Closeable {
 				int index = line.indexOf(":");
 				
 				if (index == -1) {
-					throw new IOException("malformed http request.");
+					throw new IOException("malformed http request");
 				}
 				
 				this.header.put(line.substring(0, index).toLowerCase(), line.substring(index + 1).trim());
@@ -155,7 +150,7 @@ public class Request implements Closeable {
 		
 		String [] token = line.split(" ");
 		if (token.length != 3) {
-			throw new IOException("malformed http request.");
+			throw new IOException("malformed http request");
 		}
 		
 		this.method = token[0];
@@ -203,16 +198,15 @@ public class Request implements Closeable {
 		return null;
 	}
 	
-	public void timeout() {
+	private void timeout() {
+		// reset
 		try {
 			this.channel.socket().setSoLinger(true, 0);
-			
-			this.channel.close();
-		} catch (IOException e) {
+		} catch (SocketException e) {
 			e.printStackTrace();
 		}
 		
-		this.listener.clearRequest(this);
+		this.listener.closeRequest(this);
 	}
 	
 	public String getRequestMethod() {
@@ -231,21 +225,41 @@ public class Request implements Closeable {
 		return this.header.get(name.toLowerCase());
 	}
 	
-	public void sendResponse(Response response) throws IOException {
-		ByteBuffer message = response.build();
-		
-		while(message.remaining() > 0) {			
-			this.channel.write(message);
+	public boolean sendResponse(Response response) throws IOException {
+		synchronized(closed) {
+			if (closed) {
+				return false;
+			}
+
+			ByteBuffer message = response.build();
+			
+			while(message.remaining() > 0) {			
+				this.channel.write(message);
+			}
 		}
+		
+		return true;
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
+		synchronized(closed) {
+			if (closed) {
+				return;
+			}
+			
+			closed = true;
+		}
+
+		try {
+			this.channel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		if (this.task != null) {
 			this.task.cancel();
 		}
-		
-		this.channel.close();
 	}
 	
 }

@@ -334,10 +334,11 @@ public class SNMPNode extends Node {
 			
 			if (critical != null) {
 				long rate = current *100 / max;
-				boolean criticalStatus = critical.isCritical(rate);
+				int value = critical.value(rate);
 				
-				if (!critical.compare(criticalStatus)) {
-					agent.onCritical(ip, criticalStatus, String.format("%s index[%s] %d%% %s", resource, index, rate, criticalStatus? " 성능 임계 초과.": " 성능 정상."));
+				if ((value & Critical.DIFF) > 0) {
+					agent.onCritical(ip, (value & Critical.CRITIC) > 0
+						, String.format("%s index[%s] %d%% %s", resource, index, rate, (value & Critical.CRITIC) > 0? " 성능 임계 초과.": " 성능 정상."));
 				}
 			}
 		}
@@ -345,29 +346,32 @@ public class SNMPNode extends Node {
 	
 	class Critical {
 		
-		private final int limit;
-		private boolean criticalStatus;
+		public static final int DIFF = 0x01;
+		public static final int CRITIC = 0x10;
 		
-		public String tmp;
+		private final int limit;
+		private Boolean status;
 		
 		public Critical(JSONObject criticalData) {
-			this.limit = criticalData.getInt("limit");
-			this.criticalStatus = false;
-			
+			this.limit = criticalData.getInt("limit");			
 		}
 		
-		public boolean compare(boolean status) {
-			if (this.criticalStatus != status) {
-				this.criticalStatus = status;
-				
-				return false;
+		public int value(long current) {
+			boolean critical = this.limit <= current;
+			int value = critical? CRITIC: 0;
+			
+			if (this.status == null) {
+				this.status = new Boolean(critical);
 			}
-			
-			return true;
-		}
+			else {
+				if (this.status != critical) {
+					value |= DIFF;
+				}
+				
+				this.status = critical;
+			}
 		
-		public boolean isCritical(long current) {
-			return this.limit <= current;
+			return value;
 		}
 	}
 }

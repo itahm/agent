@@ -170,12 +170,7 @@ public class RollingFile implements Closeable {
 	}
 	
 	public JSONObject getData(long start, long end, boolean summary) {
-		JSONObject result = new JSONObject();
-		Data data = summary? new JSONSummary(result, this.root, start, end): new JSONData(result, this.root, start, end);
-		
-		while (data.next());
-		
-		return result;
+		return (summary? new JSONSummary(this.root): new JSONData(this.root)).getJSON(start, end);
 	}
 	
 	@Override

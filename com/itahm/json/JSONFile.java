@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -57,7 +57,7 @@ public class JSONFile implements Closeable{
 			this.channel.read(buffer);
 			buffer.flip();
 			try {
-				this.json = new JSONObject(Charset.defaultCharset().decode(buffer).toString());
+				this.json = new JSONObject(StandardCharsets.UTF_8.decode(buffer).toString());
 			}
 			catch (JSONException jsone) {
 				throw new IOException("custom ITAhM exception: invalid json file.");
@@ -97,7 +97,7 @@ public class JSONFile implements Closeable{
 				bb.flip();
 			
 				try {
-					return new JSONObject(Charset.defaultCharset().decode(bb).toString());
+					return new JSONObject(StandardCharsets.UTF_8.decode(bb).toString());
 				}
 				catch (JSONException jsone) {
 				}
@@ -124,7 +124,7 @@ public class JSONFile implements Closeable{
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public void save() throws IOException {	
-		ByteBuffer buffer = ByteBuffer.wrap(this.json.toString().getBytes());
+		ByteBuffer buffer = ByteBuffer.wrap(this.json.toString().getBytes("UTF-8"));
 		
 		this.file.setLength(0);
 		this.channel.write(buffer);

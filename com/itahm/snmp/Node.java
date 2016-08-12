@@ -1,6 +1,5 @@
 package com.itahm.snmp;
 
-import java.io.File;
 import java.io.IOException;
 
 import java.net.InetAddress;
@@ -60,10 +59,6 @@ public abstract class Node implements ResponseListener {
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
 		target.setVersion(SnmpConstants.version2c);
 		target.setTimeout(timeout);
-		
-		// file 및 json 초기화
-		File nodeRoot = new File(new File(ITAhM.getRoot(), Constant.STRING_SNMP), ip);
-		nodeRoot.mkdirs();
 	}
 	
 	public void request (PDU pdu) {

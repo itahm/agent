@@ -37,7 +37,7 @@ public class Push extends Command {
 				}
 			}
 		}
-		catch (JSONException jsone) {
+		catch (JSONException jsone) {jsone.printStackTrace();
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
 				new JSONObject().put("error", "invalid json request")));
 		}

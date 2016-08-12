@@ -7,7 +7,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Timer;
 
 import com.itahm.table.Account;
 import com.itahm.table.Critical;
@@ -16,7 +15,7 @@ import com.itahm.table.Icon;
 import com.itahm.table.Profile;
 import com.itahm.table.Table;
 
-public class ITAhM extends Timer {
+public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
 	
@@ -29,9 +28,7 @@ public class ITAhM extends Timer {
 	private static Map<String, Table> tableMap;
 	
 	public ITAhM(int tcp, String path, String host) throws IOException {
-		super(true);
-		
-		System.out.println("ITAhM version 1.1.3.18");
+		System.out.println("ITAhM version 1.1.3.24");
 		System.out.println("start up ITAhM agent");
 		
 		dataRoot = new File(path, "data");
@@ -48,9 +45,9 @@ public class ITAhM extends Timer {
 		tableMap.put("icon", new Icon());
 		tableMap.put("critical", new Critical());
 		
-		http = new HTTPServer("0.0.0.0", tcp);
-		
 		snmp = new SNMPAgent();
+		
+		http = new HTTPServer("0.0.0.0", tcp);
 	}
 	
 	public static File getRoot() {

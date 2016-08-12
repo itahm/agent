@@ -1,5 +1,6 @@
 package com.itahm;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.json.JSONException;
@@ -46,7 +47,7 @@ public class HTTPServer extends Listener {
 	}
 	
 	@Override
-	protected void onClose(Request request, boolean closed) {
+	protected void onClose(Request request) {
 		ITAhM.log.cancel(request);
 	}
 	
@@ -58,7 +59,7 @@ public class HTTPServer extends Listener {
 		}
 		else {
 			if ("OPTIONS".equals(method)) {
-				request.sendResponse(Response.getInstance(200, "OK", "").setResponseHeader("Allow", "OPTIONS, POST"));
+				request.sendResponse(Response.getInstance(200, "OK").setResponseHeader("Allow", "OPTIONS, GET, POST"));
 			}
 			else if ("POST".equals(method)) {
 				try {
@@ -83,6 +84,20 @@ public class HTTPServer extends Listener {
 				catch (JSONException jsone) {
 					request.sendResponse(Response.getInstance(400, Response.BADREQUEST, new JSONObject().put("error", "invalid json request")));
 				}
+			}
+			else if ("GET".equals(method)) {
+				File uri = new File(ITAhM.getRoot().getParentFile(), request.getRequestURI());
+				
+				if (uri.isFile()) {
+					Response response = Response.getInstance(200, "OK", uri);
+					if (response != null) {
+						request.sendResponse(response);
+						
+						return;
+					}
+				}
+				
+				request.sendResponse(Response.getInstance(404, "Not Found"));
 			}
 			else {
 				request.sendResponse(Response.getInstance(405, "Method Not Allowed").setResponseHeader("Allow", "OPTIONS, POST"));

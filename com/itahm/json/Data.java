@@ -1,5 +1,7 @@
 package com.itahm.json;
 
+import org.json.JSONObject;
+
 public interface Data {
-	public boolean next();
+	public JSONObject getJSON(long startMills, long endMills);
 }

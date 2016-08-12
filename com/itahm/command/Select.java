@@ -19,11 +19,6 @@ public class Select extends Command {
 			
 			if (node != null) {
 				request.sendResponse(Response.getInstance(200, Response.OK, node.getData()));
-				
-				if (data.has("trigger") && data.getBoolean("trigger")) {
-					//TODO realtime 추후 구현.
-					//ITAhM.getSnmp().request(node);
-				}
 			}
 			else {
 				request.sendResponse(Response.getInstance(400, Response.BADREQUEST,

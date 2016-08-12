@@ -22,7 +22,7 @@ public class Log implements Closeable {
 	public final static String CRITICAL = "critical";
 	public final static String TEST = "test";
 	
-	private final Set<Request> waiter;
+	private final Set<Request> waiter = new HashSet<Request> ();
 	
 	private DailyFile dailyFile;
 	private RandomAccessFile indexFile;
@@ -32,8 +32,6 @@ public class Log implements Closeable {
 	private final JSONObject log;
 	
 	public Log(File dataRoot) throws IOException {
-		this.waiter = new HashSet<Request> ();
-		
 		File logRoot = new File(dataRoot, "log");
 		File indexFile = new File(logRoot, "index");
 		
@@ -87,7 +85,7 @@ public class Log implements Closeable {
 		try {
 			this.indexFile.setLength(0);
 			
-			this.indexChannel.write(ByteBuffer.wrap(this.indexObject.toString().getBytes()));
+			this.indexChannel.write(ByteBuffer.wrap(this.indexObject.toString().getBytes("UTF-8")));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -113,10 +111,25 @@ public class Log implements Closeable {
 		
 		this.log.put(Long.toString(index), logData);
 		
-		this.dailyFile.write(this.log.toString().getBytes());
+		this.dailyFile.write(this.log.toString().getBytes("UTF-8"));
 		
-		dispatch(logData);
+		// TODO waiter들이 유효한 request인지 확인해야한다.
+		synchronized(this.waiter) {
+			for (Request request : this.waiter) {
+				try {
+					request.sendResponse(Response.getInstance(200, "OK", logData));
+				} catch (IOException e) {
+					// TODO 이 경우 소켓 어떻게 닫아주나?
+					e.printStackTrace();
+				}
+			}
+			
+			waiter.clear();
+		}
+			
+		ITAhM.gcmm.broadcast(logData.getString("message"));
 	}
+	
 	
 	public String read(long mills) throws IOException {
 		byte [] bytes = this.dailyFile.read(mills);
@@ -156,27 +169,14 @@ public class Log implements Closeable {
 		}
 	}
 	
+	public int getWaiterCount() {
+		return this.waiter.size();
+	}
+	
 	public void cancel(Request request) {
 		synchronized(this.waiter) {
 			this.waiter.remove(request);
 		}
-	}
-	
-	private void dispatch(JSONObject logData) {
-		synchronized(this.waiter) {
-			for (Request request : this.waiter) {
-				try {
-					request.sendResponse(Response.getInstance(200, "OK", logData));
-				} catch (IOException e) {
-					// TODO 이 경우 소켓 어떻게 닫아주나?
-					e.printStackTrace();
-				}
-			}
-			
-			this.waiter.clear();
-		}
-		
-		ITAhM.gcmm.broadcast(logData.getString("message"));
 	}
 	
 	public void close() {

@@ -13,8 +13,16 @@ public class Critical extends Table {
 	}
 	
 	public void save(JSONObject data) {
-		super.save(data);
+		if (data.has("target")) {
+			String ip = (String)data.remove("target");
+			
+			ITAhM.snmp.reload(ip);
+		}
+		else {
+			//TODO 오류
+			System.out.println("Critical.java critical data 에서 target 없음");
+		}
 		
-		ITAhM.snmp.reStart();
+		super.save(data);
 	}
 }

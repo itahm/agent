@@ -1,8 +1,12 @@
 package com.itahm.http;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -29,6 +33,27 @@ public class Response {
 	
 	public static Response getInstance(int status, String reason) {
 		return getInstance(status, reason, "");
+	}
+	
+	public static Response getInstance(int status, String reason, File file) {
+		try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+			FileChannel fc = raf.getChannel();
+			int size = (int)fc.size();
+		
+			if (size > 0) {
+				ByteBuffer buffer = ByteBuffer.allocate(size);
+				
+				fc.read(buffer);
+				
+				buffer.flip();
+				
+				return getInstance(status, reason, StandardCharsets.UTF_8.decode(buffer).toString());
+			}
+			
+		} catch (IOException ioe) {
+		}
+		
+		return null;
 	}
 	
 	public static Response getInstance(int status, String reason, JSONObject body) {
@@ -66,7 +91,7 @@ public class Response {
 	
 	public ByteBuffer build() throws IOException {
 		if (this.startLine == null || this.body == null) {
-			throw new IOException("malformed http request.");
+			throw new IOException("malformed http request!");
 		}
 		
 		StringBuilder sb = new StringBuilder();

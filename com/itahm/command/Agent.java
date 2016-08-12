@@ -16,7 +16,8 @@ public class Agent extends Command {
 		
 		response
 			.put("connections", ITAhM.http.getConnectionSize())
-			.put("space", ITAhM.getRoot().getUsableSpace());
+			.put("space", ITAhM.getRoot().getUsableSpace())
+			.put("waiters", ITAhM.log.getWaiterCount());
 		
 		request.sendResponse(Response.getInstance(200, Response.OK, response));
 	}

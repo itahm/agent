@@ -21,7 +21,7 @@ public class Profile extends Table {
 	public void save(JSONObject data) {
 		super.save(data);
 		
-		ITAhM.snmp.reStart();
+		ITAhM.snmp.reload();
 	}
 	
 }

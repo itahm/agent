@@ -45,7 +45,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	
 	public SNMPAgent() throws IOException {
 		super(new DefaultUdpTransportMapping());
-		
+		System.out.println("snmp agent initialization.");
 		nodeList = new HashMap<String, SNMPNode>();
 		
 		deviceList = new HashMap<String, JSONObject>();
@@ -64,64 +64,80 @@ public class SNMPAgent extends Snmp implements Closeable {
 		snmpRoot.mkdir();
 		
 		listen();
+		System.out.println("snmp agent listening.");
 		
-		reStart();
+		reload();
 		
 		new RequestSchedule();
-		
+		System.out.println("snmp agent scheduling.");
 		new CleanerSchedule();
 		
 		System.out.println("snmp agent running...");
 	}
 	
-	public void reStart() {
-		JSONObject device;
+	public void reload() {
 		String ip;
-		JSONObject profile;
-		String profileName;
 		JSONObject deviceData;
-		JSONObject profileData;
-		JSONObject criticalData;
 		
 		synchronized(this.nodeList) {
 			this.nodeList.clear();
 			this.deviceList.clear();
 			
 			deviceData = this.deviceTable.getJSONObject();
-			profileData = this.profileTable.getJSONObject();
-			criticalData = this.criticalTable.getJSONObject();
 			
 			for (Object key : deviceData.keySet()) {
 				ip = (String)key;
 				
-				device = deviceData.getJSONObject(ip);
+				addNode(ip, deviceData.getJSONObject(ip));
+			}
+		}
+	}
+	
+	public void reload(String ip) {
+		reload(ip, this.deviceList.get(ip));
+	}
+	
+	public void reload(String ip, JSONObject device) {
+		synchronized(this.nodeList) {
+			// 삭제
+			if (device == null) {
+				this.deviceList.remove(ip);
+				this.nodeList.remove(ip);
+			}
+			// 추가/ 수정
+			else {
+				addNode(ip, device);
+			}
+		}
+	}
+	
+	private void addNode(String ip, JSONObject device) {
+		JSONObject profileData = this.profileTable.getJSONObject();
+		JSONObject criticalData = this.criticalTable.getJSONObject();
+		JSONObject profile;
+		String profileName;
+		
+		this.deviceList.put(ip, device);
+		
+		if (!device.has(Device.SNMP)) {
+			testNode(ip);
+		}
+		else if (device.getBoolean(Device.SNMP)) {
+			profileName = device.getString(Device.PROFILE);
+			
+			if (profileData.has(profileName)) {
+				profile = profileData.getJSONObject(profileName);
 				
-				this.deviceList.put(ip, device);
-				
-				if (!device.has(Device.SNMP)) {
-					testNode(ip);
+				try {
+					this.nodeList.put(ip, new SNMPNode(this, ip, profile.getInt(Constant.STRING_UDP)
+						, profile.getString(Profile.COMMUNITY)
+						, criticalData.has(ip)? criticalData.getJSONObject(ip): null));
+				} catch (JSONException | IOException e) {
+					e.printStackTrace();
 				}
-				else if (device.getBoolean(Device.SNMP)) {
-					profileName = device.getString(Device.PROFILE);
-					
-					if (profileData.has(profileName)) {
-						profile = profileData.getJSONObject(profileName);
-						
-						synchronized(this.nodeList) {
-							try {
-								this.nodeList.put(ip
-									, new SNMPNode(this, ip, profile.getInt(Constant.STRING_UDP)
-									, profile.getString(Profile.COMMUNITY)
-									, criticalData.has(ip)? criticalData.getJSONObject(ip): null));
-							} catch (JSONException | IOException e) {
-								e.printStackTrace();
-							}
-						}
-					}
-					else {
-						testNode(ip);
-					}
-				}
+			}
+			else {
+				testNode(ip);
 			}
 		}
 	}
@@ -140,12 +156,11 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private String getNodeName(String ip) {
 		String name = this.deviceList.get(ip).getString("name");
 		
-		if ("".equals(name)) {
-			return ip;
+		if (!"".equals(name)) {
+			name = name +" ";
 		}
-		else {
-			return String.format("%s[%s]", ip, name);
-		}
+		
+		return name;
 	}
 	
 	public void testNode(String ip) {
@@ -340,7 +355,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 				
 				@Override
 				public void onComplete(long count) {
-					System.out.println(String.format("%d 건 삭제되었습니다.", count));
 				}
 			};
 		}
