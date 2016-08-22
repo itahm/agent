@@ -23,8 +23,7 @@ public class Push extends Command {
 			}
 			else {
 				if (table.commit(data.getInt("sequence"))) {
-					data = data.getJSONObject("data");
-					table.save(data);
+					data = table.save(data.getJSONObject("data"));
 					
 					request.sendResponse(Response.getInstance(200, Response.OK,
 						new JSONObject()

@@ -29,10 +29,12 @@ public class Profile extends Table {
 		
 	}	
 
-	public void save(JSONObject data) {
+	public JSONObject save(JSONObject data) {
 		super.save(data);
 		
 		ITAhM.snmp.reload();
+		
+		return data;
 	}
 	
 }

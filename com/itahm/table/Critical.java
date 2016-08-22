@@ -12,7 +12,7 @@ public class Critical extends Table {
 		load("critical");
 	}
 	
-	public void save(JSONObject data) {
+	public JSONObject save(JSONObject data) {
 		if (data.has("target")) {
 			String ip = (String)data.remove("target");
 			
@@ -23,6 +23,6 @@ public class Critical extends Table {
 			System.out.println("Critical.java critical data 에서 target 없음");
 		}
 		
-		super.save(data);
+		return super.save(data);
 	}
 }

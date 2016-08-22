@@ -52,16 +52,18 @@ public class Table implements Closeable {
 		return false;
 	}
 	
-	public void save() {
+	public JSONObject save() {
 		try {
 			this.file.save();
 		} catch (IOException e) {
 			// fatal error
 			e.printStackTrace();
 		}
+		
+		return this.table;
 	}
 
-	public void save(JSONObject data) {
+	public JSONObject save(JSONObject data) {
 		try {
 			this.file.save(data);
 			
@@ -70,6 +72,8 @@ public class Table implements Closeable {
 			// fatal error
 			e.printStackTrace();
 		}
+		
+		return this.table;
 	}
 	
 	@Override

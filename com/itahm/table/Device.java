@@ -53,14 +53,23 @@ public class Device extends Table {
 		}
 	}
 	
-	public void save(JSONObject data) {
+	public JSONObject save(JSONObject data) {
 		JSONObject device = null;
 		
 		if (data.has("target")) {
 			String ip = (String)data.remove("target");
 			
 			if (data.has(ip)) {
+				// 수정
 				device = data.getJSONObject(ip);
+				
+				data = getJSONObject();
+				data.put(ip, device);
+			}
+			else {
+				// 삭제
+				data = getJSONObject();
+				data.remove(ip);
 			}
 			
 			ITAhM.snmp.reload(ip, device);
@@ -98,11 +107,10 @@ public class Device extends Table {
 					device.put(IFENTRY, new JSONObject());
 				}
 			}
-			
-			ITAhM.snmp.reload();
+			//ITAhM.snmp.reload();
 		}
 		
-		super.save(data);
+		return super.save(data);
 	}
 	
 }
