@@ -46,7 +46,7 @@ private static final long TIMEOUT = 5000;
 		
 		pdu = new PDU();
 		pdu.setType(PDU.GETNEXT);
-		pdu.add(new VariableBinding(Constants.sysName));
+		pdu.add(new VariableBinding(RequestPDU.sysName));
 	}
 	
 	public TmpNode addProfile(String name, int udp, String community) throws UnknownHostException{
@@ -95,7 +95,7 @@ private static final long TIMEOUT = 5000;
 			if (status == PDU.noError) {
 				Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
 				VariableBinding responseVB = (VariableBinding)responseVBs.get(0);
-				if (responseVB.getOid().startsWith(Constants.sysName)) {
+				if (responseVB.getOid().startsWith(RequestPDU.sysName)) {
 					this.sysName = ((OctetString)responseVB.getVariable()).toString();
 				}
 				

@@ -91,6 +91,7 @@ public class SNMPNode extends Node {
 		JSONObject oldData;
 		long max;
 		long maxRate;
+		long maxErr;
 		long value;
 		long capacity;
 		long tmpValue;
@@ -154,75 +155,148 @@ public class SNMPNode extends Node {
 			long interval = super.data.getLong("lastResponse") - lastRolling;
 			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
 			long bytes;
-			long in;
-			long out;
+			//long in;
+			//long out;
 			
 			max = 0;
 			maxRate = 0;
+			maxErr = 0;
+			
 			for(String index: super.ifEntry.keySet()) {
 				data = super.ifEntry.get(index);
 				
-				capacity = data.getInt("ifSpeed");
+				if (!ifEntry.has(index)) {
+					continue;
+				}
 				
-				if (!ifEntry.has(index) || capacity <= 0) {
+				if (data == null) {
+					System.out.println("SNMPNode, null data");
+					
+					continue;
+				}
+				
+				capacity = 0;
+				
+				if (data.has("ifHighSpeed")) {
+					capacity = data.getLong("ifHighSpeed");
+				}
+				
+				if (capacity == 0 && data.has("ifSpeed")) {
+					capacity = data.getLong("ifSpeed");
+				}
+				
+				if (capacity == 0) {
 					continue;
 				}
 				
 				oldData = ifEntry.getJSONObject(index);
 				
-				if (data.has(Constant.STRING_IFHCOUT)) {
-					bytes = data.getLong(Constant.STRING_IFHCOUT);
+				if (data.has("ifInErrors")) {
+					value = data.getInt("ifInErrors");
+					
+					this.rollingMap.put(Resource.IFINERRORS, index, value);
+					
+					if (oldData.has("ifInErrors")) {
+						value -= oldData.getInt("ifInErrors");
+						
+						data.put("ifInErrors", value);
+						
+						maxErr = Math.max(maxErr, value);
+					}
+				}
+				
+				if (data.has("ifOutErrors")) {
+					value = data.getInt("ifOutErrors");
+					
+					this.rollingMap.put(Resource.IFOUTERRORS, index, value);
+					
+					if (oldData.has("ifOutErrors")) {
+						value -= oldData.getInt("ifOutErrors");
+						
+						data.put("ifOutErrors", value);
+						
+						maxErr = Math.max(maxErr, value);
+					}
+				}
+				
+				if (data.has("ifHCInOctets")) {
+					bytes = data.getLong("ifHCInOctets");
+				}
+				else if (data.has("ifInOctets")) {
+					bytes = data.getLong("ifInOctets");
 				}
 				else {
-					bytes = data.getLong(Constant.STRING_IFOUT);
+					continue;
 				}
 				
-				if (oldData.has(Constant.STRING_IFHCOUT)) {
-					bytes -= oldData.getLong(Constant.STRING_IFHCOUT);
+				this.rollingMap.put(Resource.IFINBYTES, index, bytes);
+				
+				if (oldData.has("ifHCInOctets")) {
+					bytes -= oldData.getLong("ifHCInOctets");
 				}
-				else {
-					bytes -= oldData.getLong(Constant.STRING_IFOUT);
-				}
-				
-				in = bytes *8000 / interval;
-				
-				data.put("ifOutBPS", in);
-				
-				this.rollingMap.put(Resource.IFOUTOCTETS, index, in);
-				
-				max = Math.max(max, in);
-				maxRate = Math.max(maxRate, in *100L / capacity);
-				
-				if (data.has(Constant.STRING_IFHCIN)) {
-					bytes = data.getLong(Constant.STRING_IFHCIN);
+				else if (oldData.has("ifInOctets")) {
+					bytes -= oldData.getLong("ifInOctets");
 				}
 				else {
-					bytes = data.getLong(Constant.STRING_IFIN);
+					continue;
 				}
 				
-				if (oldData.has(Constant.STRING_IFHCIN)) {
-					bytes -= oldData.getLong(Constant.STRING_IFHCIN);
+				//in = bytes *8000 / interval;
+				bytes = bytes *8000 / interval;
+				
+				//data.put("ifInBPS", in);
+				data.put("ifInBPS", bytes);
+				
+				//this.rollingMap.put(Resource.IFINOCTETS, index, in);
+				this.rollingMap.put(Resource.IFINOCTETS, index, bytes);
+				
+				//max = Math.max(max, in);
+				max = Math.max(max, bytes);
+				//maxRate = Math.max(maxRate, in *100L / capacity);
+				maxRate = Math.max(maxRate, bytes *100L / capacity);
+				
+				if (data.has("ifHCOutOctets")) {
+					bytes = data.getLong("ifHCOutOctets");
+				}
+				else if (data.has("ifOutOctets")) {
+					bytes = data.getLong("ifOutOctets");
 				}
 				else {
-					bytes -= oldData.getLong(Constant.STRING_IFIN);
+					continue;
 				}
 				
-				out = bytes *8000 / interval;
+				this.rollingMap.put(Resource.IFOUTBYTES, index, bytes);
 				
-				data.put("ifInBPS", out);
+				if (oldData.has("ifHCOutOctets")) {
+					bytes -= oldData.getLong("ifHCOutOctets");
+				}
+				else if (oldData.has("ifOutOctets")) {
+					bytes -= oldData.getLong("ifOutOctets");
+				}
+				else {
+					continue;
+				}
 				
-				this.rollingMap.put(Resource.IFINOCTETS, index, out);
+				//out = bytes *8000 / interval;
+				bytes = bytes *8000 / interval;
+				//data.put("ifOutBPS", out);
+				data.put("ifOutBPS", bytes);
+				//this.rollingMap.put(Resource.IFOUTOCTETS, index, out);
+				this.rollingMap.put(Resource.IFOUTOCTETS, index, bytes);
+				//max = Math.max(max, out);
+				max = Math.max(max, bytes);
+				//maxRate = Math.max(maxRate, out *100L / capacity);
+				maxRate = Math.max(maxRate, bytes *100L / capacity);
 				
-				max = Math.max(max, out);
-				maxRate = Math.max(maxRate, out *100L / capacity);
-				
-				this.critical.analyze(CriticalData.THROUGHPUT, index, capacity, Math.max(out, in));
+				this.critical.analyze(CriticalData.THROUGHPUT, index, capacity, max);
 			}
 			
 			this.agent.onSubmitTop(ip, "throughput", max);
 			this.agent.onSubmitTop(ip, "throughputRate", maxRate);
+			this.agent.onSubmitTop(ip, "throughputErr", maxErr);
 		}
 	}
+	
 	@Override
 	public void onSuccess() {
 		try {

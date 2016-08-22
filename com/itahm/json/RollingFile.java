@@ -3,6 +3,7 @@ package com.itahm.json;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Calendar;
 
@@ -29,8 +30,10 @@ public class RollingFile implements Closeable {
 	
 	private long max;
 	private long min;
-	private BigInteger sum;
+	private double avg;
 	private int count;
+	private long sum;
+	private long sumCnt;
 	/**
 	 * Instantiates a new rolling file.
 	 *
@@ -58,8 +61,10 @@ public class RollingFile implements Closeable {
 		initDay(Long.toString(calendar.getTimeInMillis()));
 		initHour(hourString, hour);
 		
-		sum = BigInteger.valueOf(0);
+		avg = 0;
 		count = 0;
+		sum = 0;
+		sumCnt = 0;
 	}
 	
 	/**
@@ -97,6 +102,36 @@ public class RollingFile implements Closeable {
 	}
 	
 	private void roll(String hourString, long value) throws IOException {
+		if (this.data.has(hourString)) {
+			this.sum += value;
+		}
+		else {
+			this.sum = value;
+			this.sumCnt = 0;
+		}
+		
+		this.sumCnt++;
+		
+		this.data.put(hourString, this.sum / this.sumCnt);
+		
+		if (this.count == 0) {
+			this.avg = value;
+			this.max = value;
+			this.min = value;
+		}
+		else {
+			this.avg = (this.avg / this.count +1) * this.count + value / this.count;
+			this.max = Math.max(this.max, value);
+			this.min = Math.min(this.min, value);
+		}
+		
+		this.count++;
+		
+		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
+		this.file.save();
+	}
+	/*
+	private void roll(String hourString, long value) throws IOException {
 		if (this.data.has(hourString) && this.data.getLong(hourString) >= value) {
 			return;
 		}
@@ -119,7 +154,7 @@ public class RollingFile implements Closeable {
 		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
 		this.file.save();
 	}
-	
+	*/
 	private void initDay(String dateString) throws IOException {
 		// day directory 생성
 		this.dir = new File(this.root, dateString);
@@ -158,7 +193,7 @@ public class RollingFile implements Closeable {
 		if (this.count > 0) {
 			this.summaryData.put(this.lastHourString,
 				new JSONObject()
-				.put("avg", this.sum.divide(BigInteger.valueOf(this.count)).longValue())
+				.put("avg", (long)this.avg)
 				.put("max", this.max)
 				.put("min", this.min)
 			);

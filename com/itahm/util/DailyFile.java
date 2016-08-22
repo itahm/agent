@@ -99,7 +99,16 @@ public class DailyFile {
 	}
 	
 	public static void main(String[] args) throws IOException {
+		DailyFile df = new DailyFile();
+		String s = "테스트";
 		
+		df.roll();
+		
+		df.write(s.getBytes(java.nio.charset.StandardCharsets.UTF_8.name()));
+		
+		df.close();
+		
+		System.out.println(java.nio.charset.StandardCharsets.UTF_8.name());
 	}
 
 }

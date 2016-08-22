@@ -121,8 +121,6 @@ public class Request implements Closeable {
 				} catch (NumberFormatException nfe) {
 					this.length = 0;
 				}
-					
-				listener.onRequest(this);
 				
 				this.body = new ByteArrayOutputStream();
 				

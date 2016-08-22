@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
@@ -45,7 +46,7 @@ public class Log implements Closeable {
 			this.log = new JSONObject();
 		}
 		else {
-			this.log = new JSONObject(new String(bytes));
+			this.log = new JSONObject(new String(bytes, StandardCharsets.UTF_8.name()));
 		}
 		
 		this.indexFile = new RandomAccessFile(indexFile, "rws");
@@ -85,7 +86,7 @@ public class Log implements Closeable {
 		try {
 			this.indexFile.setLength(0);
 			
-			this.indexChannel.write(ByteBuffer.wrap(this.indexObject.toString().getBytes("UTF-8")));
+			this.indexChannel.write(ByteBuffer.wrap(this.indexObject.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8.name())));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -111,7 +112,7 @@ public class Log implements Closeable {
 		
 		this.log.put(Long.toString(index), logData);
 		
-		this.dailyFile.write(this.log.toString().getBytes("UTF-8"));
+		this.dailyFile.write(this.log.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8.name()));
 		
 		// TODO waiter들이 유효한 request인지 확인해야한다.
 		synchronized(this.waiter) {
@@ -135,7 +136,7 @@ public class Log implements Closeable {
 		byte [] bytes = this.dailyFile.read(mills);
 		
 		if (bytes != null) {
-			return new String(bytes);
+			return new String(bytes, StandardCharsets.UTF_8.name());
 		}
 		
 		return new JSONObject().toString();

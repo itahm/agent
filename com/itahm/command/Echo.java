@@ -27,7 +27,7 @@ public class Echo extends Command {
 	@Override
 	protected void execute(Request request, JSONObject data) throws IOException {
 		request.sendResponse(Response.getInstance(200, Response.OK, new JSONObject()
-			.put(Constant.STRING_LEVEL, this.level).toString()));
+			.put(Constant.STRING_LEVEL, this.level)));
 	}
 
 }

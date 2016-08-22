@@ -93,13 +93,13 @@ public abstract class Node implements ResponseListener {
 	}
 	
 	private final boolean parseSystem(OID response, Variable variable, OID request) {
-		if (request.startsWith(Constants.sysDescr) && response.startsWith(Constants.sysDescr)) {
+		if (request.startsWith(RequestPDU.sysDescr) && response.startsWith(RequestPDU.sysDescr)) {
 			this.data.put("sysDescr", new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(Constants.sysObjectID) && response.startsWith(Constants.sysObjectID)) {
+		else if (request.startsWith(RequestPDU.sysObjectID) && response.startsWith(RequestPDU.sysObjectID)) {
 			this.data.put("sysObjectID", ((OID)variable).toDottedString());
 		}
-		else if (request.startsWith(Constants.sysName) && response.startsWith(Constants.sysName)) {
+		else if (request.startsWith(RequestPDU.sysName) && response.startsWith(RequestPDU.sysName)) {
 			this.data.put("sysName", new String(((OctetString)variable).getValue()));
 		}
 		
@@ -117,29 +117,35 @@ public abstract class Node implements ResponseListener {
 			ifData.put("ifOutBPS", 0);
 		}
 		
-		if (request.startsWith(Constants.ifDescr) && response.startsWith(Constants.ifDescr)) {
+		if (request.startsWith(RequestPDU.ifDescr) && response.startsWith(RequestPDU.ifDescr)) {
 			ifData.put("ifDescr", new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(Constants.ifType) && response.startsWith(Constants.ifType)) {			
+		else if (request.startsWith(RequestPDU.ifType) && response.startsWith(RequestPDU.ifType)) {			
 			ifData.put("ifType", ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(Constants.ifSpeed) && response.startsWith(Constants.ifSpeed)) {			
-			ifData.put(Constant.STRING_IFSPEED, ((Gauge32)variable).getValue());
+		else if (request.startsWith(RequestPDU.ifSpeed) && response.startsWith(RequestPDU.ifSpeed)) {			
+			ifData.put("ifSpeed", ((Gauge32)variable).getValue());
 		}
-		else if (request.startsWith(Constants.ifPhysAddress) && response.startsWith(Constants.ifPhysAddress)) {
+		else if (request.startsWith(RequestPDU.ifPhysAddress) && response.startsWith(RequestPDU.ifPhysAddress)) {
 			ifData.put(Constant.STRING_MAC_ADDR, new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(Constants.ifAdminStatus) && response.startsWith(Constants.ifAdminStatus)) {
+		else if (request.startsWith(RequestPDU.ifAdminStatus) && response.startsWith(RequestPDU.ifAdminStatus)) {
 			ifData.put(Constant.STRING_IFADMINSTAT, ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(Constants.ifOperStatus) && response.startsWith(Constants.ifOperStatus)) {			
+		else if (request.startsWith(RequestPDU.ifOperStatus) && response.startsWith(RequestPDU.ifOperStatus)) {			
 			ifData.put("ifOperStatus", ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(Constants.ifInOctets) && response.startsWith(Constants.ifInOctets)) {
+		else if (request.startsWith(RequestPDU.ifInOctets) && response.startsWith(RequestPDU.ifInOctets)) {
 			ifData.put("ifInOctets", ((Counter32)variable).getValue());
 		}
-		else if (request.startsWith(Constants.ifOutOctets) && response.startsWith(Constants.ifOutOctets)) {
+		else if (request.startsWith(RequestPDU.ifOutOctets) && response.startsWith(RequestPDU.ifOutOctets)) {
 			ifData.put("ifOutOctets", ((Counter32)variable).getValue());
+		}
+		else if (request.startsWith(RequestPDU.ifInErrors) && response.startsWith(RequestPDU.ifInErrors)) {
+			ifData.put("ifInErrors", ((Counter32)variable).getValue());
+		}
+		else if (request.startsWith(RequestPDU.ifOutErrors) && response.startsWith(RequestPDU.ifOutErrors)) {
+			ifData.put("ifOutErrors", ((Counter32)variable).getValue());
 		}
 		else {
 			return false;
@@ -156,17 +162,20 @@ public abstract class Node implements ResponseListener {
 			this.ifEntry.put(index, ifData = new JSONObject());
 		}
 		
-		if (request.startsWith(Constants.ifName) && response.startsWith(Constants.ifName)) {
+		if (request.startsWith(RequestPDU.ifName) && response.startsWith(RequestPDU.ifName)) {
 			ifData.put(Constant.STRING_IFNAME, new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(Constants.ifAlias) && response.startsWith(Constants.ifAlias)) {
+		else if (request.startsWith(RequestPDU.ifAlias) && response.startsWith(RequestPDU.ifAlias)) {
 			ifData.put(Constant.STRING_IFALIAS, new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(Constants.ifHCInOctets) && response.startsWith(Constants.ifHCInOctets)) {
-			ifData.put(Constant.STRING_IFHCIN, ((Counter64)variable).getValue());
+		else if (request.startsWith(RequestPDU.ifHCInOctets) && response.startsWith(RequestPDU.ifHCInOctets)) {
+			ifData.put("ifHCInOctets", ((Counter64)variable).getValue());
 		}
-		else if (request.startsWith(Constants.ifHCOutOctets) && response.startsWith(Constants.ifHCOutOctets)) {
-			ifData.put(Constant.STRING_IFHCOUT, ((Counter64)variable).getValue());
+		else if (request.startsWith(RequestPDU.ifHCOutOctets) && response.startsWith(RequestPDU.ifHCOutOctets)) {
+			ifData.put("ifHCOutOctets", ((Counter64)variable).getValue());
+		}
+		else if (request.startsWith(RequestPDU.ifHighSpeed) && response.startsWith(RequestPDU.ifHighSpeed)) {
+			ifData.put("ifHighSpeed", ((Gauge32)variable).getValue() * 1000000L);
 		}
 		else {
 			return false;
@@ -176,7 +185,7 @@ public abstract class Node implements ResponseListener {
 	}
 	
 	private final boolean parseHost(OID response, Variable variable, OID request) throws JSONException, IOException {
-		if (request.startsWith(Constants.hrSystemUptime) && response.startsWith(Constants.hrSystemUptime)) {
+		if (request.startsWith(RequestPDU.hrSystemUptime) && response.startsWith(RequestPDU.hrSystemUptime)) {
 			this.data.put(Constant.STRING_SYSUPTIME, ((TimeTicks)variable).toMilliseconds());
 			
 			return false;
@@ -184,10 +193,10 @@ public abstract class Node implements ResponseListener {
 		
 		String index = Integer.toString(response.last());
 		
-		if (request.startsWith(Constants.hrProcessorLoad) && response.startsWith(Constants.hrProcessorLoad)) {
+		if (request.startsWith(RequestPDU.hrProcessorLoad) && response.startsWith(RequestPDU.hrProcessorLoad)) {
 			this.hrProcessorEntry.put(index, ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(Constants.hrStorageEntry) && response.startsWith(Constants.hrStorageEntry)) {
+		else if (request.startsWith(RequestPDU.hrStorageEntry) && response.startsWith(RequestPDU.hrStorageEntry)) {
 			JSONObject storageData = this.hrStorageEntry.get(index);
 			
 			if (storageData == null) {
@@ -196,19 +205,19 @@ public abstract class Node implements ResponseListener {
 				this.hrStorageEntry.put(index, storageData = new JSONObject());
 			}
 			
-			if (request.startsWith(Constants.hrStorageType) && response.startsWith(Constants.hrStorageType)) {
+			if (request.startsWith(RequestPDU.hrStorageType) && response.startsWith(RequestPDU.hrStorageType)) {
 				storageData.put("hrStorageType", ((OID)variable).last());
 			}
-			else if (request.startsWith(Constants.hrStorageDescr) && response.startsWith(Constants.hrStorageDescr)) {
+			else if (request.startsWith(RequestPDU.hrStorageDescr) && response.startsWith(RequestPDU.hrStorageDescr)) {
 				storageData.put("hrStorageDescr", new String(((OctetString)variable).getValue()));
 			}
-			else if (request.startsWith(Constants.hrStorageAllocationUnits) && response.startsWith(Constants.hrStorageAllocationUnits)) {
+			else if (request.startsWith(RequestPDU.hrStorageAllocationUnits) && response.startsWith(RequestPDU.hrStorageAllocationUnits)) {
 				storageData.put("hrStorageAllocationUnits", ((Integer32)variable).getValue());
 			}
-			else if (request.startsWith(Constants.hrStorageSize) && response.startsWith(Constants.hrStorageSize)) {
+			else if (request.startsWith(RequestPDU.hrStorageSize) && response.startsWith(RequestPDU.hrStorageSize)) {
 				storageData.put("hrStorageSize", ((Integer32)variable).getValue());
 			}
-			else if (request.startsWith(Constants.hrStorageUsed) && response.startsWith(Constants.hrStorageUsed)) {
+			else if (request.startsWith(RequestPDU.hrStorageUsed) && response.startsWith(RequestPDU.hrStorageUsed)) {
 				storageData.put("hrStorageUsed", ((Integer32)variable).getValue());
 			}
 			else {
@@ -226,7 +235,7 @@ public abstract class Node implements ResponseListener {
 		int [] array = response.getValue();
 		int index = array[array.length -5];
 		
-		if (request.startsWith(Constants.ipNetToMediaPhysAddress) && response.startsWith(Constants.ipNetToMediaPhysAddress)) {
+		if (request.startsWith(RequestPDU.ipNetToMediaPhysAddress) && response.startsWith(RequestPDU.ipNetToMediaPhysAddress)) {
 			OctetString value = (OctetString)variable;
 			
 			if (value.length() > 0) {
@@ -240,6 +249,25 @@ public abstract class Node implements ResponseListener {
 		return true;
 	}
 	
+	private final boolean parseCisco(OID response, Variable variable, OID request) {
+		String index = Integer.toString(response.last());
+		
+		if (request.startsWith(RequestPDU.busyPer) && response.startsWith(RequestPDU.busyPer)) {
+			this.hrProcessorEntry.put(index, (int)((Gauge32)variable).getValue());
+		}
+		else if (request.startsWith(RequestPDU.cpmCPUTotal5sec) && response.startsWith(RequestPDU.cpmCPUTotal5sec)) {
+			this.hrProcessorEntry.put(index, (int)((Gauge32)variable).getValue());
+			
+		}
+		else if (request.startsWith(RequestPDU.cpmCPUTotal5secRev) && response.startsWith(RequestPDU.cpmCPUTotal5secRev)) {
+			this.hrProcessorEntry.put(index, (int)((Gauge32)variable).getValue());
+		}
+		else {
+			return false;
+		}
+		
+		return true;
+	}
 	/**
 	 * Parse.
 	 * 
@@ -250,20 +278,23 @@ public abstract class Node implements ResponseListener {
 	 * @throws IOException 
 	 */
 	private final boolean parseResponse (OID response, Variable variable, OID request) throws IOException {
-		if (request.startsWith(Constants.system)) {
+		if (request.startsWith(RequestPDU.system)) {
 			return parseSystem(response, variable, request);
 		}
-		else if (request.startsWith(Constants.ifEntry)) {
+		else if (request.startsWith(RequestPDU.ifEntry)) {
 			return parseIFEntry(response, variable, request);
 		}
-		else if (request.startsWith(Constants.ifXEntry)) {
+		else if (request.startsWith(RequestPDU.ifXEntry)) {
 			return parseIFXEntry(response, variable, request);
 		}
-		else if (request.startsWith(Constants.host)) {
+		else if (request.startsWith(RequestPDU.host)) {
 			return parseHost(response, variable, request);
 		}
-		else if (request.startsWith(Constants.ipNetToMediaTable)) {
+		else if (request.startsWith(RequestPDU.ipNetToMediaTable)) {
 			return parseIPNetToMediaTable(response, variable, request);
+		}
+		else if (request.startsWith(RequestPDU.cisco)) {
+			return parseCisco(response, variable, request);
 		}
 		
 		return false;
@@ -378,7 +409,7 @@ public abstract class Node implements ResponseListener {
 				}
 			}
 			
-		}.request(new RequestPDU());
+		}.request(RequestPDU.getInstance());
 		
 		System.in.read();
 	}

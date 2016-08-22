@@ -41,7 +41,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Table criticalTable;
 	private final TopTable topTable;
 	private final Timer timer;
-	private final static PDU pdu = new RequestPDU();
+	private final static PDU pdu = RequestPDU.getInstance();
 	
 	public SNMPAgent() throws IOException {
 		super(new DefaultUdpTransportMapping());
@@ -369,7 +369,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		private final Map<String, Long> storageRateTop = new HashMap<String, Long>();
 		private final Map<String, Long> throughputTop = new HashMap<String, Long>();
 		private final Map<String, Long> throughputRateTop = new HashMap<String, Long>();
-		
+		private final Map<String, Long> throughputErrTop = new HashMap<String, Long>();
 		private Map<String, Long> sortTop;
 		
 		public synchronized void submit(String ip, String resource, long value) {
@@ -408,6 +408,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 				top = this.throughputRateTop;
 				
 				break;
+			case "throughputErr":
+				top = this.throughputErrTop;
+				
+				break;					
 			}
 			
 			if (top != null) {
@@ -426,6 +430,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			top.put("storageRate", getTop(this.storageRateTop, count));
 			top.put("throughput", getTop(this.throughputTop, count));
 			top.put("throughputRate", getTop(this.throughputRateTop, count));
+			top.put("throughputErr", getTop(this.throughputErrTop, count));
 			
 			return top;
 		}

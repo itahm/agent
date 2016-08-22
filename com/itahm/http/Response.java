@@ -81,7 +81,7 @@ public class Response {
 	
 	public Response setResponseBody(String body) {
 		try {
-			this.body = body.getBytes("UTF-8");
+			this.body = body.getBytes(StandardCharsets.UTF_8.name());
 		} catch (UnsupportedEncodingException e) {
 			this.body = new byte[0];
 		}
@@ -112,7 +112,7 @@ public class Response {
 		
 		sb.append(CRLF);
 		
-		header = sb.toString().getBytes("US-ASCII");
+		header = sb.toString().getBytes(StandardCharsets.US_ASCII.name());
 		
 		message = new byte [header.length + this.body.length];
 		

@@ -124,7 +124,7 @@ public class JSONFile implements Closeable{
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public void save() throws IOException {	
-		ByteBuffer buffer = ByteBuffer.wrap(this.json.toString().getBytes("UTF-8"));
+		ByteBuffer buffer = ByteBuffer.wrap(this.json.toString().getBytes(StandardCharsets.UTF_8.name()));
 		
 		this.file.setLength(0);
 		this.channel.write(buffer);

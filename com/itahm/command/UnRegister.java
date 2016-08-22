@@ -31,7 +31,7 @@ public class UnRegister extends Command {
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-				new JSONObject().put("error", "invalid json request").toString()));
+				new JSONObject().put("error", "invalid json request")));
 		}
 	}
 

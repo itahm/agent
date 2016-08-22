@@ -2,6 +2,7 @@ package com.itahm;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -63,7 +64,7 @@ public class HTTPServer extends Listener {
 			}
 			else if ("POST".equals(method)) {
 				try {
-					JSONObject data = new JSONObject(new String(request.getRequestBody(), "UTF-8"));
+					JSONObject data = new JSONObject(new String(request.getRequestBody(), StandardCharsets.UTF_8.name()));
 					
 					Session session = getSession(request);
 					

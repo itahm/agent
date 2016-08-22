@@ -26,30 +26,30 @@ public class Responder implements CommandResponder {
 	
 	private final void parse(OID oid, Variable variable, Address address, String community) {
 		
-		if (oid.leftMostCompare(5, Constants.snmpV2) == 0) {
-			//if (oid.leftMostCompare(6, Constants.snmpModules) == 0) {
-				//if (oid.leftMostCompare(7, Constants.snmpMIB) == 0) {
-					//if (oid.leftMostCompare(8, Constants.snmpMIBObjects) == 0) {
-			if (oid.leftMostCompare(9, Constants.snmpTrap) == 0) {
+		if (oid.leftMostCompare(5, RequestPDU.snmpV2) == 0) {
+			//if (oid.leftMostCompare(6, RequestPDU.snmpModules) == 0) {
+				//if (oid.leftMostCompare(7, RequestPDU.snmpMIB) == 0) {
+					//if (oid.leftMostCompare(8, RequestPDU.snmpMIBObjects) == 0) {
+			if (oid.leftMostCompare(9, RequestPDU.snmpTrap) == 0) {
 				System.out.println("got it");
 			}
-			else if (oid.leftMostCompare(9, Constants.snmpTraps) == 0) {
-							if (oid.leftMostCompare(10, Constants.coldStart) == 0) {
+			else if (oid.leftMostCompare(9, RequestPDU.snmpTraps) == 0) {
+							if (oid.leftMostCompare(10, RequestPDU.coldStart) == 0) {
 								System.out.println("coldStart trap : "+ oid);
 							}
-							else if (oid.leftMostCompare(10, Constants.warmStart) == 0) {
+							else if (oid.leftMostCompare(10, RequestPDU.warmStart) == 0) {
 								System.out.println("warmStart trap : "+ oid);
 							}
-							else if (oid.leftMostCompare(10, Constants.linkDown) == 0) {
+							else if (oid.leftMostCompare(10, RequestPDU.linkDown) == 0) {
 								System.out.println("linkDown trap : "+ oid);
 							}
-							else if (oid.leftMostCompare(10, Constants.linkUp) == 0) {
+							else if (oid.leftMostCompare(10, RequestPDU.linkUp) == 0) {
 								System.out.println("linkUp trap : "+ oid);
 							}
-							else if (oid.leftMostCompare(10, Constants.authenticationFailure) == 0) {
+							else if (oid.leftMostCompare(10, RequestPDU.authenticationFailure) == 0) {
 								System.out.println("authenticationFailure trap : "+ oid);
 							}
-							else if (oid.leftMostCompare(10, Constants.egpNeighborLoss) == 0) {
+							else if (oid.leftMostCompare(10, RequestPDU.egpNeighborLoss) == 0) {
 								System.out.println("egpNeighborLoss trap : "+ oid);
 							}
 						}

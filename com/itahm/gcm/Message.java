@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -108,7 +109,7 @@ class Message implements DownStream.Request {
 		
 		try {
 			os = this.connection.getOutputStream();
-			os.write(this.message.toString().getBytes("UTF-8"));
+			os.write(this.message.toString().getBytes(StandardCharsets.UTF_8.name()));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

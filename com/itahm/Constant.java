@@ -21,11 +21,8 @@ public class Constant {
 	public static final String STRING_MAC_ADDR = "ifPhysAddress";
 	public static final String STRING_IFNAME = "ifName";
 	public static final String STRING_IFENTRY = "ifEntry";
-	public static final String STRING_IFSPEED = "ifSpeed";
 	public static final String STRING_IFALIAS = "ifAlias";
 	public static final String STRING_IFIN = "ifInOctets";
 	public static final String STRING_IFOUT = "ifOutOctets";
-	public static final String STRING_IFHCIN = "ifHCInOctets";
-	public static final String STRING_IFHCOUT = "ifHCOutOctets";
 	public static final String STRING_IFADMINSTAT = "ifAdminStatus";
 }

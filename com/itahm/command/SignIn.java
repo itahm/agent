@@ -37,7 +37,7 @@ public class SignIn extends Command {
 					Session session = Session.getInstance(account.getInt(Constant.STRING_LEVEL));
 					
 					request.sendResponse(Response.getInstance(200, Response.OK,
-						new JSONObject().put(Constant.STRING_LEVEL, (Integer)session.getExtras()).toString())
+						new JSONObject().put(Constant.STRING_LEVEL, (Integer)session.getExtras()))
 							.setResponseHeader("Set-Cookie", String.format(COOKIE, session.getCookie())));
 					
 					return;
@@ -48,7 +48,7 @@ public class SignIn extends Command {
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request").toString()));
+					new JSONObject().put("error", "invalid json request")));
 		}
 	}
 
