@@ -16,6 +16,17 @@ public class Profile extends Table {
 	
 	public Profile() throws IOException {
 		load("profile");
+		
+		if (isEmpty()) {
+			getJSONObject().put(PUBLIC, new JSONObject()
+				.put(NAME, "public")
+				.put(COMMUNITY, "public")
+				.put(VERSION, "v2c")
+				.put(UDP,  161));
+			
+			super.save();
+		}
+		
 	}	
 
 	public void save(JSONObject data) {

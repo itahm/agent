@@ -28,7 +28,7 @@ public class ITAhM {
 	private static Map<String, Table> tableMap;
 	
 	public ITAhM(int tcp, String path, String host) throws IOException {
-		System.out.println("ITAhM version 1.1.3.25");
+		System.out.println("ITAhM version 1.1.3.26");
 		System.out.println("start up ITAhM agent");
 		
 		dataRoot = new File(path, "data");
