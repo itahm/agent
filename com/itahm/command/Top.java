@@ -22,7 +22,7 @@ public class Top extends Command {
 				count = Math.min(data.getInt("count"), TOP_MAX);
 			}
 			
-			request.sendResponse(Response.getInstance(200, Response.OK, ITAhM.snmp.getTop(count)));
+			request.sendResponse(Response.getInstance(200, Response.OK, ITAhM.agent.getTop(count)));
 		}
 		catch (JSONException jsone) {
 			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,

@@ -15,7 +15,7 @@ public class Select extends Command {
 	@Override
 	protected void execute(Request request, JSONObject data) throws IOException {
 		try {
-			SNMPNode node = ITAhM.snmp.getNode(data.getString("ip"));
+			SNMPNode node = ITAhM.agent.getNode(data.getString("ip"));
 			
 			if (node != null) {
 				request.sendResponse(Response.getInstance(200, Response.OK, node.getData()));

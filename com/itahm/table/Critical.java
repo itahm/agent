@@ -12,17 +12,9 @@ public class Critical extends Table {
 		load("critical");
 	}
 	
-	public JSONObject save(JSONObject data) {
-		if (data.has("target")) {
-			String ip = (String)data.remove("target");
-			
-			ITAhM.snmp.reload(ip);
-		}
-		else {
-			//TODO 오류
-			System.out.println("Critical.java critical data 에서 target 없음");
-		}
+	public JSONObject put(String ip, JSONObject critical) {
+		ITAhM.agent.resetNode(ip, critical);
 		
-		return super.save(data);
+		return super.put(ip, critical);
 	}
 }

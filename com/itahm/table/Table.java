@@ -10,12 +10,17 @@ import com.itahm.ITAhM;
 import com.itahm.json.JSONFile;
 
 public class Table implements Closeable {
+	public final static String ACCOUNT = "account";
+	public final static String CRITICAL = "critical";
+	public final static String DEVICE = "device";
+	public final static String SNMP = "snmp";
+	public final static String ICON = "icon";
+	public final static String POSITION = "position";
+	public final static String PROFILE = "profile";
 	
 	private final static File dataRoot = ITAhM.getRoot();
 	protected JSONFile file;
 	protected JSONObject table;
-	protected int sequence = 0;
-	protected int commit = 0;
 	
 	protected void load(String tableName) throws IOException {
 		this.file = new JSONFile((new File(dataRoot, tableName)));
@@ -38,18 +43,25 @@ public class Table implements Closeable {
 		return null;
 	}
 	
-	public int lock() {
-		return this.sequence++;
-	}
-	
-	public boolean commit(int sequence) {
-		if (sequence - this.commit >= 0) {
-			this.commit = this.sequence;
-			
-			return true;
+	public JSONObject remove(String key) {
+		JSONObject value = (JSONObject)this.table.remove(key);
+		
+		if (value != null) {
+			save();
 		}
 		
-		return false;
+		return value;
+	}
+	
+	public JSONObject put(String key, JSONObject value) {
+		if (value == null) {
+			this.table.remove(key);
+		}
+		else {
+			this.table.put(key, value);
+		}
+		
+		return save();
 	}
 	
 	public JSONObject save() {

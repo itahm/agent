@@ -3,8 +3,6 @@ package com.itahm.json;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Calendar;
 
 import org.json.JSONObject;
@@ -97,7 +95,6 @@ public class RollingFile implements Closeable {
 			initHour(hourString, hour);
 		}
 		
-		// 동일한 분 단위 data가 이미 존재 한다면 더 큰 수로 변경
 		roll(hourString, value);
 	}
 	
@@ -120,7 +117,7 @@ public class RollingFile implements Closeable {
 			this.min = value;
 		}
 		else {
-			this.avg = (this.avg / this.count +1) * this.count + value / this.count;
+			this.avg = this.avg / (this.count +1) * this.count + value / (this.count +1.0);
 			this.max = Math.max(this.max, value);
 			this.min = Math.min(this.min, value);
 		}

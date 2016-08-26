@@ -12,7 +12,9 @@ import com.itahm.table.Account;
 import com.itahm.table.Critical;
 import com.itahm.table.Device;
 import com.itahm.table.Icon;
+import com.itahm.table.Position;
 import com.itahm.table.Profile;
+import com.itahm.table.Snmp;
 import com.itahm.table.Table;
 
 public class ITAhM {
@@ -22,7 +24,7 @@ public class ITAhM {
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;
-	public static SNMPAgent snmp;
+	public static SNMPAgent agent;
 	public static GCMManager gcmm;
 	
 	private static Map<String, Table> tableMap;
@@ -39,13 +41,15 @@ public class ITAhM {
 		gcmm = new GCMManager(API_KEY, host);
 		
 		tableMap = new HashMap<String, Table>();
-		tableMap.put("account", new Account());
-		tableMap.put("profile", new Profile());
-		tableMap.put("device", new Device());
-		tableMap.put("icon", new Icon());
-		tableMap.put("critical", new Critical());
+		tableMap.put(Table.ACCOUNT, new Account());
+		tableMap.put(Table.PROFILE, new Profile());
+		tableMap.put(Table.DEVICE, new Device());
+		tableMap.put(Table.POSITION, new Position());
+		tableMap.put(Table.SNMP, new Snmp());
+		tableMap.put(Table.ICON, new Icon());
+		tableMap.put(Table.CRITICAL, new Critical());
 		
-		snmp = new SNMPAgent();
+		agent = new SNMPAgent();
 		
 		http = new HTTPServer("0.0.0.0", tcp);
 	}
@@ -65,7 +69,7 @@ public class ITAhM {
 	public static void shutdown() {
 		http.close();
 		
-		snmp.close();
+		agent.close();
 		
 		log.close();
 		

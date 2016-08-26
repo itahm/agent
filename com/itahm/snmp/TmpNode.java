@@ -17,15 +17,16 @@ import org.snmp4j.mp.SnmpConstants;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
-import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.ITAhM;
+import com.itahm.SNMPAgent;
 
 abstract public class TmpNode implements ResponseListener {
 
 private static final long TIMEOUT = 5000;
 	
-	private final Snmp snmp;
+	protected final SNMPAgent agent;
+	
 	private final PDU pdu;
 	private final LinkedList<CommunityTarget> list;
 	private final Map<CommunityTarget, String> profileMap;
@@ -34,8 +35,8 @@ private static final long TIMEOUT = 5000;
 	
 	protected String sysName;
 	
-	public TmpNode(Snmp snmp, String ip) {
-		this.snmp = snmp;
+	public TmpNode(SNMPAgent agent, String ip) {
+		this.agent = agent;
 		this.ip = ip;
 		
 		sysName = "";
@@ -66,18 +67,28 @@ private static final long TIMEOUT = 5000;
 		CommunityTarget target = this.list.peek();
 		
 		if (target == null) {
-			onTest(null);
+			onFailure();
 		}
 		else {
 			try {
-				this.snmp.send(pdu, target, null, this);
+				this.agent.send(pdu, target, null, this);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 	}
 	
-	abstract public void onTest(String profileName);
+	private void onResponse(String profileName) {
+		if (profileName == null) {
+			onFailure();
+		}
+		else {
+			onSuccess(profileName);
+		}
+	}
+	
+	abstract public void onSuccess(String profileName);
+	abstract public void onFailure();
 	
 	@Override
 	public void onResponse(ResponseEvent event) {
@@ -99,7 +110,7 @@ private static final long TIMEOUT = 5000;
 					this.sysName = ((OctetString)responseVB.getVariable()).toString();
 				}
 				
-				onTest(this.profileMap.get(this.list.peek()));
+				onResponse(this.profileMap.get(this.list.peek()));
 			}
 			else {
 				ITAhM.debug("알수 없는 오류. 개발자에게 문의 바랍니다.");
@@ -108,29 +119,5 @@ private static final long TIMEOUT = 5000;
 	}
 	
 	public static void main(String[] args) throws IOException {
-		final Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-		
-		snmp.listen();
-		
-		new TmpNode(snmp, "192.168.0.20") {
-			@Override
-			public void onTest(String profileName) {
-				try {
-					if (profileName == null) {
-						System.out.println("실패");
-					}
-					else {
-						System.out.println("성공 profile = "+ profileName);
-					}
-					snmp.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		.addProfile("public", 161, "public")
-		.test();
-		
-		System.in.read();
 	}
 }

@@ -16,7 +16,7 @@ public class Query extends Command {
 	protected void execute(Request request, JSONObject data) throws IOException {
 		
 		try {
-			SNMPNode node = ITAhM.snmp.getNode(data.getString("ip"));
+			SNMPNode node = ITAhM.agent.getNode(data.getString("ip"));
 			
 			if (node != null) {
 				data = node.getData(data.getString("database")

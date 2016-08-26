@@ -28,12 +28,12 @@ public class SNMPNode extends Node {
 		this.agent = agent;
 		this.ip = ip;
 		
-		File nodeRoot = new File(new File(ITAhM.getRoot(), Constant.STRING_SNMP), ip);
+		File nodeRoot = new File(agent.nodeRoot, ip);
 		nodeRoot.mkdirs();
 		
 		rollingMap = new RollingMap(nodeRoot);
 		
-		this.critical = new CriticalData(criticalCondition);
+		setCritical(criticalCondition);
 	}
 	
 	public JSONObject getData(String database, String index, long start, long end, boolean summary) {
@@ -51,6 +51,15 @@ public class SNMPNode extends Node {
 		}
 		
 		return data;
+	}
+	
+	public void setCritical(JSONObject criticalCondition) {
+		if (criticalCondition == null) {
+			this.critical = null;
+		}
+		else {
+			this.critical = new CriticalData(criticalCondition);
+		}
 	}
 	
 	public String getIFNameFromARP(String mac) {
@@ -100,7 +109,9 @@ public class SNMPNode extends Node {
 		
 		this.rollingMap.put(Resource.RESPONSETIME, "0", super.responseTime);
 		
-		this.critical.analyze(CriticalData.RESPONSETIME, "0", TIMEOUT, super.responseTime);
+		if (this.critical != null) {
+			this.critical.analyze(CriticalData.RESPONSETIME, "0", TIMEOUT, super.responseTime);
+		}
 		
 		this.agent.onSubmitTop(ip, "responseTime", super.responseTime);
 		
@@ -109,8 +120,9 @@ public class SNMPNode extends Node {
 			value = super.hrProcessorEntry.get(index);
 			
 			this.rollingMap.put(Resource.HRPROCESSORLOAD, index, value);
-			
-			this.critical.analyze(CriticalData.PROCESSOR, index, 100, value);
+			if (this.critical != null) {
+				this.critical.analyze(CriticalData.PROCESSOR, index, 100, value);
+			}
 			
 			max = Math.max(max, value);
 		}
@@ -134,14 +146,18 @@ public class SNMPNode extends Node {
 			
 			switch(data.getInt("hrStorageType")) {
 			case 2:
-				this.critical.analyze(CriticalData.MEMORY, index, capacity, tmpValue);
+				if (this.critical != null) {
+					this.critical.analyze(CriticalData.MEMORY, index, capacity, tmpValue);
+				}
 				
 				this.agent.onSubmitTop(ip, "memory", value);
 				this.agent.onSubmitTop(ip, "memoryRate", tmpValue *100L / capacity);
 				
 				break;
 			case 4:
-				this.critical.analyze(CriticalData.STORAGE, index, capacity, tmpValue);
+				if (this.critical != null) {
+					this.critical.analyze(CriticalData.STORAGE, index, capacity, tmpValue);
+				}
 				
 				max = Math.max(max, value);
 				maxRate = Math.max(maxRate, tmpValue *100L / capacity);
@@ -288,7 +304,9 @@ public class SNMPNode extends Node {
 				//maxRate = Math.max(maxRate, out *100L / capacity);
 				maxRate = Math.max(maxRate, bytes *100L / capacity);
 				
-				this.critical.analyze(CriticalData.THROUGHPUT, index, capacity, max);
+				if (this.critical != null) {
+					this.critical.analyze(CriticalData.THROUGHPUT, index, capacity, max);
+				}
 			}
 			
 			this.agent.onSubmitTop(ip, "throughput", max);
@@ -331,10 +349,6 @@ public class SNMPNode extends Node {
 			this.processor = new HashMap<String, Critical>();
 			this.storage = new HashMap<String, Critical>();
 			this.throughput = new HashMap<String, Critical>();
-			
-			if (criticalCondition == null) {
-				return;
-			}
 			
 			JSONObject list;
 			Map<String, Critical> mapping;
@@ -412,7 +426,7 @@ public class SNMPNode extends Node {
 				
 				if ((value & Critical.DIFF) > 0) {
 					agent.onCritical(ip, (value & Critical.CRITIC) > 0
-						, String.format("%s index[%s] %d%% %s", resource, index, rate, (value & Critical.CRITIC) > 0? " 성능 임계 초과.": " 성능 정상."));
+						, String.format("%s.%s %d%% %s", resource, index, rate, (value & Critical.CRITIC) > 0? " 성능 임계 초과.": " 성능 정상."));
 				}
 			}
 		}

@@ -22,18 +22,9 @@ public class Push extends Command {
 					new JSONObject().put("error", "database not found")));
 			}
 			else {
-				if (table.commit(data.getInt("sequence"))) {
-					data = table.save(data.getJSONObject("data"));
-					
-					request.sendResponse(Response.getInstance(200, Response.OK,
-						new JSONObject()
-							.put("sequence", table.lock())
-							.put("data", data)));
-				}
-				else {
-					request.sendResponse(Response.getInstance(409, Response.CONFLICT,
-						new JSONObject().put("error", "database lock")));
-				}
+				table.save(data.getJSONObject("data"));
+				
+				request.sendResponse(Response.getInstance(200, Response.OK));
 			}
 		}
 		catch (JSONException jsone) {jsone.printStackTrace();
