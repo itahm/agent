@@ -41,8 +41,14 @@ public abstract class Node implements ResponseListener {
 	protected long responseTime;
 	private boolean completed;
 	
+	/**
+	 * 이전 데이터 보관소
+	 */
 	protected final JSONObject data;
 	
+	/**
+	 * 최신 데이터 보관소
+	 */
 	protected Map<String, Integer> hrProcessorEntry;
 	protected Map<String, JSONObject> hrStorageEntry;
 	protected Map<String, JSONObject> ifEntry;
@@ -68,8 +74,13 @@ public abstract class Node implements ResponseListener {
 			return;
 		}
 		
-		completed = false;
+		if (!this.completed) {
+			System.out.println("delay");
+		}
 		
+		this.completed = false;
+		
+		// 존재하지 않는 index 지워주기 위해 초기화
 		hrProcessorEntry = new HashMap<String, Integer>();
 		hrStorageEntry = new HashMap<String, JSONObject>();
 		ifEntry = new HashMap<String, JSONObject>();
@@ -111,7 +122,9 @@ public abstract class Node implements ResponseListener {
 		JSONObject ifData = this.ifEntry.get(index);
 		
 		if(ifData == null) {
-			this.ifEntry.put(index, ifData = new JSONObject());
+			ifData = new JSONObject();
+					
+			this.ifEntry.put(index, ifData);
 			
 			ifData.put("ifInBPS", 0);
 			ifData.put("ifOutBPS", 0);
@@ -159,7 +172,9 @@ public abstract class Node implements ResponseListener {
 		JSONObject ifData = this.ifEntry.get(index);
 		
 		if(ifData == null) {
-			this.ifEntry.put(index, ifData = new JSONObject());
+			ifData = new JSONObject();
+			
+			this.ifEntry.put(index, ifData);
 		}
 		
 		if (request.startsWith(RequestPDU.ifName) && response.startsWith(RequestPDU.ifName)) {

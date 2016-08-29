@@ -169,10 +169,9 @@ public class SNMPNode extends Node {
 		
 		if (lastRolling > 0) {
 			long interval = super.data.getLong("lastResponse") - lastRolling;
+			// 보관된 값
 			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
 			long bytes;
-			//long in;
-			//long out;
 			
 			max = 0;
 			maxRate = 0;
@@ -181,12 +180,14 @@ public class SNMPNode extends Node {
 			for(String index: super.ifEntry.keySet()) {
 				data = super.ifEntry.get(index);
 				
+				// 특정 index가 새로 생성되었다면 보관된 값이 없을수도 있음.
 				if (!ifEntry.has(index)) {
 					continue;
 				}
 				
+				// 처리가 완료되기 전에 새로운 요청이 있었음.
 				if (data == null) {
-					System.out.println("SNMPNode, null data");
+					System.out.println("SNMPNode, index "+index);
 					
 					continue;
 				}
@@ -245,7 +246,7 @@ public class SNMPNode extends Node {
 					continue;
 				}
 				
-				this.rollingMap.put(Resource.IFINBYTES, index, bytes);
+				//this.rollingMap.put(Resource.IFINBYTES, index, bytes);
 				
 				if (oldData.has("ifHCInOctets")) {
 					bytes -= oldData.getLong("ifHCInOctets");
@@ -257,18 +258,13 @@ public class SNMPNode extends Node {
 					continue;
 				}
 				
-				//in = bytes *8000 / interval;
 				bytes = bytes *8000 / interval;
 				
-				//data.put("ifInBPS", in);
 				data.put("ifInBPS", bytes);
 				
-				//this.rollingMap.put(Resource.IFINOCTETS, index, in);
 				this.rollingMap.put(Resource.IFINOCTETS, index, bytes);
 				
-				//max = Math.max(max, in);
 				max = Math.max(max, bytes);
-				//maxRate = Math.max(maxRate, in *100L / capacity);
 				maxRate = Math.max(maxRate, bytes *100L / capacity);
 				
 				if (data.has("ifHCOutOctets")) {
@@ -281,7 +277,7 @@ public class SNMPNode extends Node {
 					continue;
 				}
 				
-				this.rollingMap.put(Resource.IFOUTBYTES, index, bytes);
+				//this.rollingMap.put(Resource.IFOUTBYTES, index, bytes);
 				
 				if (oldData.has("ifHCOutOctets")) {
 					bytes -= oldData.getLong("ifHCOutOctets");
@@ -293,15 +289,13 @@ public class SNMPNode extends Node {
 					continue;
 				}
 				
-				//out = bytes *8000 / interval;
 				bytes = bytes *8000 / interval;
-				//data.put("ifOutBPS", out);
+				
 				data.put("ifOutBPS", bytes);
-				//this.rollingMap.put(Resource.IFOUTOCTETS, index, out);
+				
 				this.rollingMap.put(Resource.IFOUTOCTETS, index, bytes);
-				//max = Math.max(max, out);
+				
 				max = Math.max(max, bytes);
-				//maxRate = Math.max(maxRate, out *100L / capacity);
 				maxRate = Math.max(maxRate, bytes *100L / capacity);
 				
 				if (this.critical != null) {
