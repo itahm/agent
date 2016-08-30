@@ -35,6 +35,7 @@ import com.itahm.ITAhM;
 
 public abstract class Node implements ResponseListener {
 	
+	private final RequestPDU pdu;
 	private final Snmp snmp;
 	private final CommunityTarget target;
 	private long requestTime;
@@ -55,6 +56,8 @@ public abstract class Node implements ResponseListener {
 	protected Map<String, Integer> arpTable;
 	
 	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {
+		this.pdu = RequestPDU.getInstance();
+		
 		this.snmp = snmp;
 		
 		data = new JSONObject();
@@ -65,6 +68,12 @@ public abstract class Node implements ResponseListener {
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
 		target.setVersion(SnmpConstants.version2c);
 		target.setTimeout(timeout);
+	}
+	
+	public void request () {
+		this.pdu.setRequestID(null);
+		
+		request(this.pdu);
 	}
 	
 	public void request (PDU pdu) {
@@ -108,7 +117,12 @@ public abstract class Node implements ResponseListener {
 			this.data.put("sysDescr", new String(((OctetString)variable).getValue()));
 		}
 		else if (request.startsWith(RequestPDU.sysObjectID) && response.startsWith(RequestPDU.sysObjectID)) {
-			this.data.put("sysObjectID", ((OID)variable).toDottedString());
+			if (this.data.has("sysObjectID")) {
+				this.data.put("sysObjectID", ((OID)variable).toDottedString());
+			}
+			else {
+				this.pdu.setEnterprise(((OID)variable).get(0));
+			}
 		}
 		else if (request.startsWith(RequestPDU.sysName) && response.startsWith(RequestPDU.sysName)) {
 			this.data.put("sysName", new String(((OctetString)variable).getValue()));
@@ -349,8 +363,6 @@ public abstract class Node implements ResponseListener {
 		PDU response = event.getResponse();
 		
 		((Snmp)event.getSource()).cancel(request, this);
-
-		completed = true;
 		
 		if (response == null) { // response timed out
 			onFailure();
@@ -390,6 +402,8 @@ public abstract class Node implements ResponseListener {
 		else {
 			new Exception().printStackTrace();
 		}
+		
+		this.completed = true;
 	}
 	
 	abstract protected void onSuccess();

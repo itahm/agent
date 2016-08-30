@@ -153,9 +153,7 @@ public class RequestPDU extends PDU {
 	public final static OID authenticationFailure = new OID(snmpTraps).append(5); // 10
 	public final static OID egpNeighborLoss = new OID(snmpTraps).append(6); // 10
 	
-	public enum Enterprise {
-		CISCO
-	}
+	private final static int CISCO = 9;
 	
 	private RequestPDU() {
 		setType(PDU.GETNEXT);
@@ -193,4 +191,14 @@ public class RequestPDU extends PDU {
 		return new RequestPDU();
 	}
 	
+	public void setEnterprise(int enterprise) {
+		switch(enterprise) {
+		case CISCO:
+			add(new VariableBinding(busyPer));
+			add(new VariableBinding(cpmCPUTotal5sec));
+			add(new VariableBinding(cpmCPUTotal5secRev));
+			
+			break;
+		}
+	}
 }

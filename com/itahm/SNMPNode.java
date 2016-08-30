@@ -95,7 +95,9 @@ public class SNMPNode extends Node {
 		return "";
 	}
 	
-	private void parseResponse() {
+	@Override
+	public void onSuccess() {
+		
 		JSONObject data;
 		JSONObject oldData;
 		long max;
@@ -211,12 +213,12 @@ public class SNMPNode extends Node {
 				if (data.has("ifInErrors")) {
 					value = data.getInt("ifInErrors");
 					
-					this.rollingMap.put(Resource.IFINERRORS, index, value);
-					
 					if (oldData.has("ifInErrors")) {
 						value -= oldData.getInt("ifInErrors");
 						
 						data.put("ifInErrors", value);
+					
+						this.rollingMap.put(Resource.IFINERRORS, index, value);
 						
 						maxErr = Math.max(maxErr, value);
 					}
@@ -225,12 +227,12 @@ public class SNMPNode extends Node {
 				if (data.has("ifOutErrors")) {
 					value = data.getInt("ifOutErrors");
 					
-					this.rollingMap.put(Resource.IFOUTERRORS, index, value);
-					
 					if (oldData.has("ifOutErrors")) {
 						value -= oldData.getInt("ifOutErrors");
 						
 						data.put("ifOutErrors", value);
+						
+						this.rollingMap.put(Resource.IFOUTERRORS, index, value);
 						
 						maxErr = Math.max(maxErr, value);
 					}
@@ -306,16 +308,6 @@ public class SNMPNode extends Node {
 			this.agent.onSubmitTop(ip, "throughput", max);
 			this.agent.onSubmitTop(ip, "throughputRate", maxRate);
 			this.agent.onSubmitTop(ip, "throughputErr", maxErr);
-		}
-	}
-	
-	@Override
-	public void onSuccess() {
-		try {
-			parseResponse();
-		}
-		catch(Exception e) {
-			e.printStackTrace();
 		}
 		
 		lastRolling = this.data.getLong("lastResponse");

@@ -108,7 +108,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 			}
 		} catch (IOException ioe) {
 			// RESET에 의한 예외일 수 있음. client의 reset을 막을수는 없기에...
-			System.out.println(ioe.getMessage());
+			//System.out.println(ioe.getMessage());
 		}
 		
 		closeRequest(request);

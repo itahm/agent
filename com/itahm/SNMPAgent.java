@@ -18,11 +18,9 @@ import java.util.TimerTask;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-import com.itahm.snmp.RequestPDU;
 import com.itahm.snmp.TmpNode;
 import com.itahm.table.Table;
 import com.itahm.util.DataCleaner;
@@ -40,7 +38,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Table criticalTable;
 	private final TopTable topTable;
 	private final Timer timer;
-	private final static PDU pdu = RequestPDU.getInstance();
+	//private final static PDU pdu = RequestPDU.getInstance();
 	
 	public SNMPAgent() throws IOException {
 		super(new DefaultUdpTransportMapping());
@@ -291,9 +289,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 				for(String ip: nodeList.keySet()) {
 					SNMPNode node = nodeList.get(ip);
 					
-					pdu.setRequestID(null);
+					//pdu.setRequestID(null);
 					
-					node.request(pdu);
+					//node.request(pdu);
+					node.request();
 				}
 			}
 		}
