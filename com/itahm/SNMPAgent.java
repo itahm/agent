@@ -233,7 +233,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			JSONObject profile = profileTable.getJSONObject(profileName);
 			JSONObject device = deviceTable.getJSONObject(super.ip);
 			
-			if ("".equals(device.getString("name"))) {
+			if (!device.has("name") || "".equals(device.getString("name"))) {
 				device.put("name", super.sysName);
 			}
 			
@@ -244,7 +244,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 				.put("critical", false));
 			
 			snmpTable.save();
-			
 			
 			synchronized(nodeList) {
 				try {

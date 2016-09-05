@@ -40,6 +40,7 @@ public abstract class Node implements ResponseListener {
 	private final CommunityTarget target;
 	private long requestTime;
 	protected long responseTime;
+	private Integer enterprise;
 	private boolean completed;
 	
 	/**
@@ -117,11 +118,12 @@ public abstract class Node implements ResponseListener {
 			this.data.put("sysDescr", new String(((OctetString)variable).getValue()));
 		}
 		else if (request.startsWith(RequestPDU.sysObjectID) && response.startsWith(RequestPDU.sysObjectID)) {
-			if (this.data.has("sysObjectID")) {
-				this.data.put("sysObjectID", ((OID)variable).toDottedString());
-			}
-			else {
-				this.pdu.setEnterprise(((OID)variable).get(0));
+			this.data.put("sysObjectID", ((OID)variable).toDottedString());
+			
+			if (this.enterprise == null) {
+				this.enterprise = ((OID)variable).get(6);
+				
+				this.pdu.setEnterprise(this.enterprise);
 			}
 		}
 		else if (request.startsWith(RequestPDU.sysName) && response.startsWith(RequestPDU.sysName)) {

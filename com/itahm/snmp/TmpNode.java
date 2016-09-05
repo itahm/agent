@@ -108,9 +108,14 @@ private static final long TIMEOUT = 5000;
 				VariableBinding responseVB = (VariableBinding)responseVBs.get(0);
 				if (responseVB.getOid().startsWith(RequestPDU.sysName)) {
 					this.sysName = ((OctetString)responseVB.getVariable()).toString();
+					
+					onResponse(this.profileMap.get(this.list.peek()));
 				}
-				
-				onResponse(this.profileMap.get(this.list.peek()));
+				else {
+					System.out.println("sysName 지원하지 않는 snmp.");
+					
+					onFailure();
+				}
 			}
 			else {
 				ITAhM.debug("알수 없는 오류. 개발자에게 문의 바랍니다.");
