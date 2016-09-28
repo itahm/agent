@@ -14,7 +14,7 @@ public class Device extends Table {
 		if (isEmpty()) {
 			getJSONObject().put("127.0.0.1", new JSONObject()
 				.put("ip", "127.0.0.1")
-				.put("type", "server")
+				.put("type", "unknown")
 				.put("ifEntry", new JSONObject())
 			);
 			

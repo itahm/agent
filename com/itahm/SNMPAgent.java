@@ -63,16 +63,16 @@ public class SNMPAgent extends Snmp implements Closeable {
 		nodeRoot.mkdir();
 		
 		listen();
-		System.out.println("snmp agent :: listening.");
+		//System.out.println("snmp agent :: listening.");
 		
 		initNode();
 		
-		System.out.println("snmp agent :: loading node.");
+		//System.out.println("snmp agent :: loading node.");
 		new RequestSchedule();
-		System.out.println("snmp agent :: scheduling.");
+		//System.out.println("snmp agent :: scheduling.");
 		new CleanerSchedule();
 		
-		System.out.println("snmp agent :: running...");
+		System.out.println("snmp agent running.");
 	}
 	
 	public void removeNode(String ip) {
