@@ -78,7 +78,7 @@ public abstract class Node implements ResponseListener {
 	}
 	
 	public void request (PDU pdu) {
-		if (!completed) {
+		if (!completed) {System.out.println(this.target);
 			ITAhM.debug("delay");
 			
 			return;
@@ -368,41 +368,40 @@ public abstract class Node implements ResponseListener {
 		
 		if (response == null) { // response timed out
 			onFailure();
-			
-			return;
-		}
-		
-		int status = response.getErrorStatus();
-		
-		if (status == PDU.noError) {
-			try {
-				PDU nextRequest = getNextRequest(request, response);
-				
-				if (nextRequest == null) {
-					long current = Calendar.getInstance().getTimeInMillis();
-					
-					responseTime = current - this.requestTime;
-					
-					this.data.put("responseTime", responseTime);
-					this.data.put("lastResponse", current);
-					
-					onSuccess();
-					
-					this.data.put("hrProcessorEntry", this.hrProcessorEntry);
-					this.data.put("hrStorageEntry", this.hrStorageEntry);
-					this.data.put("ifEntry", this.ifEntry);
-					this.data.put("arpTable", this.arpTable);
-				}
-				else {
-					sendRequest(nextRequest);
-				}
-			} catch (IOException e) {
-				// TODO fatal error
-				e.printStackTrace();
-			}
 		}
 		else {
-			new Exception().printStackTrace();
+			int status = response.getErrorStatus();
+			
+			if (status == PDU.noError) {
+				try {
+					PDU nextRequest = getNextRequest(request, response);
+					
+					if (nextRequest == null) {
+						long current = Calendar.getInstance().getTimeInMillis();
+						
+						responseTime = current - this.requestTime;
+						
+						this.data.put("responseTime", responseTime);
+						this.data.put("lastResponse", current);
+						
+						onSuccess();
+						
+						this.data.put("hrProcessorEntry", this.hrProcessorEntry);
+						this.data.put("hrStorageEntry", this.hrStorageEntry);
+						this.data.put("ifEntry", this.ifEntry);
+						this.data.put("arpTable", this.arpTable);
+					}
+					else {
+						sendRequest(nextRequest);
+					}
+				} catch (IOException e) {
+					// TODO fatal error
+					e.printStackTrace();
+				}
+			}
+			else {
+				new Exception().printStackTrace();
+			}
 		}
 		
 		this.completed = true;
