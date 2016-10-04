@@ -67,52 +67,53 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		initNode();
 		
-		//System.out.println("snmp agent :: loading node.");
-		new RequestSchedule();
-		//System.out.println("snmp agent :: scheduling.");
 		new CleanerSchedule();
 		
 		System.out.println("snmp agent running.");
 	}
 	
-	public void removeNode(String ip) {
-		synchronized(this.nodeList) {
-			this.nodeList.remove(ip);
+	private void addNode(String ip, String profileName) {
+		JSONObject profile = profileTable.getJSONObject(profileName);
+		SNMPNode node;
+		
+		try {
+			node = new SNMPNode(this, ip, profile.getInt("udp")
+					, profile.getString("community")
+					, this.criticalTable.getJSONObject(ip));
 			
-			this.snmpTable.getJSONObject().remove(ip);
-			this.snmpTable.save();
+			this.nodeList.put(ip, node);
+			
+			node.request();
+		} catch (IOException | JSONException e) {
+			e.printStackTrace();
 		}
+	}
+	
+	public void removeNode(String ip) {
+		this.nodeList.remove(ip);
+		
+		this.snmpTable.getJSONObject().remove(ip);
+		this.snmpTable.save();
 	}
 	
 	private void initNode() {
 		JSONObject snmpData = this.snmpTable.getJSONObject();
-		JSONObject snmp;
-		JSONObject profile;
-		String profileName;
 		String ip;
 		
 		for (Object key : snmpData.keySet()) {
 			ip = (String)key;
 			
-			snmp = snmpData.getJSONObject(ip);
-			
-			profileName = snmp.getString("profile");
-			
-			profile = this.profileTable.getJSONObject(profileName);
-			
-			try {
-				this.nodeList.put(ip, new SNMPNode(this, ip, profile.getInt("udp")
-					, profile.getString("community")
-					, this.criticalTable.getJSONObject(ip)));
-			} catch (JSONException | IOException e) {
-				e.printStackTrace();
-			}
+			addNode(ip, snmpData.getJSONObject(ip).getString("profile"));
 		}
 	}
 	
-	public void resetNode(String ip, JSONObject critical) {
+	public void resetCritical(String ip, JSONObject critical) {
 		SNMPNode node = this.nodeList.get(ip);
 		
+		if (node == null) {
+			return;
+		}
+			
 		node.setCritical(critical);
 	}
 	
@@ -156,7 +157,11 @@ public class SNMPAgent extends Snmp implements Closeable {
 	
 	public void onSuccess(String ip) {
 		JSONObject snmp = this.snmpTable.getJSONObject(ip);
-		SNMPNode node = this.nodeList.get(ip);
+		final SNMPNode node = this.nodeList.get(ip);
+		
+		if (node == null) {
+			return;
+		}
 		
 		if (snmp.getBoolean("shutdown")) {
 			snmp.put("shutdown", false);
@@ -170,12 +175,25 @@ public class SNMPAgent extends Snmp implements Closeable {
 			}
 		}
 
+		this.timer.schedule(
+		new TimerTask() {
+
+			@Override
+			public void run() {
+				node.request();
+			}
+			
+		}, REQUEST_INTERVAL);
 	}
 	
 	public void onFailure(String ip) {
 		JSONObject snmp = this.snmpTable.getJSONObject(ip);
 		SNMPNode node = this.nodeList.get(ip);
 
+		if (node == null) {
+			return;
+		}
+		
 		if (!snmp.getBoolean("shutdown")) {
 			snmp.put("shutdown", true);
 			
@@ -187,11 +205,17 @@ public class SNMPAgent extends Snmp implements Closeable {
 				e.printStackTrace();
 			}
 		}
+		
+		node.request();
 	}
 	
 	public void onCritical(String ip, boolean critical, String message) {
 		JSONObject snmp = this.snmpTable.getJSONObject(ip);
 		SNMPNode node = this.nodeList.get(ip);
+		
+		if (node == null) {
+			return;
+		}
 		
 		snmp.put("critical", critical);
 		
@@ -230,7 +254,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 
 		@Override
 		public void onSuccess(String profileName) {
-			JSONObject profile = profileTable.getJSONObject(profileName);
+			
 			JSONObject device = deviceTable.getJSONObject(super.ip);
 			
 			if (!device.has("name") || "".equals(device.getString("name"))) {
@@ -245,16 +269,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			snmpTable.save();
 			
-			synchronized(nodeList) {
-				try {
-					nodeList.put(this.ip
-						, new SNMPNode(super.agent, ip, profile.getInt("udp"), profile.getString("community"), null));
-				} catch (JSONException | IOException e) {
-					e.printStackTrace();
-					
-					return;
-				}
-			}
+			addNode(this.ip, profileName);
 			
 			try {
 				ITAhM.log.write(ip, String.format("%s [%s] 등록 성공.", super.ip, super.sysName));
@@ -274,27 +289,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 			}
 		}
 		
-	}
-	
-	class RequestSchedule extends TimerTask {
-
-		public RequestSchedule(){
-			timer.schedule(this, 0, REQUEST_INTERVAL);
-		}
-		
-		@Override
-		public void run() {
-			synchronized(nodeList) {
-				for(String ip: nodeList.keySet()) {
-					SNMPNode node = nodeList.get(ip);
-					
-					//pdu.setRequestID(null);
-					
-					//node.request(pdu);
-					node.request();
-				}
-			}
-		}
 	}
 	
 	class CleanerSchedule {

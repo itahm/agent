@@ -13,21 +13,21 @@ import com.itahm.http.Response;
 public class Pull extends Command {
 	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			Table table = ITAhM.getTable(data.getString("database"));
 			
 			if (table == null) {
-				request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "database not found")));
+				return Response.getInstance(Response.Status.BADREQUEST,
+					new JSONObject().put("error", "database not found").toString());
 			}
 			else {
-				request.sendResponse(Response.getInstance(200, Response.OK, table.getJSONObject()));
+				return Response.getInstance(Response.Status.OK, table.getJSONObject().toString());
 			}
 		}
 		catch (JSONException jsone) {
-			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-				new JSONObject().put("error", "invalid json request")));
+			return Response.getInstance(Response.Status.BADREQUEST,
+				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 	

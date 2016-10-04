@@ -9,14 +9,9 @@ import com.itahm.http.Response;
 import com.itahm.http.Session;
 
 public abstract class Command {
-	public void execute(Request request, JSONObject data, Session session) throws IOException {
-		if (session == null) {
-			request.sendResponse(Response.getInstance(401, Response.UNAUTHORIZED, ""));
-		}
-		else {
-			execute(request, data);
-		}
+	public Response execute(Request request, JSONObject data, Session session) throws IOException {
+		return session == null? Response.getInstance(Response.Status.UNAUTHORIZED): execute(request, data);
 	}
 	
-	protected abstract void execute(Request request, JSONObject data) throws IOException;
+	protected abstract Response execute(Request request, JSONObject data) throws IOException;
 }

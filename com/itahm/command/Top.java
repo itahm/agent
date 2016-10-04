@@ -14,7 +14,7 @@ public class Top extends Command {
 	private static int TOP_MAX = 10;
 	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		int count = TOP_MAX;
 		
 		try {
@@ -22,11 +22,14 @@ public class Top extends Command {
 				count = Math.min(data.getInt("count"), TOP_MAX);
 			}
 			
-			request.sendResponse(Response.getInstance(200, Response.OK, ITAhM.agent.getTop(count)));
+			return Response.getInstance(Response.Status.OK, ITAhM.agent.getTop(count).toString());
+		}
+		catch(NullPointerException npe) {
+			return Response.getInstance(Response.Status.UNAVAILABLE);
 		}
 		catch (JSONException jsone) {
-			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request")));
+			return Response.getInstance(Response.Status.BADREQUEST,
+					new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 	

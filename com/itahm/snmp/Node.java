@@ -31,7 +31,6 @@ import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.Constant;
-import com.itahm.ITAhM;
 
 public abstract class Node implements ResponseListener {
 	
@@ -71,21 +70,15 @@ public abstract class Node implements ResponseListener {
 		target.setTimeout(timeout);
 	}
 	
-	public void request () {
+	public boolean request () {
 		this.pdu.setRequestID(null);
 		
-		request(this.pdu);
+		return request(this.pdu);
 	}
 	
-	public void request (PDU pdu) {
-		if (!completed) {System.out.println(this.target);
-			ITAhM.debug("delay");
-			
-			return;
-		}
-		
+	 private boolean request (PDU pdu) {
 		if (!this.completed) {
-			System.out.println("delay");
+			return false;
 		}
 		
 		this.completed = false;
@@ -99,6 +92,8 @@ public abstract class Node implements ResponseListener {
 		this.requestTime = Calendar.getInstance().getTimeInMillis();
 		
 		sendRequest(pdu);
+		
+		return true;
 	}
 	
 	public JSONObject getData() {		
@@ -439,7 +434,7 @@ public abstract class Node implements ResponseListener {
 				}
 			}
 			
-		}.request(RequestPDU.getInstance());
+		}.request();
 		
 		System.in.read();
 	}

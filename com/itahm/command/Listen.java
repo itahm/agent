@@ -6,17 +6,17 @@ import org.json.JSONObject;
 
 import com.itahm.ITAhM;
 import com.itahm.http.Request;
+import com.itahm.http.Response;
 
 public class Listen extends Command {
 	
-	public Listen() {
-	}
-	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		long index = data.has("index")? data.getInt("index"): -1;
 		
 		ITAhM.log.listen(request, index);
+		
+		return null;
 	}
 	
 }

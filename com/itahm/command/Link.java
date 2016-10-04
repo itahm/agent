@@ -13,12 +13,13 @@ import com.itahm.table.Table;
 
 public class Link extends Command {
 	
-	public void execute(Request request, JSONObject data, Session session) throws IOException {
-		execute(request, data);
+	@Override
+	public Response execute(Request request, JSONObject data, Session session) throws IOException {
+		return execute(request, data);
 	}
 		
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		Table table = ITAhM.getTable("device");
 		JSONObject deviceData = table.getJSONObject();
 		
@@ -32,19 +33,24 @@ public class Link extends Command {
 			JSONObject ifEntry2 = device2.getJSONObject("ifEntry");
 			
 			if (link) {
-				ifEntry1.put(ip2, ITAhM.agent.getPeerIFName(ip1, ip2));
-				ifEntry2.put(ip1, ITAhM.agent.getPeerIFName(ip2, ip1));
+				try {
+					ifEntry1.put(ip2, ITAhM.agent.getPeerIFName(ip1, ip2));
+					ifEntry2.put(ip1, ITAhM.agent.getPeerIFName(ip2, ip1));
+				}
+				catch(NullPointerException npe) {
+					return Response.getInstance(Response.Status.UNAVAILABLE);
+				}
 			}
 			else {
 				ifEntry1.remove(ip2);
 				ifEntry2.remove(ip1);
 			}
 			
-			request.sendResponse(Response.getInstance(200, Response.OK, table.save()));
+			return Response.getInstance(Response.Status.OK, table.save().toString());
 		}
-		catch (JSONException jsone) {jsone.printStackTrace();
-			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request")));
+		catch (JSONException jsone) {
+			return Response.getInstance(Response.Status.BADREQUEST,
+				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 

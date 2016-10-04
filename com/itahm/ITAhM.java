@@ -30,15 +30,12 @@ public class ITAhM {
 	private static Map<String, Table> tableMap;
 	
 	public ITAhM(int tcp, String path, String host) throws IOException {
-		System.out.println("ITAhM version 1.1.3.33");
+		System.out.println("Version 1.1.3.34");
 		System.out.println("start up ITAhM agent");
+		System.out.println("TCP "+ tcp);
 		
 		dataRoot = new File(path, "data");
 		dataRoot.mkdir();
-		
-		log = new Log(dataRoot);
-		
-		gcmm = new GCMManager(API_KEY, host);
 		
 		tableMap = new HashMap<String, Table>();
 		tableMap.put(Table.ACCOUNT, new Account());
@@ -49,9 +46,10 @@ public class ITAhM {
 		tableMap.put(Table.ICON, new Icon());
 		tableMap.put(Table.CRITICAL, new Critical());
 		
-		agent = new SNMPAgent();
-		
 		http = new HTTPServer("0.0.0.0", tcp);
+		log = new Log(dataRoot);
+		gcmm = new GCMManager(API_KEY, host);
+		agent = new SNMPAgent();
 	}
 	
 	public static File getRoot() {

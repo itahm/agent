@@ -13,12 +13,12 @@ import com.itahm.http.Session;
 
 public class Register extends Command {
 
-	public void execute(Request request, JSONObject data, Session session) throws IOException {
-		execute(request, data);
+	public Response execute(Request request, JSONObject data, Session session) throws IOException {
+		return execute(request, data);
 	}
 	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			String id = data.getString(GCMManager.ID);
 			
@@ -28,11 +28,11 @@ public class Register extends Command {
 			
 			ITAhM.gcmm.register(id, data.getString(GCMManager.TOKEN));
 			
-			request.sendResponse(Response.getInstance(200, Response.OK));
+			return Response.getInstance(Response.Status.OK);
 		}
 		catch (JSONException jsone) {
-			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request")));
+			return Response.getInstance(Response.Status.BADREQUEST,
+					new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 

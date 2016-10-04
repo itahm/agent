@@ -10,12 +10,9 @@ import com.itahm.http.Response;
 
 public class Log extends Command {
 	
-	public Log() {
-	}
-	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
-		request.sendResponse(Response.getInstance(200, Response.OK, ITAhM.log.read(data.getLong("date"))));
+	protected Response execute(Request request, JSONObject data) throws IOException {
+		return Response.getInstance(Response.Status.OK, ITAhM.log.read(data.getLong("date")));
 	}
 
 }

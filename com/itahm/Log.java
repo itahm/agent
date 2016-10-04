@@ -116,7 +116,7 @@ public class Log implements Closeable {
 		synchronized(this.waiter) {
 			for (Request request : this.waiter) {
 				try {
-					request.sendResponse(Response.getInstance(200, "OK", logData));
+					request.sendResponse(Response.getInstance(Response.Status.OK, logData.toString()));
 				} catch (IOException e) {
 					// TODO 이 경우 소켓 어떻게 닫아주나?
 					e.printStackTrace();
@@ -160,7 +160,7 @@ public class Log implements Closeable {
 		
 		synchronized(this.log) {
 			if (this.log.has(index)) {
-				request.sendResponse(Response.getInstance(200, "OK", this.log.getJSONObject(index)));
+				request.sendResponse(Response.getInstance(Response.Status.OK, this.log.getJSONObject(index).toString()));
 			}
 			else {
 				this.waiter.add(request);

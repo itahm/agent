@@ -11,23 +11,20 @@ import com.itahm.http.Session;
 
 public class Echo extends Command {
 	
-	private int level;
+	private int level = -1;
 	
-	public Echo() {
-	}
-
-	public void execute(Request request, JSONObject data, Session session) throws IOException {
+	public Response execute(Request request, JSONObject data, Session session) throws IOException {
 		if (session != null) {
 			this.level = (Integer)session.getExtras();
 		}
 		
-		super.execute(request, data, session);
+		return super.execute(request, data, session);
 	}
 	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
-		request.sendResponse(Response.getInstance(200, Response.OK, new JSONObject()
-			.put(Constant.STRING_LEVEL, this.level)));
+	protected Response execute(Request request, JSONObject data) throws IOException {
+		return Response.getInstance(Response.Status.OK, new JSONObject()
+			.put(Constant.STRING_LEVEL, this.level).toString());
 	}
 
 }

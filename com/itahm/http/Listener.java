@@ -1,6 +1,7 @@
 package com.itahm.http;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 
 import java.net.InetAddress;
@@ -20,12 +21,14 @@ import java.util.Timer;
 
 
 public abstract class Listener extends Timer implements Runnable, Closeable {
-
+	
+	private final static int BUF_SIZE = 2048;
+	
 	private final ServerSocketChannel channel;
 	private final ServerSocket listener;
 	private final Selector selector;
 	private final ByteBuffer buffer;
-	private static final Set<Request> connections = new HashSet<Request>();
+	private final Set<Request> connections = new HashSet<Request>();
 	
 	private Boolean closed = false;
 	
@@ -49,7 +52,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 		channel = ServerSocketChannel.open();
 		listener = channel.socket();
 		selector = Selector.open();
-		buffer = ByteBuffer.allocateDirect(1024);
+		buffer = ByteBuffer.allocateDirect(BUF_SIZE);
 		
 		listener.bind(addr);
 		channel.configureBlocking(false);
@@ -107,8 +110,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 				return;
 			}
 		} catch (IOException ioe) {
-			// RESET에 의한 예외일 수 있음. client의 reset을 막을수는 없기에...
-			//System.out.println(ioe.getMessage());
+			// TODO reset
 		}
 		
 		closeRequest(request);
@@ -193,53 +195,58 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-		onStop();
 	}
 	
-	abstract protected void onRequest(Request request);
-	abstract protected void onClose(Request request);
-	abstract protected void onStart();
-	abstract protected void onStop();
+	protected void onStart() {
+	}
+	
+	protected void onRequest(Request request) {
+	}
+	
+	protected void onClose(Request request) {
+	}
 	
 	public static void main(String [] args) throws IOException {
-		final Set<Request> req = new HashSet<Request>();
-		
-		final Listener server = new Listener(2015) {
+		final Listener server = new Listener() {
 
 			@Override
 			protected void onRequest(Request request) {
 				
-				request.getRequestURI();
-				request.getRequestMethod();
+				String uri = request.getRequestURI();
+				String method = request.getRequestMethod();
+				Response response;
 				
-				try {
-					
-					request.sendResponse(Response.getInstance(200, "OK","{\"test\":\"good\"}"));
-
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				if (!"HTTP/1.1".equals(request.getRequestVersion())) {
+					response = Response.getInstance(Response.Status.VERSIONNOTSUP);
+				}
+				else {
+					if (method.toLowerCase().equals("get")) {
+						if ("/".equals(uri)) {
+							uri = "/index.html";
+						}
+						
+						response = Response.getInstance(Response.Status.OK, new File("."+ uri));
+							
+						if (response == null) {
+							response = Response.getInstance(Response.Status.NOTFOUND);
+						}
+					}
+					else {
+						response = Response.getInstance(Response.Status.NOTALLOWED);
+					}
 				}
 				
-				req.add(request);
+				try {
+					request.sendResponse(response);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 
 			@Override
 			protected void onClose(Request request) {
-				req.remove(request);
 			}
 
-			@Override
-			protected void onStart() {
-				System.out.println("HTTP Server running...");
-			}
-
-			@Override
-			protected void onStop() {
-				System.out.println("stop HTTP Server.");
-			}
-			
 		};
 		
 		System.in.read();

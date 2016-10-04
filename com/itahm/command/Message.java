@@ -12,15 +12,18 @@ import com.itahm.http.Response;
 public class Message extends Command {
 
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			ITAhM.gcmm.broadcast(data.getString("message"));
 			
-			request.sendResponse(Response.getInstance(200, Response.OK));
+			return Response.getInstance(Response.Status.OK);
+		}
+		catch(NullPointerException npe) {
+			return Response.getInstance(Response.Status.UNAVAILABLE);
 		}
 		catch (JSONException jsone) {
-			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request")));
+			return Response.getInstance(Response.Status.BADREQUEST,
+					new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 

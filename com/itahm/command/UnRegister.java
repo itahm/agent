@@ -12,26 +12,27 @@ import com.itahm.http.Session;
 
 public class UnRegister extends Command {
 
-	public void execute(Request request, JSONObject data, Session session) throws IOException {
-		execute(request, data);
+	public Response execute(Request request, JSONObject data, Session session) throws IOException {
+		return execute(request, data);
 	}
 	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			String token = data.getString("token");
 			
 			if (token.length() == 0) {
-				throw new JSONException("");
+				return Response.getInstance(Response.Status.BADREQUEST,
+					new JSONObject().put("error", "invalid token").toString());
 			}
 			
 			ITAhM.gcmm.onUnRegister(token);
 			
-			request.sendResponse(Response.getInstance(200, Response.OK, ""));
+			return Response.getInstance(Response.Status.OK);
 		}
 		catch (JSONException jsone) {
-			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-				new JSONObject().put("error", "invalid json request")));
+			return Response.getInstance(Response.Status.BADREQUEST,
+				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 

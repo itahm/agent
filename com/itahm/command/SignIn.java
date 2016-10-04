@@ -15,15 +15,12 @@ public class SignIn extends Command {
 	
 	public final static String COOKIE = "SESSION=%s; HttpOnly";
 	
-	public SignIn() {
-	}
-
-	public void execute(Request request, JSONObject data, Session session) throws IOException {
-		execute(request, data);
+	public Response execute(Request request, JSONObject data, Session session) throws IOException {
+		return execute(request, data);
 	}
 		
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			String username = data.getString(Constant.STRING_USER);
 			String password = data.getString(Constant.STRING_PWORD);
@@ -36,19 +33,17 @@ public class SignIn extends Command {
 					// signin 성공, cookie 발행
 					Session session = Session.getInstance(account.getInt(Constant.STRING_LEVEL));
 					
-					request.sendResponse(Response.getInstance(200, Response.OK,
-						new JSONObject().put(Constant.STRING_LEVEL, (Integer)session.getExtras()))
-							.setResponseHeader("Set-Cookie", String.format(COOKIE, session.getCookie())));
-					
-					return;
+					return Response.getInstance(Response.Status.OK,
+						new JSONObject().put(Constant.STRING_LEVEL, (Integer)session.getExtras()).toString())
+							.setResponseHeader("Set-Cookie", String.format(COOKIE, session.getCookie()));
 				 }
 			}
 			
-			request.sendResponse(Response.getInstance(401, Response.UNAUTHORIZED));
+			return Response.getInstance(Response.Status.UNAUTHORIZED);
 		}
 		catch (JSONException jsone) {
-			request.sendResponse(Response.getInstance(400, Response.BADREQUEST,
-					new JSONObject().put("error", "invalid json request")));
+			return Response.getInstance(Response.Status.BADREQUEST,
+				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 

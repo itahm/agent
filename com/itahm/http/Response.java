@@ -7,72 +7,153 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
-import org.json.JSONObject;
 
 public class Response {
 
 	public final static String CRLF = "\r\n";
 	public final static String FIELD = "%s: %s"+ CRLF;
-	public final static String OK = "OK";
-	public final static String UNAUTHORIZED = "Unauthorized";
-	public final static String BADREQUEST = "Bad request";
-	public final static String VERSIONNOTSUP = "HTTP Version Not Supported";
-	public static final String CONFLICT = "Conflict";
 	
-	private Map<String, String> header;
+	private final Map<String, String> header = new HashMap<String, String>();
 	private String startLine;
 	private byte [] body;
 	
-	private Response () {
-		header = new HashMap<String, String>();
-	}
+	public enum Status {
+		OK, BADREQUEST, UNAUTHORIZED, NOTFOUND, NOTALLOWED, VERSIONNOTSUP, CONFLICT, UNAVAILABLE
+	};
 	
-	public static Response getInstance(int status, String reason) {
-		return getInstance(status, reason, "");
-	}
-	
-	public static Response getInstance(int status, String reason, File file) {
-		try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-			FileChannel fc = raf.getChannel();
-			int size = (int)fc.size();
+	private Response(Status status, byte [] bytes) {
+		int code = 200;
+		String reason = "OK";
 		
-			if (size > 0) {
-				ByteBuffer buffer = ByteBuffer.allocate(size);
-				
-				fc.read(buffer);
-				
-				buffer.flip();
-				
-				return getInstance(status, reason, StandardCharsets.UTF_8.decode(buffer).toString());
+		body = bytes;
+		
+		switch (status) {
+		case BADREQUEST:
+			code = 400;
+			reason = "Bad request";
+			
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 400 Bad request</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
 			}
 			
-		} catch (IOException ioe) {
+			break;
+		case NOTFOUND:
+			code = 404;
+			reason = "Not found";
+			
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 404 Not found</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+			}
+			
+			body = bytes;
+			
+			break;
+		case NOTALLOWED:
+			code = 405;
+			reason = "Method Not Allowed";
+		
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 405 Method Not Allowed</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+			}
+			
+			setResponseHeader("Allow", "GET");
+			
+			break;
+		case UNAUTHORIZED:
+			code = 401;
+			reason = "Unauthorized";
+			
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 401 Unauthorized</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+			}
+			
+			break;
+		case VERSIONNOTSUP:
+			code = 505;
+			reason = "HTTP Version Not Supported";
+			
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 505 HTTP Version Not Supported</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+			}
+			
+			break;
+		case CONFLICT:
+			code = 409;
+			reason = "Conflict";
+			
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 409 Conflict</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+			}
+			
+			break;
+		case UNAVAILABLE:
+			code = 503;
+			reason = "Service Unavailable";
+			
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 503 Service Unavailable</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+			}
+		case OK:
 		}
 		
-		return null;
+		startLine = String.format("HTTP/1.1 %d %s" +CRLF, code, reason);
+		
+		setResponseHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+		setResponseHeader("Access-Control-Allow-Origin", "http://itahm.com");
+		setResponseHeader("Access-Control-Allow-Credentials", "true");
 	}
 	
-	public static Response getInstance(int status, String reason, JSONObject body) {
-		return getInstance(status, reason, body.toString());
+	public static Response getInstance(Status status) {
+		return new Response(status, new byte [0]);
 	}
 	
-	public static Response getInstance(int status, String reason, String body) {
-		Response response = new Response();
-		
-		response.setResponseStatus(status, reason);
-		response.setResponseHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-		response.setResponseHeader("Access-Control-Allow-Origin", "http://itahm.com");
-		response.setResponseHeader("Access-Control-Allow-Credentials", "true");
-		
-		response.setResponseBody(body);
-		
-		return response;
+	public static Response getInstance(Status status, String body) {
+		try {
+			return new Response(status, body.getBytes(StandardCharsets.UTF_8.name()));
+		} catch (UnsupportedEncodingException e) {
+			return null;
+		}
 	}
 	
+	public static Response getInstance(Status status, File body) {
+		try (RandomAccessFile raf = new RandomAccessFile(body, "r")) {
+			FileChannel fc = raf.getChannel();
+			int size = (int)fc.size();
+			ByteBuffer buffer = ByteBuffer.allocate(size);
+			byte [] bytes;
+			
+			fc.read(buffer);
+			
+			buffer.flip();
+			
+			bytes = new byte [buffer.remaining()];
+			
+			buffer.get(bytes);
+			
+			return new Response(status, bytes).setResponseHeader("Content-type", Files.probeContentType(body.toPath()));
+		} catch (IOException ioe) {
+			return null;
+		}
+	}
+
 	public Response setResponseHeader(String name, String value) {
 		this.header.put(name, value);
 		
@@ -120,12 +201,6 @@ public class Response {
 		System.arraycopy(this.body, 0, message, header.length, this.body.length);
 		
 		return ByteBuffer.wrap(message);
-	}
-	
-	public Response setResponseStatus(int status, String reason) {
-		this.startLine = "HTTP/1.1 "+ status +" "+ reason +CRLF;
-		
-		return this;
 	}
 	
 }

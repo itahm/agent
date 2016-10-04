@@ -11,10 +11,10 @@ import com.itahm.http.Response;
 public class ShutDown extends Command {
 
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
-		request.sendResponse(Response.getInstance(200, Response.OK, ""));
-		
+	protected Response execute(Request request, JSONObject data) throws IOException {
 		ITAhM.shutdown();
+		
+		return Response.getInstance(Response.Status.OK);
 	}
 
 }

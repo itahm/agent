@@ -11,15 +11,17 @@ import com.itahm.http.Response;
 public class Agent extends Command {
 	
 	@Override
-	protected void execute(Request request, JSONObject data) throws IOException {
-		JSONObject response = new JSONObject();
-		
-		response
-			.put("connections", ITAhM.http.getConnectionSize())
-			.put("space", ITAhM.getRoot().getUsableSpace())
-			.put("waiters", ITAhM.log.getWaiterCount());
-		
-		request.sendResponse(Response.getInstance(200, Response.OK, response));
+	protected Response execute(Request request, JSONObject data) throws IOException {
+		try {
+			return Response.getInstance(Response.Status.OK,
+				new JSONObject()
+				.put("connections", ITAhM.http.getConnectionSize())
+				.put("space", ITAhM.getRoot().getUsableSpace())
+				.put("waiters", ITAhM.log.getWaiterCount()).toString());
+		}
+		catch (NullPointerException npe) {
+			return Response.getInstance(Response.Status.UNAVAILABLE);
+		}
 	}
 	
 }

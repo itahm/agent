@@ -32,11 +32,6 @@ public class HTTPServer extends Listener {
 	protected void onStart() {
 		System.out.println("HTTP Server running...");
 	}
-	
-	@Override
-	protected void onStop() {
-		System.out.println("Stop HTTP Server.");
-	}
 
 	@Override
 	protected void onRequest(Request request) {
@@ -53,55 +48,62 @@ public class HTTPServer extends Listener {
 	}
 	
 	private void processRequest(Request request) throws IOException{
-		String method = request.getRequestMethod();
-		
 		if (!"HTTP/1.1".equals(request.getRequestVersion())) {
-			request.sendResponse(Response.getInstance(505, Response.VERSIONNOTSUP, ""));
+			request.sendResponse(Response.getInstance(Response.Status.VERSIONNOTSUP));
 		}
 		else {
-			if ("OPTIONS".equals(method)) {
-				request.sendResponse(Response.getInstance(200, "OK").setResponseHeader("Allow", "OPTIONS, GET, POST"));
-			}
-			else if ("POST".equals(method)) {
+			Response response = null;
+			
+			switch(request.getRequestMethod()) {
+			case "OPTIONS":
+				response = Response.getInstance(Response.Status.OK).setResponseHeader("Allow", "OPTIONS, GET, POST");
+			
+				break;
+			
+			case"POST":
 				try {
 					JSONObject data = new JSONObject(new String(request.getRequestBody(), StandardCharsets.UTF_8.name()));
 					
 					Session session = getSession(request);
 					
 					if (!data.has("command")) {
-						request.sendResponse(Response.getInstance(400, "Bad Request", new JSONObject().put("error", "command not found")));
+						response = Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "command not found").toString());
 					}
 					else {
 						Command command = Commander.getCommand(data.getString("command"));
 						
 						if (command != null) {
-							command.execute(request, data, session);
+							response = command.execute(request, data, session);
 						}
 						else {
-							request.sendResponse(Response.getInstance(400, "Bad Request", new JSONObject().put("error", "invalid command")));
+							response = Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "invalid command").toString());
 						}
 					}
 				}
 				catch (JSONException jsone) {
-					request.sendResponse(Response.getInstance(400, Response.BADREQUEST, new JSONObject().put("error", "invalid json request")));
+					response = Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "invalid json request").toString());
 				}
-			}
-			else if ("GET".equals(method)) {
+				
+				break;
+			
+			case "GET":
 				File uri = new File(ITAhM.getRoot().getParentFile(), request.getRequestURI());
 				
 				if (uri.isFile()) {
-					Response response = Response.getInstance(200, "OK", uri);
-					if (response != null) {
-						request.sendResponse(response);
-						
-						return;
-					}
+					response = Response.getInstance(Response.Status.OK, uri);
 				}
 				
-				request.sendResponse(Response.getInstance(404, "Not Found"));
+				if (response == null) {
+					response = Response.getInstance(Response.Status.NOTFOUND);
+				}
+				
+				break;
+			default:
+				response = Response.getInstance(Response.Status.NOTALLOWED).setResponseHeader("Allow", "OPTIONS, POST, GET");
 			}
-			else {
-				request.sendResponse(Response.getInstance(405, "Method Not Allowed").setResponseHeader("Allow", "OPTIONS, POST"));
+			
+			if (response != null) { /* listen인 경우 null*/
+				request.sendResponse(response);
 			}
 		}
 	}
