@@ -3,7 +3,6 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -19,6 +18,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.snmp4j.Snmp;
+import org.snmp4j.smi.IpAddress;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.snmp.TmpNode;
@@ -38,6 +38,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Table criticalTable;
 	private final TopTable topTable;
 	private final Timer timer;
+	private final Map<String, JSONObject> arp;
+	private final Map<String, String> network;
+	
 	//private final static PDU pdu = RequestPDU.getInstance();
 	
 	public SNMPAgent() throws IOException {
@@ -59,11 +62,13 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		timer = new Timer();
 		
+		arp = new HashMap<String, JSONObject>();
+		network = new HashMap<String, String>();
+		 
 		nodeRoot = new File(ITAhM.getRoot(), "node");
 		nodeRoot.mkdir();
 		
 		listen();
-		//System.out.println("snmp agent :: listening.");
 		
 		initNode();
 		
@@ -175,15 +180,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			}
 		}
 
-		this.timer.schedule(
-		new TimerTask() {
-
-			@Override
-			public void run() {
-				node.request();
-			}
-			
-		}, REQUEST_INTERVAL);
+		sendNextRequest(node);
 	}
 	
 	public void onFailure(String ip) {
@@ -209,6 +206,16 @@ public class SNMPAgent extends Snmp implements Closeable {
 		node.request();
 	}
 	
+	public void onPending(String ip) {
+		final SNMPNode node = this.nodeList.get(ip);
+		
+		if (node == null) {
+			return;
+		}
+		
+		sendNextRequest(node);
+	}
+	
 	public void onCritical(String ip, boolean critical, String message) {
 		JSONObject snmp = this.snmpTable.getJSONObject(ip);
 		SNMPNode node = this.nodeList.get(ip);
@@ -232,6 +239,51 @@ public class SNMPAgent extends Snmp implements Closeable {
 		this.topTable.submit(ip, resource, value);
 	}
 	
+	/**
+	 * 
+	 * @param mac
+	 * @param ip
+	 * @param mask
+	 */
+	public void onARP(String mac, String ip, String mask) {
+		if ("127.0.0.1".equals(ip)) {
+			return;
+		}
+		
+		this.arp.put(mac, new JSONObject().put("ip", ip).put("mask", mask));
+	}
+	
+	public JSONObject getARP() {
+		return new JSONObject(this.arp);
+	}
+	
+	public void onNetwork(String ip, String mask) {
+		byte [] ipArray = new IpAddress(ip).toByteArray();
+		byte [] maskArray = new IpAddress(mask).toByteArray();
+		int length = ipArray.length;
+		
+		for (int i=0; i<length; i++) {
+			ipArray[i] = (byte)(ipArray[i] & maskArray[i]);
+		}
+		
+		this.network.put(new IpAddress(ipArray).toString(), mask);
+	}
+	
+	public JSONObject getNetwork() {
+		return new JSONObject(this.network);
+	}
+	
+	private void sendNextRequest(final SNMPNode node) {
+		this.timer.schedule(
+			new TimerTask() {
+
+				@Override
+				public void run() {
+					node.request();
+				}
+				
+			}, REQUEST_INTERVAL);
+	}
 	/**
 	 * ovverride
 	 */

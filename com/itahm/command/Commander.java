@@ -17,7 +17,9 @@ public enum Commander {
 	MESSAGE("com.itahm.command.Message"),
 	TOP("com.itahm.command.Top"),
 	LOG("com.itahm.command.Log"),
-	AGENT("com.itahm.command.Agent");
+	AGENT("com.itahm.command.Agent"),
+	ARP("com.itahm.command.ARP"),
+	NETWORK("com.itahm.command.Network");
 	
 	private String className;
 	
@@ -39,7 +41,6 @@ public enum Commander {
 			return valueOf(command.toUpperCase()).getCommand();
 		}
 		catch (IllegalArgumentException iae) {
-			
 		}
 	
 		return null;

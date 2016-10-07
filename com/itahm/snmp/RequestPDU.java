@@ -73,7 +73,13 @@ public class RequestPDU extends PDU {
 	//iso.org.dod.internet.mgmt.mib_2.at.atTable.atEntry.atNetAddress
 	public final static OID atNetAddress = new OID(new int [] {1,3,6,1,2,1,3,1,1,3});
 	//iso.org.dod.internet.mgmt.mib_2.ip
-	public final static OID ip = new OID(new int [] {1,3,6,1,2,1,4});	
+	public final static OID ip = new OID(new int [] {1,3,6,1,2,1,4});
+	
+	public final static OID ipAddrTable = new OID(new int [] {1,3,6,1,2,1,4,20});
+	public final static OID ipAdEntAddr = new OID(new int [] {1,3,6,1,2,1,4,20,1,1});
+	public final static OID ipAdEntIfIndex = new OID(new int [] {1,3,6,1,2,1,4,20,1,2});
+	public final static OID ipAdEntNetMask = new OID(new int [] {1,3,6,1,2,1,4,20,1,3});
+	
 	//iso(1).org(3).dod(6).internet(1).mgmt(2).mib_2(1).ip(4).ipNetToMediaTable(22)
 	public final static OID ipNetToMediaTable = new OID(new int [] {1,3,6,1,2,1,4,22});
 	public final static OID ipNetToMediaPhysAddress = new OID(new int [] {1,3,6,1,2,1,4,22,1,2});
@@ -176,6 +182,8 @@ public class RequestPDU extends PDU {
 		add(new VariableBinding(ifHCOutOctets));
 		add(new VariableBinding(ifHighSpeed));
 		add(new VariableBinding(ifAlias));
+		add(new VariableBinding(ipAdEntIfIndex));
+		add(new VariableBinding(ipAdEntNetMask));
 		add(new VariableBinding(ipNetToMediaType));
 		add(new VariableBinding(ipNetToMediaPhysAddress));
 		add(new VariableBinding(hrSystemUptime));

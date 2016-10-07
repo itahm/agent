@@ -63,20 +63,19 @@ public class SNMPNode extends Node {
 	}
 	
 	public String getIFNameFromARP(String mac) {
-		JSONObject arpTable = this.data.getJSONObject("arpTable");
+		Integer index = super.macTable.get(mac);
 		
-		if (arpTable.has(mac)) {
-			JSONObject ifEntry = this.data.getJSONObject("ifEntry");
-			String index = String.valueOf(arpTable.getInt(mac));
+		if (index != null) {
+			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
 			
-			return ifEntry.getJSONObject(index).getString(Constant.STRING_IFNAME);
+			return ifEntry.getJSONObject(index.toString()).getString(Constant.STRING_IFNAME);
 		}
 		
 		return null;
 	}
 	
 	public String getPeerIFName(SNMPNode peer){
-		JSONObject ifEntry = this.data.getJSONObject(Constant.STRING_IFENTRY);
+		JSONObject ifEntry = super.data.getJSONObject(Constant.STRING_IFENTRY);
 		String mac;
 		String name;
 		
@@ -107,15 +106,30 @@ public class SNMPNode extends Node {
 		long capacity;
 		long tmpValue;
 		
-		this.agent.onSuccess(ip);
+		this.agent.onSuccess(this.ip);
+	try {		
+		for (String network : super.networkTable.keySet()) {
+			if ("127.0.0.1".equals(network)) {
+				continue;
+			}
+			
+			this.agent.onNetwork(network, super.networkTable.get(network));
+		}
 		
+		for (String mac : super.arpTable.keySet()) {
+			this.agent.onARP(mac, super.arpTable.get(mac), super.maskTable.get(super.macTable.get(mac)));
+		}
+	}
+	catch (RuntimeException re) {
+		re.printStackTrace();
+	}
 		this.rollingMap.put(Resource.RESPONSETIME, "0", super.responseTime);
 		
 		if (this.critical != null) {
 			this.critical.analyze(CriticalData.RESPONSETIME, "0", TIMEOUT, super.responseTime);
 		}
 		
-		this.agent.onSubmitTop(ip, "responseTime", super.responseTime);
+		this.agent.onSubmitTop(this.ip, "responseTime", super.responseTime);
 		
 		max = 0;
 		for(String index: super.hrProcessorEntry.keySet()) {
@@ -129,7 +143,7 @@ public class SNMPNode extends Node {
 			max = Math.max(max, value);
 		}
 		
-		this.agent.onSubmitTop(ip, "processor", max);
+		this.agent.onSubmitTop(this.ip, "processor", max);
 		
 		max = 0;
 		maxRate = 0;
@@ -152,8 +166,8 @@ public class SNMPNode extends Node {
 					this.critical.analyze(CriticalData.MEMORY, index, capacity, tmpValue);
 				}
 				
-				this.agent.onSubmitTop(ip, "memory", value);
-				this.agent.onSubmitTop(ip, "memoryRate", tmpValue *100L / capacity);
+				this.agent.onSubmitTop(this.ip, "memory", value);
+				this.agent.onSubmitTop(this.ip, "memoryRate", tmpValue *100L / capacity);
 				
 				break;
 			case 4:
@@ -166,8 +180,8 @@ public class SNMPNode extends Node {
 			}
 		}
 		
-		this.agent.onSubmitTop(ip, "storage", max);
-		this.agent.onSubmitTop(ip, "storageRate", maxRate);
+		this.agent.onSubmitTop(this.ip, "storage", max);
+		this.agent.onSubmitTop(this.ip, "storageRate", maxRate);
 		
 		if (lastRolling > 0) {
 			long interval = super.data.getLong("lastResponse") - lastRolling;
@@ -180,20 +194,12 @@ public class SNMPNode extends Node {
 			maxErr = 0;
 			
 			for(String index: super.ifEntry.keySet()) {
-				data = super.ifEntry.get(index);
-				
 				// 특정 index가 새로 생성되었다면 보관된 값이 없을수도 있음.
 				if (!ifEntry.has(index)) {
 					continue;
 				}
 				
-				// 처리가 완료되기 전에 새로운 요청이 있었음.
-				if (data == null) {
-					System.out.println("SNMPNode, index "+index);
-					
-					continue;
-				}
-				
+				data = super.ifEntry.get(index);
 				capacity = 0;
 				
 				if (data.has("ifHighSpeed")) {
@@ -248,8 +254,6 @@ public class SNMPNode extends Node {
 					continue;
 				}
 				
-				//this.rollingMap.put(Resource.IFINBYTES, index, bytes);
-				
 				if (oldData.has("ifHCInOctets")) {
 					bytes -= oldData.getLong("ifHCInOctets");
 				}
@@ -279,8 +283,6 @@ public class SNMPNode extends Node {
 					continue;
 				}
 				
-				//this.rollingMap.put(Resource.IFOUTBYTES, index, bytes);
-				
 				if (oldData.has("ifHCOutOctets")) {
 					bytes -= oldData.getLong("ifHCOutOctets");
 				}
@@ -305,19 +307,24 @@ public class SNMPNode extends Node {
 				}
 			}
 			
-			this.agent.onSubmitTop(ip, "throughput", max);
-			this.agent.onSubmitTop(ip, "throughputRate", maxRate);
-			this.agent.onSubmitTop(ip, "throughputErr", maxErr);
+			this.agent.onSubmitTop(this.ip, "throughput", max);
+			this.agent.onSubmitTop(this.ip, "throughputRate", maxRate);
+			this.agent.onSubmitTop(this.ip, "throughputErr", maxErr);
 		}
 		
-		lastRolling = this.data.getLong("lastResponse");
+		lastRolling = super.data.getLong("lastResponse");
 	}
 
 	@Override
 	protected void onFailure() {
-		this.agent.onFailure(ip);
+		this.agent.onFailure(this.ip);
 	}
 
+	@Override
+	public void onPending() {
+		this.agent.onPending(this.ip);
+	}
+	
 	class CriticalData {
 	
 		public static final String RESPONSETIME = "responseTime";

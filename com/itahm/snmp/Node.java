@@ -21,6 +21,7 @@ import org.snmp4j.smi.Counter32;
 import org.snmp4j.smi.Counter64;
 import org.snmp4j.smi.Gauge32;
 import org.snmp4j.smi.Integer32;
+import org.snmp4j.smi.IpAddress;
 import org.snmp4j.smi.Null;
 import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
@@ -28,7 +29,6 @@ import org.snmp4j.smi.TimeTicks;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
-import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.Constant;
 
@@ -53,7 +53,12 @@ public abstract class Node implements ResponseListener {
 	protected Map<String, Integer> hrProcessorEntry;
 	protected Map<String, JSONObject> hrStorageEntry;
 	protected Map<String, JSONObject> ifEntry;
-	protected Map<String, Integer> arpTable;
+	protected Map<String, String> arpTable; // mac - ip
+	protected Map<String, Integer> macTable; // mac - index
+	protected Map<String, Integer> ipTable; // ip - index
+	protected Map<String, Integer> remoteIPTable; //ip - index
+	protected Map<String, String> networkTable; //ip - mask
+	protected Map<Integer, String> maskTable; //index - mask
 	
 	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {
 		this.pdu = RequestPDU.getInstance();
@@ -70,15 +75,15 @@ public abstract class Node implements ResponseListener {
 		target.setTimeout(timeout);
 	}
 	
-	public boolean request () {
+	public void request () {
 		this.pdu.setRequestID(null);
 		
-		return request(this.pdu);
+		request(this.pdu);
 	}
 	
-	 private boolean request (PDU pdu) {
+	 private void request (PDU pdu) {
 		if (!this.completed) {
-			return false;
+			onPending();
 		}
 		
 		this.completed = false;
@@ -87,13 +92,16 @@ public abstract class Node implements ResponseListener {
 		hrProcessorEntry = new HashMap<String, Integer>();
 		hrStorageEntry = new HashMap<String, JSONObject>();
 		ifEntry = new HashMap<String, JSONObject>();
-		arpTable = new HashMap<String, Integer>();
+		arpTable = new HashMap<String, String>();
+		remoteIPTable = new HashMap<String, Integer>();
+		macTable = new HashMap<String, Integer>();
+		ipTable = new HashMap<String, Integer>();
+		networkTable = new HashMap<String, String>();
+		maskTable = new HashMap<Integer, String>();
 		
 		this.requestTime = Calendar.getInstance().getTimeInMillis();
 		
 		sendRequest(pdu);
-		
-		return true;
 	}
 	
 	public JSONObject getData() {		
@@ -151,7 +159,19 @@ public abstract class Node implements ResponseListener {
 			ifData.put("ifSpeed", ((Gauge32)variable).getValue());
 		}
 		else if (request.startsWith(RequestPDU.ifPhysAddress) && response.startsWith(RequestPDU.ifPhysAddress)) {
-			ifData.put(Constant.STRING_MAC_ADDR, new String(((OctetString)variable).getValue()));
+			byte [] mac = ((OctetString)variable).getValue();
+			
+			String macString = "";
+			
+			if (mac.length > 0) {
+				macString = String.format("%02X", Byte.toUnsignedInt(mac[0]));
+				
+				for (int i=1; i<mac.length; i++) {
+					macString += String.format("-%02X", Byte.toUnsignedInt(mac[i]));
+				}
+			}
+			
+			ifData.put(Constant.STRING_MAC_ADDR, macString);
 		}
 		else if (request.startsWith(RequestPDU.ifAdminStatus) && response.startsWith(RequestPDU.ifAdminStatus)) {
 			ifData.put(Constant.STRING_IFADMINSTAT, ((Integer32)variable).getValue());
@@ -257,15 +277,55 @@ public abstract class Node implements ResponseListener {
 		return true;
 	}
 	
-	private final boolean parseIPNetToMediaTable(OID response, Variable variable, OID request) {
-		int [] array = response.getValue();
-		int index = array[array.length -5];
+	private final boolean parseIP(OID response, Variable variable, OID request) {
+		byte [] array = response.toByteArray();
+		String ip = new IpAddress(new byte [] {array[array.length -4], array[array.length -3], array[array.length -2], array[array.length -1]}).toString();
 		
-		if (request.startsWith(RequestPDU.ipNetToMediaPhysAddress) && response.startsWith(RequestPDU.ipNetToMediaPhysAddress)) {
-			OctetString value = (OctetString)variable;
+		if (request.startsWith(RequestPDU.ipAddrTable)) {
+			if (request.startsWith(RequestPDU.ipAdEntIfIndex) && response.startsWith(RequestPDU.ipAdEntIfIndex)) {
+				if (this.data.has("ifEntry")) {
+					Integer index = ((Integer32)variable).getValue();
+					JSONObject ifEntry = this.data.getJSONObject("ifEntry");
+					String mac = ifEntry.getJSONObject(index.toString()).getString("ifPhysAddress");
+					
+					this.arpTable.put(mac, ip);
+					this.macTable.put(mac, index);
+					this.ipTable.put(ip, index);
+				}
+			}
+			else if (request.startsWith(RequestPDU.ipAdEntNetMask) && response.startsWith(RequestPDU.ipAdEntNetMask)) {
+				String mask = ((IpAddress)variable).toString();
+				
+				this.networkTable.put(ip, mask);
+				
+				this.maskTable.put(this.ipTable.get(ip), mask);
+			}
+			else {
+				return false;
+			}
+		} else if (request.startsWith(RequestPDU.ipNetToMediaTable)) {
+			int index = array[array.length -5];
 			
-			if (value.length() > 0) {
-				this.arpTable.put(new String(value.getValue()), index);
+			if (request.startsWith(RequestPDU.ipNetToMediaType) && response.startsWith(RequestPDU.ipNetToMediaType)) {
+				if (((Integer32)variable).getValue() == 3) {
+					this.remoteIPTable.put(ip, index);
+				}
+			}
+			else if (request.startsWith(RequestPDU.ipNetToMediaPhysAddress) && response.startsWith(RequestPDU.ipNetToMediaPhysAddress)) {
+				if (this.remoteIPTable.containsKey(ip) && this.remoteIPTable.get(ip) == index) {
+					byte [] mac = ((OctetString)variable).getValue();
+					String macString = String.format("%02X", Byte.toUnsignedInt(mac[0]));
+					
+					for (int i=1; i<mac.length; i++) {
+						macString += String.format("-%02X", Byte.toUnsignedInt(mac[i]));
+					}
+					
+					this.macTable.put(macString, index);
+					this.arpTable.put(macString, ip);
+				}
+			}
+			else {
+				return false;
 			}
 		}
 		else {
@@ -316,8 +376,8 @@ public abstract class Node implements ResponseListener {
 		else if (request.startsWith(RequestPDU.host)) {
 			return parseHost(response, variable, request);
 		}
-		else if (request.startsWith(RequestPDU.ipNetToMediaTable)) {
-			return parseIPNetToMediaTable(response, variable, request);
+		else if (request.startsWith(RequestPDU.ip)) {
+			return parseIP(response, variable, request);
 		}
 		else if (request.startsWith(RequestPDU.cisco)) {
 			return parseCisco(response, variable, request);
@@ -384,7 +444,6 @@ public abstract class Node implements ResponseListener {
 						this.data.put("hrProcessorEntry", this.hrProcessorEntry);
 						this.data.put("hrStorageEntry", this.hrStorageEntry);
 						this.data.put("ifEntry", this.ifEntry);
-						this.data.put("arpTable", this.arpTable);
 					}
 					else {
 						sendRequest(nextRequest);
@@ -404,39 +463,9 @@ public abstract class Node implements ResponseListener {
 	
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
+	abstract protected void onPending();
 	
 	public static void main(String [] args) throws IOException {
-		final Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
-		
-		snmp.listen();
-		
-		new Node(snmp, "127.0.0.1", 161, "itahm2014", 5000) {
-
-			@Override
-			public void onSuccess() {
-				System.out.println("completed!");
-				
-				try {
-					snmp.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-
-			@Override
-			public void onFailure() {
-				System.out.println("timeout.");
-				
-				try {
-					snmp.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			
-		}.request();
-		
-		System.in.read();
 	}
 	
 }
