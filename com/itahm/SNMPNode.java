@@ -107,7 +107,7 @@ public class SNMPNode extends Node {
 		long tmpValue;
 		
 		this.agent.onSuccess(this.ip);
-	try {		
+		
 		for (String network : super.networkTable.keySet()) {
 			if ("127.0.0.1".equals(network)) {
 				continue;
@@ -119,10 +119,7 @@ public class SNMPNode extends Node {
 		for (String mac : super.arpTable.keySet()) {
 			this.agent.onARP(mac, super.arpTable.get(mac), super.maskTable.get(super.macTable.get(mac)));
 		}
-	}
-	catch (RuntimeException re) {
-		re.printStackTrace();
-	}
+	
 		this.rollingMap.put(Resource.RESPONSETIME, "0", super.responseTime);
 		
 		if (this.critical != null) {
@@ -318,11 +315,6 @@ public class SNMPNode extends Node {
 	@Override
 	protected void onFailure() {
 		this.agent.onFailure(this.ip);
-	}
-
-	@Override
-	public void onPending() {
-		this.agent.onPending(this.ip);
 	}
 	
 	class CriticalData {

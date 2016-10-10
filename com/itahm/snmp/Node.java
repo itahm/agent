@@ -40,7 +40,6 @@ public abstract class Node implements ResponseListener {
 	private long requestTime;
 	protected long responseTime;
 	private Integer enterprise;
-	private boolean completed;
 	
 	/**
 	 * 이전 데이터 보관소
@@ -67,8 +66,6 @@ public abstract class Node implements ResponseListener {
 		
 		data = new JSONObject();
 		
-		completed = true;
-		
 		// target 설정
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
 		target.setVersion(SnmpConstants.version2c);
@@ -82,12 +79,6 @@ public abstract class Node implements ResponseListener {
 	}
 	
 	 private void request (PDU pdu) {
-		if (!this.completed) {
-			onPending();
-		}
-		
-		this.completed = false;
-		
 		// 존재하지 않는 index 지워주기 위해 초기화
 		hrProcessorEntry = new HashMap<String, Integer>();
 		hrStorageEntry = new HashMap<String, JSONObject>();
@@ -286,11 +277,17 @@ public abstract class Node implements ResponseListener {
 				if (this.data.has("ifEntry")) {
 					Integer index = ((Integer32)variable).getValue();
 					JSONObject ifEntry = this.data.getJSONObject("ifEntry");
-					String mac = ifEntry.getJSONObject(index.toString()).getString("ifPhysAddress");
 					
-					this.arpTable.put(mac, ip);
-					this.macTable.put(mac, index);
-					this.ipTable.put(ip, index);
+					try {
+						String mac = ifEntry.getJSONObject(index.toString()).getString("ifPhysAddress");
+						
+						this.arpTable.put(mac, ip);
+						this.macTable.put(mac, index);
+						this.ipTable.put(ip, index);
+					}
+					catch(JSONException jsone) {
+						jsone.printStackTrace();
+					}
 				}
 			}
 			else if (request.startsWith(RequestPDU.ipAdEntNetMask) && response.startsWith(RequestPDU.ipAdEntNetMask)) {
@@ -412,7 +409,7 @@ public abstract class Node implements ResponseListener {
 		}
 		
 		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
-	}
+}
 		
 	@Override
 	public void onResponse(ResponseEvent event) {
@@ -457,13 +454,10 @@ public abstract class Node implements ResponseListener {
 				new Exception().printStackTrace();
 			}
 		}
-		
-		this.completed = true;
 	}
 	
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
-	abstract protected void onPending();
 	
 	public static void main(String [] args) throws IOException {
 	}

@@ -46,7 +46,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	public SNMPAgent() throws IOException {
 		super(new DefaultUdpTransportMapping());
 		
-		System.out.println("snmp agent initialization.");
+		System.out.println("snmp agent started.");
 		
 		nodeList = new HashMap<String, SNMPNode>();
 		
@@ -73,8 +73,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 		initNode();
 		
 		new CleanerSchedule();
-		
-		System.out.println("snmp agent running.");
 	}
 	
 	private void addNode(String ip, String profileName) {
@@ -184,36 +182,38 @@ public class SNMPAgent extends Snmp implements Closeable {
 	}
 	
 	public void onFailure(String ip) {
-		JSONObject snmp = this.snmpTable.getJSONObject(ip);
 		SNMPNode node = this.nodeList.get(ip);
 
 		if (node == null) {
 			return;
 		}
 		
+		JSONObject snmp = this.snmpTable.getJSONObject(ip);
+		
 		if (!snmp.getBoolean("shutdown")) {
+			JSONObject nodeData = node.getData();
+			String message;
+			
 			snmp.put("shutdown", true);
 			
 			this.snmpTable.save();
 			
+			if(nodeData.has("sysName")) {
+				message = String.format("%s [%s] 응답 없음.", ip, node.getData().getString("sysName"));
+			}
+			else {
+				message = String.format("%s 응답 없음.", ip);
+			}
+			
 			try {
-				ITAhM.log.write(ip, String.format("%s [%s] 응답 없음.", ip, node.getData().getString("sysName")));
+				
+				ITAhM.log.write(ip, message);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 		
 		node.request();
-	}
-	
-	public void onPending(String ip) {
-		final SNMPNode node = this.nodeList.get(ip);
-		
-		if (node == null) {
-			return;
-		}
-		
-		sendNextRequest(node);
 	}
 	
 	public void onCritical(String ip, boolean critical, String message) {
