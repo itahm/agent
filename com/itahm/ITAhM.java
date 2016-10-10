@@ -29,7 +29,7 @@ public class ITAhM {
 	
 	private static Map<String, Table> tableMap;
 	
-	public ITAhM(int tcp, String path, String host) throws IOException {
+	public ITAhM(int tcp, String path, String host, int timeout) throws IOException {
 		System.out.println("Version 1.1.3.35");
 		System.out.println("start up ITAhM agent");
 		System.out.println("TCP "+ tcp);
@@ -49,7 +49,7 @@ public class ITAhM {
 		http = new HTTPServer("0.0.0.0", tcp);
 		log = new Log(dataRoot);
 		gcmm = new GCMManager(API_KEY, host);
-		agent = new SNMPAgent();
+		agent = new SNMPAgent(timeout);
 	}
 	
 	public static File getRoot() {
@@ -87,6 +87,7 @@ public class ITAhM {
 	public static void main(String[] args) throws IOException {
 		String path = ".";
 		int tcp = 2014;
+		int timeout = 5;
 		String host = InetAddress.getLocalHost().getHostAddress();
 		
 		for(int i=0, length = args.length; i<length;) {
@@ -114,6 +115,14 @@ public class ITAhM {
 					return;
 				}
 			}
+			else if (args[i].equals("-timeout")) {
+				if (++i < length) {
+					timeout = Integer.parseInt(args[i++]);
+				}
+				else {
+					return;
+				}
+			}
 			else if (args[i].equals("-help")) {
 				System.out.println("");
 				System.out.println("-path DIRECTORY_PATH");
@@ -132,7 +141,7 @@ public class ITAhM {
 		}
 		
 		try {
-			new ITAhM(tcp, path, host);
+			new ITAhM(tcp, path, host, timeout);
 		}
 		catch (UnknownHostException uhe) {
 			System.out.println("dns is not responding.");

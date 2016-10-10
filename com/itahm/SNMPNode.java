@@ -14,19 +14,19 @@ import com.itahm.snmp.Node;
 
 public class SNMPNode extends Node {
 
-	private static final long TIMEOUT = 5000;
-	
 	private final RollingMap rollingMap;
 	private final String ip;
 	private final SNMPAgent agent;
+	private final int timeout;
 	private long lastRolling;
 	private CriticalData critical;
 	
-	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
-		super(agent, ip, udp, community, TIMEOUT);
+	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, int timeout, JSONObject criticalCondition) throws IOException {
+		super(agent, ip, udp, community, timeout);
 		
 		this.agent = agent;
 		this.ip = ip;
+		this.timeout = timeout;
 		
 		File nodeRoot = new File(agent.nodeRoot, ip);
 		nodeRoot.mkdirs();
@@ -123,7 +123,7 @@ public class SNMPNode extends Node {
 		this.rollingMap.put(Resource.RESPONSETIME, "0", super.responseTime);
 		
 		if (this.critical != null) {
-			this.critical.analyze(CriticalData.RESPONSETIME, "0", TIMEOUT, super.responseTime);
+			this.critical.analyze(CriticalData.RESPONSETIME, "0", this.timeout, super.responseTime);
 		}
 		
 		this.agent.onSubmitTop(this.ip, "responseTime", super.responseTime);

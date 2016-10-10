@@ -286,6 +286,7 @@ public abstract class Node implements ResponseListener {
 						this.ipTable.put(ip, index);
 					}
 					catch(JSONException jsone) {
+						System.out.println("iterface count is "+ ifEntry.length());
 						jsone.printStackTrace();
 					}
 				}

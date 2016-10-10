@@ -32,6 +32,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	public final File nodeRoot;
 	
 	private final Map<String, SNMPNode> nodeList;
+	private final int timeout;
 	private final Table deviceTable;
 	private final Table snmpTable;
 	private final Table profileTable;
@@ -43,7 +44,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	
 	//private final static PDU pdu = RequestPDU.getInstance();
 	
-	public SNMPAgent() throws IOException {
+	public SNMPAgent(int timeout) throws IOException {
 		super(new DefaultUdpTransportMapping());
 		
 		System.out.println("snmp agent started.");
@@ -68,6 +69,8 @@ public class SNMPAgent extends Snmp implements Closeable {
 		nodeRoot = new File(ITAhM.getRoot(), "node");
 		nodeRoot.mkdir();
 		
+		this.timeout = timeout;
+		
 		listen();
 		
 		initNode();
@@ -82,6 +85,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		try {
 			node = new SNMPNode(this, ip, profile.getInt("udp")
 					, profile.getString("community")
+					, this.timeout
 					, this.criticalTable.getJSONObject(ip));
 			
 			this.nodeList.put(ip, node);
