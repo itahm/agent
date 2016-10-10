@@ -87,7 +87,7 @@ public class ITAhM {
 	public static void main(String[] args) throws IOException {
 		String path = ".";
 		int tcp = 2014;
-		int timeout = 5;
+		int timeout = 5000;
 		String host = InetAddress.getLocalHost().getHostAddress();
 		
 		for(int i=0, length = args.length; i<length;) {
