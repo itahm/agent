@@ -30,7 +30,7 @@ public class ITAhM {
 	private static Map<String, Table> tableMap;
 	
 	public ITAhM(int tcp, String path, String host, int timeout) throws IOException {
-		System.out.println("Version 1.1.3.35");
+		System.out.println("Version 1.1.3.37");
 		System.out.println("start up ITAhM agent");
 		System.out.println("TCP "+ tcp);
 		

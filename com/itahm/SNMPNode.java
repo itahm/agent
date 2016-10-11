@@ -314,7 +314,9 @@ public class SNMPNode extends Node {
 
 	@Override
 	protected void onFailure() {
-		this.agent.onFailure(this.ip);
+		if (this.critical == null || !this.critical.monitorMode) {
+			this.agent.onFailure(this.ip);
+		}
 	}
 	
 	class CriticalData {
@@ -325,16 +327,14 @@ public class SNMPNode extends Node {
 		public static final String STORAGE = "storage";
 		public static final String THROUGHPUT = "throughput";
 		
-		private final Map<String, Critical> processor;
-		private final Map<String, Critical> storage;
-		private final Map<String, Critical> throughput;
+		private final Map<String, Critical> processor = new HashMap<String, Critical>();
+		private final Map<String, Critical> storage = new HashMap<String, Critical>();
+		private final Map<String, Critical> throughput = new HashMap<String, Critical>();
+		
+		public boolean monitorMode = false; 
 		private Critical responseTime;
 		
-		public CriticalData(JSONObject criticalCondition) {			
-			this.processor = new HashMap<String, Critical>();
-			this.storage = new HashMap<String, Critical>();
-			this.throughput = new HashMap<String, Critical>();
-			
+		public CriticalData(JSONObject criticalCondition) {
 			JSONObject list;
 			Map<String, Critical> mapping;
 			String resource;
@@ -343,7 +343,11 @@ public class SNMPNode extends Node {
 				resource = (String)key;
 				
 				if (RESPONSETIME.equals(resource)) {
-					responseTime = new Critical(criticalCondition.getJSONObject(RESPONSETIME).getJSONObject("0"));
+					JSONObject critical = criticalCondition.getJSONObject(RESPONSETIME).getJSONObject("0");
+					
+					monitorMode = (critical.getInt("limit") == 100);
+					
+					responseTime = new Critical(critical);
 				}
 				else {
 					if (PROCESSOR.equals(resource)) {
