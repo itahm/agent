@@ -13,10 +13,11 @@ public class Table implements Closeable {
 	public final static String ACCOUNT = "account";
 	public final static String CRITICAL = "critical";
 	public final static String DEVICE = "device";
-	public final static String SNMP = "snmp";
+	public final static String MONITOR = "monitor";
 	public final static String ICON = "icon";
 	public final static String POSITION = "position";
 	public final static String PROFILE = "profile";
+	public final static String GCM = "gcm";
 	
 	private final static File dataRoot = ITAhM.getRoot();
 	protected JSONFile file;

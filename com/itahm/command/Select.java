@@ -10,12 +10,12 @@ import com.itahm.SNMPNode;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Select extends Command {
+public class Select implements Command {
 	
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			SNMPNode node = ITAhM.agent.getNode(data.getString("ip"));
+			SNMPNode node = ITAhM.agent.snmp.getNode(data.getString("ip"));
 			
 			if (node != null) {
 				return Response.getInstance(Response.Status.OK, node.getData().toString());

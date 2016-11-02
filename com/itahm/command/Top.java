@@ -9,12 +9,12 @@ import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Top extends Command {
+public class Top implements Command {
 	
 	private static int TOP_MAX = 10;
 	
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		int count = TOP_MAX;
 		
 		try {
@@ -22,7 +22,7 @@ public class Top extends Command {
 				count = Math.min(data.getInt("count"), TOP_MAX);
 			}
 			
-			return Response.getInstance(Response.Status.OK, ITAhM.agent.getTop(count).toString());
+			return Response.getInstance(Response.Status.OK, ITAhM.agent.snmp.getTop(count).toString());
 		}
 		catch(NullPointerException npe) {
 			return Response.getInstance(Response.Status.UNAVAILABLE);

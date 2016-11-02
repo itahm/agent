@@ -8,12 +8,12 @@ import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class ARP extends Command {
+public class ARP implements Command {
 	
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			return Response.getInstance(Response.Status.OK, ITAhM.agent.getARP().toString());
+			return Response.getInstance(Response.Status.OK, ITAhM.agent.snmp.getARP().toString());
 		}
 		catch (NullPointerException npe) {
 			return Response.getInstance(Response.Status.UNAVAILABLE);

@@ -8,10 +8,10 @@ import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Agent extends Command {
+public class Agent implements Command {
 	
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			return Response.getInstance(Response.Status.OK,
 				new JSONObject()

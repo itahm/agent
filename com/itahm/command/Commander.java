@@ -1,9 +1,6 @@
 package com.itahm.command;
 
 public enum Commander {
-	ECHO("com.itahm.command.Echo"),
-	SIGNIN("com.itahm.command.SignIn"),
-	SIGNOUT("com.itahm.command.SignOut"),
 	PULL("com.itahm.command.Pull"),
 	PUSH("com.itahm.command.Push"),
 	PUT("com.itahm.command.Put"),
@@ -12,8 +9,6 @@ public enum Commander {
 	LINK("com.itahm.command.Link"),
 	LISTEN("com.itahm.command.Listen"),
 	SHUTDOWN("com.itahm.command.ShutDown"),
-	REGISTER("com.itahm.command.Register"),
-	UNREGISTER("com.itahm.command.UnRegister"),
 	MESSAGE("com.itahm.command.Message"),
 	TOP("com.itahm.command.Top"),
 	LOG("com.itahm.command.Log"),

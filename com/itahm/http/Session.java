@@ -18,6 +18,11 @@ public class Session {
 	private final Object extras;
 	private TimerTask task;
 	
+	private Session() {
+		cookie = null;
+		this.extras = null;
+	}
+	
 	private Session(String uuid, Object extras) {
 		cookie = uuid;
 		this.extras = extras;
@@ -32,6 +37,11 @@ public class Session {
 		sessions.put(uuid, session);
 		
 		return session;
+	}
+	
+	public static Session getInstance() {
+		
+		return new Session();
 	}
 	
 	public static int count() {

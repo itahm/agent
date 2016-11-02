@@ -8,10 +8,10 @@ import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Log extends Command {
+public class Log implements Command {
 	
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		return Response.getInstance(Response.Status.OK, ITAhM.log.read(data.getLong("date")));
 	}
 

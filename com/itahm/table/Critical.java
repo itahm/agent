@@ -13,7 +13,7 @@ public class Critical extends Table {
 	}
 	
 	public JSONObject put(String ip, JSONObject critical) {
-		ITAhM.agent.resetCritical(ip, critical);
+		ITAhM.agent.snmp.resetCritical(ip, critical);
 		
 		return super.put(ip, critical);
 	}

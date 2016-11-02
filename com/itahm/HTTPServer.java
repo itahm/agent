@@ -64,19 +64,56 @@ public class HTTPServer extends Listener {
 				try {
 					JSONObject data = new JSONObject(new String(request.getRequestBody(), StandardCharsets.UTF_8.name()));
 					
-					Session session = getSession(request);
-					
 					if (!data.has("command")) {
 						response = Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "command not found").toString());
 					}
 					else {
-						Command command = Commander.getCommand(data.getString("command"));
+						String cmd = data.getString("command");
+						Session session = getSession(request);
 						
-						if (command != null) {
-							response = command.execute(request, data, session);
+						if ("echo".equals(cmd)) {
+							response = Response.getInstance(Response.Status.OK, new JSONObject()
+									.put("level", session == null? -1: (int)session.getExtras()).toString());
+						}
+						else if ("signin".equals(cmd)) {
+							if (session == null) {
+								session = signIn(data);
+							}
+							
+							if (session == null) {
+								response = Response.getInstance(Response.Status.UNAUTHORIZED);
+							}
+							else {
+								response = Response.getInstance(Response.Status.OK,	new JSONObject()
+									.put("level", (int)session.getExtras())
+									.put("version", ITAhM.VERSION).toString())
+										.setResponseHeader("Set-Cookie", String.format("SESSION=%s; HttpOnly", session.getCookie()));
+							}
+						}
+						else if ("signout".equals(cmd)) {
+							if (session != null) {
+								session.close();
+							}
+							
+							response = Response.getInstance(Response.Status.OK);
 						}
 						else {
-							response = Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "invalid command").toString());
+							Command command = Commander.getCommand(cmd);
+							
+							if (command != null) {
+								if ("put".equals(cmd) && "gcm".equals(data.getString("database"))) {
+									response = command.execute(request, data);
+								}
+								else if (session != null) {
+									response = command.execute(request, data);
+								}
+								else {
+									response = Response.getInstance(Response.Status.UNAUTHORIZED);
+								}
+							}
+							else {
+								response = Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "invalid command").toString());
+							}
 						}
 					}
 				}
@@ -106,6 +143,23 @@ public class HTTPServer extends Listener {
 				request.sendResponse(response);
 			}
 		}
+	}
+	
+	private Session signIn(JSONObject data) {
+		String username = data.getString("username");
+		String password = data.getString("password");
+		JSONObject accountData = ITAhM.getTable("account").getJSONObject();
+		
+		if (accountData.has(username)) {
+			 JSONObject account = accountData.getJSONObject(username);
+			 
+			 if (account.getString("password").equals(password)) {
+				// signin 성공, cookie 발행
+				return Session.getInstance(account.getInt("level"));
+			 }
+		}
+		
+		return null;
 	}
 	
 	private static Session getSession(Request request) {

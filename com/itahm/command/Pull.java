@@ -10,10 +10,10 @@ import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Pull extends Command {
+public class Pull implements Command {
 	
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			Table table = ITAhM.getTable(data.getString("database"));
 			

@@ -94,13 +94,14 @@ public class Log implements Closeable {
 		return index; 
 	}
 	
-	public void write(String ip, String message) throws IOException {
+	public void write(String ip, String message, String type) throws IOException {
 		JSONObject logData = new JSONObject();
 		long index = getIndex();
 		
 		logData
 			.put("index", index)
 			.put("ip", ip)
+			.put("type", type)
 			.put("message", message)
 			.put("date", Calendar.getInstance().getTimeInMillis());
 		

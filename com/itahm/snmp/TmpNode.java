@@ -18,7 +18,6 @@ import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
 
-import com.itahm.ITAhM;
 import com.itahm.SNMPAgent;
 
 abstract public class TmpNode implements ResponseListener {
@@ -118,7 +117,7 @@ private static final long TIMEOUT = 5000;
 				}
 			}
 			else {
-				ITAhM.debug("알수 없는 오류. 개발자에게 문의 바랍니다.");
+				new Exception().printStackTrace();
 			}
 		}
 	}

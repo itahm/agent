@@ -9,10 +9,10 @@ import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Message extends Command {
+public class Message implements Command {
 
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			ITAhM.gcmm.broadcast(data.getString("message"));
 			

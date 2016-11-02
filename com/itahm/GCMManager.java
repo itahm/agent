@@ -1,129 +1,66 @@
 package com.itahm;
 
-import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
-
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.json.JSONObject;
 
 import com.itahm.gcm.DownStream;
-import com.itahm.json.JSONFile;
+import com.itahm.table.Table;
 
-public class GCMManager extends DownStream implements Closeable {
+public class GCMManager extends DownStream {
 
-	public static final String ID = "id";
-	public static final String TOKEN = "token";
-	
-	/**
-	 * token - id
-	 */
-	private final Map<String, String> tokenMapping = new HashMap<String, String>();
-	/**
-	 * id - token
-	 */
-	private final Map<String, String> idMapping = new HashMap<String, String>();
-	private JSONFile file;
+	private final Map<String, String> index = new HashMap<String, String> ();
+	private final Table gcmTable;
 	
 	public GCMManager(String apiKey, String host) throws IOException {
 		super(apiKey, host);
 		
-		file = new JSONFile(new File(ITAhM.getRoot(), "gcm"));
-		JSONObject jsono = file.getJSONObject();
-		String token;
+		gcmTable = ITAhM.getTable(Table.GCM);
+	}
+
+	public void broadcast(String message) {
+		JSONObject gcmData = gcmTable.getJSONObject();
 		
-		if (jsono.length() > 0) {
-			for(String id : JSONObject.getNames(jsono)) {
-				token = jsono.getString(id);
-				
-				idMapping.put(id, token);
-				tokenMapping.put(token, id);
+		for (Object id : gcmData.keySet()) {
+			try {
+				send(gcmData.getJSONObject((String)id).getString("token"), "ITAhM message", message);
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}
 
-	public void broadcast(String message) {
-		Iterator<String> it;
-	
-		synchronized(this.tokenMapping) {
-			it = this.tokenMapping.keySet().iterator();
-			
-			while(it.hasNext()) {
-				try {
-					send(it.next(), "ITAhM message", message);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
+	public void register(String token, String id) {
+		this.index.put(token, id);
 	}
 	
-	private void save() {
-		JSONObject jsono = new JSONObject();
-		Iterator<String> it;
-		String id;
-		
-		synchronized(this.idMapping) {
-			it = this.idMapping.keySet().iterator();
-			while (it.hasNext()) {
-				id = it.next();
-				
-				jsono.put(id, this.idMapping.get(id));
-			}
-		}
-		
-		try {
-			this.file.save(jsono);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void register(String id, String token) {
-		synchronized (this.idMapping) {
-			this.idMapping.put(id, token);
-		}
-			
-		synchronized (this.tokenMapping) {
-			this.tokenMapping.put(token, id);
-		}
-		
-		save();
+	public void unregister(String token) {
+		this.index.remove(token);
 	}
 	
 	@Override
 	public void onUnRegister(String token) {
-		String id;
+		JSONObject gcmData = this.gcmTable.getJSONObject();
 		
-		synchronized (this.tokenMapping) {
-			id = this.tokenMapping.remove(token);
-		}
+		gcmData.remove(this.index.get(token));
 		
-		if (id == null) {
-			System.out.println("unregister failed: no such token\n"+ token);
-		}
-		else {
-			synchronized (this.tokenMapping) {
-				this.idMapping.remove(id);
-			}
-			
-			save();
-		}
+		this.gcmTable.save();
 	}
 
 	@Override
-	public void onRefresh(String old, String token) {
-		String id = this.tokenMapping.remove(token);
+	public void onRefresh(String oldToken, String token) {
+		JSONObject gcmData = this.gcmTable.getJSONObject();
+		String id = this.index.get(oldToken);
 		
-		if (id != null) {
-			this.idMapping.put(id, token);
+		if (gcmData.has(id)) {
+			JSONObject gcm = gcmData.getJSONObject(id);
+			
+			gcm.put("token", token);
 		}
-		else {
-			System.out.println("refresh failed: no shuch Token");
-		}
+		
+		this.gcmTable.save();
 	}
 
 	@Override
@@ -143,14 +80,4 @@ public class GCMManager extends DownStream implements Closeable {
 		System.out.println("GCM DownStream OFF.");
 	}
 	
-	@Override
-	public void close() {
-		try {
-			this.file.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		super.close();
-	}
 }

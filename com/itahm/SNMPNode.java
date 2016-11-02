@@ -68,19 +68,19 @@ public class SNMPNode extends Node {
 		if (index != null) {
 			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
 			
-			return ifEntry.getJSONObject(index.toString()).getString(Constant.STRING_IFNAME);
+			return ifEntry.getJSONObject(index.toString()).getString("ifName");
 		}
 		
 		return null;
 	}
 	
 	public String getPeerIFName(SNMPNode peer){
-		JSONObject ifEntry = super.data.getJSONObject(Constant.STRING_IFENTRY);
+		JSONObject ifEntry = super.data.getJSONObject("ifEntry");
 		String mac;
 		String name;
 		
 		for (Object index : ifEntry.keySet()) {
-			mac = ifEntry.getJSONObject((String)index).getString(Constant.STRING_MAC_ADDR);
+			mac = ifEntry.getJSONObject((String)index).getString("ifPhysAddress");
 			
 			if (!"".equals(mac)) {
 				name = peer.getIFNameFromARP(mac);
@@ -199,6 +199,12 @@ public class SNMPNode extends Node {
 				data = super.ifEntry.get(index);
 				capacity = 0;
 				
+				oldData = ifEntry.getJSONObject(index);
+				
+				if (data.getInt("ifAdminStatus") != 1) {
+					continue;
+				}
+				
 				if (data.has("ifHighSpeed")) {
 					capacity = data.getLong("ifHighSpeed");
 				}
@@ -210,8 +216,6 @@ public class SNMPNode extends Node {
 				if (capacity == 0) {
 					continue;
 				}
-				
-				oldData = ifEntry.getJSONObject(index);
 				
 				if (data.has("ifInErrors")) {
 					value = data.getInt("ifInErrors");
@@ -317,6 +321,13 @@ public class SNMPNode extends Node {
 		if (this.critical == null || !this.critical.monitorMode) {
 			this.agent.onFailure(this.ip);
 		}
+	}
+	
+	@Override
+	protected void onPending() {
+		this.rollingMap.put(Resource.RESPONSETIME, "0", this.timeout);
+		
+		this.agent.onPending(this.ip);
 	}
 	
 	class CriticalData {

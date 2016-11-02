@@ -30,8 +30,6 @@ import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 
-import com.itahm.Constant;
-
 public abstract class Node implements ResponseListener {
 	
 	private final RequestPDU pdu;
@@ -39,6 +37,7 @@ public abstract class Node implements ResponseListener {
 	private final CommunityTarget target;
 	private long requestTime;
 	protected long responseTime;
+	private boolean pending = false;
 	private Integer enterprise;
 	
 	/**
@@ -162,10 +161,10 @@ public abstract class Node implements ResponseListener {
 				}
 			}
 			
-			ifData.put(Constant.STRING_MAC_ADDR, macString);
+			ifData.put("ifPhysAddress", macString);
 		}
 		else if (request.startsWith(RequestPDU.ifAdminStatus) && response.startsWith(RequestPDU.ifAdminStatus)) {
-			ifData.put(Constant.STRING_IFADMINSTAT, ((Integer32)variable).getValue());
+			ifData.put("ifAdminStatus", ((Integer32)variable).getValue());
 		}
 		else if (request.startsWith(RequestPDU.ifOperStatus) && response.startsWith(RequestPDU.ifOperStatus)) {			
 			ifData.put("ifOperStatus", ((Integer32)variable).getValue());
@@ -200,10 +199,10 @@ public abstract class Node implements ResponseListener {
 		}
 		
 		if (request.startsWith(RequestPDU.ifName) && response.startsWith(RequestPDU.ifName)) {
-			ifData.put(Constant.STRING_IFNAME, new String(((OctetString)variable).getValue()));
+			ifData.put("ifName", new String(((OctetString)variable).getValue()));
 		}
 		else if (request.startsWith(RequestPDU.ifAlias) && response.startsWith(RequestPDU.ifAlias)) {
-			ifData.put(Constant.STRING_IFALIAS, new String(((OctetString)variable).getValue()));
+			ifData.put("ifAlias", new String(((OctetString)variable).getValue()));
 		}
 		else if (request.startsWith(RequestPDU.ifHCInOctets) && response.startsWith(RequestPDU.ifHCInOctets)) {
 			ifData.put("ifHCInOctets", ((Counter64)variable).getValue());
@@ -223,7 +222,7 @@ public abstract class Node implements ResponseListener {
 	
 	private final boolean parseHost(OID response, Variable variable, OID request) throws JSONException, IOException {
 		if (request.startsWith(RequestPDU.hrSystemUptime) && response.startsWith(RequestPDU.hrSystemUptime)) {
-			this.data.put(Constant.STRING_SYSUPTIME, ((TimeTicks)variable).toMilliseconds());
+			this.data.put("hrSystemUptime", ((TimeTicks)variable).toMilliseconds());
 			
 			return false;
 		}
@@ -420,10 +419,21 @@ public abstract class Node implements ResponseListener {
 		((Snmp)event.getSource()).cancel(request, this);
 		
 		if (response == null) { // response timed out
-			onFailure();
+			if (pending) {
+				onFailure();
+				
+				pending = false;
+			}
+			else {
+				onPending();
+				
+				pending = true;
+			}
 		}
 		else {
 			int status = response.getErrorStatus();
+			
+			pending = false;
 			
 			if (status == PDU.noError) {
 				try {
@@ -459,6 +469,7 @@ public abstract class Node implements ResponseListener {
 	
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
+	abstract protected void onPending();
 	
 	public static void main(String [] args) throws IOException {
 	}

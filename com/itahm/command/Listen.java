@@ -8,10 +8,10 @@ import com.itahm.ITAhM;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Listen extends Command {
+public class Listen implements Command {
 	
 	@Override
-	protected Response execute(Request request, JSONObject data) throws IOException {
+	public Response execute(Request request, JSONObject data) throws IOException {
 		long index = data.has("index")? data.getInt("index"): -1;
 		
 		ITAhM.log.listen(request, index);

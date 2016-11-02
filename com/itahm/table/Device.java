@@ -37,7 +37,7 @@ public class Device extends Table {
 			}
 			
 			ITAhM.getTable(Table.POSITION).remove(ip);
-			ITAhM.getTable(Table.SNMP).remove(ip);
+			ITAhM.getTable(Table.MONITOR).remove(ip);
 		}
 		
 		return device;
@@ -72,9 +72,11 @@ public class Device extends Table {
 			if (!device.has("ifEntry")) {
 				device.put("ifEntry", new JSONObject());
 			}
+			
+			super.put(ip, device);
 		}
 		
-		return super.put(ip, device);
+		return super.table;
 	}
 	
 }
