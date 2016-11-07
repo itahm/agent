@@ -245,63 +245,48 @@ public class SNMPNode extends Node {
 					}
 				}
 				
-				if (data.has("ifHCInOctets")) {
-					bytes = data.getLong("ifHCInOctets");
+				bytes = -1;
+				
+				if (data.has("ifHCInOctets") && oldData.has("ifHCInOctets")) {
+					bytes = data.getLong("ifHCInOctets") - oldData.getLong("ifHCInOctets");
 				}
-				else if (data.has("ifInOctets")) {
-					bytes = data.getLong("ifInOctets");
+				else if (data.has("ifInOctets") && oldData.has("ifInOctets")) {
+					bytes = data.getLong("ifInOctets") - oldData.getLong("ifInOctets");
+				}
+				
+				if (bytes  >= 0) {
+					bytes = bytes *8000 / interval;
+					
+					data.put("ifInBPS", bytes);
+					
+					this.rollingMap.put(Resource.IFINOCTETS, index, bytes);
+					
+					max = Math.max(max, bytes);
+					maxRate = Math.max(maxRate, bytes *100L / capacity);
+				}
+				
+				bytes = -1;
+				
+				if (data.has("ifHCOutOctets") && oldData.has("ifHCOutOctets")) {
+					bytes = data.getLong("ifHCOutOctets") - oldData.getLong("ifHCOutOctets");
+				}
+				else if (data.has("ifOutOctets") && oldData.has("ifOutOctets")) {
+					bytes = data.getLong("ifOutOctets") - oldData.getLong("ifOutOctets");
 				}
 				else {
 					continue;
 				}
 				
-				if (oldData.has("ifHCInOctets")) {
-					bytes -= oldData.getLong("ifHCInOctets");
+				if (bytes >= 0) {
+					bytes = bytes *8000 / interval;
+					
+					data.put("ifOutBPS", bytes);
+					
+					this.rollingMap.put(Resource.IFOUTOCTETS, index, bytes);
+					
+					max = Math.max(max, bytes);
+					maxRate = Math.max(maxRate, bytes *100L / capacity);
 				}
-				else if (oldData.has("ifInOctets")) {
-					bytes -= oldData.getLong("ifInOctets");
-				}
-				else {
-					continue;
-				}
-				
-				bytes = bytes *8000 / interval;
-				
-				data.put("ifInBPS", bytes);
-				
-				this.rollingMap.put(Resource.IFINOCTETS, index, bytes);
-				
-				max = Math.max(max, bytes);
-				maxRate = Math.max(maxRate, bytes *100L / capacity);
-				
-				if (data.has("ifHCOutOctets")) {
-					bytes = data.getLong("ifHCOutOctets");
-				}
-				else if (data.has("ifOutOctets")) {
-					bytes = data.getLong("ifOutOctets");
-				}
-				else {
-					continue;
-				}
-				
-				if (oldData.has("ifHCOutOctets")) {
-					bytes -= oldData.getLong("ifHCOutOctets");
-				}
-				else if (oldData.has("ifOutOctets")) {
-					bytes -= oldData.getLong("ifOutOctets");
-				}
-				else {
-					continue;
-				}
-				
-				bytes = bytes *8000 / interval;
-				
-				data.put("ifOutBPS", bytes);
-				
-				this.rollingMap.put(Resource.IFOUTOCTETS, index, bytes);
-				
-				max = Math.max(max, bytes);
-				maxRate = Math.max(maxRate, bytes *100L / capacity);
 				
 				if (this.critical != null) {
 					this.critical.analyze(CriticalData.THROUGHPUT, index, capacity, max);

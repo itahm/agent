@@ -44,7 +44,7 @@ public class RollingMap {
 		}
 	}
 
-	public void put(Resource resource, String index, long value) {
+	public boolean put(Resource resource, String index, long value) {
 		Map<String, RollingFile> map = this.map.get(resource);
 		RollingFile rollingFile = map.get(index);
 		
@@ -54,15 +54,17 @@ public class RollingMap {
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
 				
-				return;
+				return false;
 			}
 		}
 		
 		try {
-			rollingFile.roll(value);
+			return rollingFile.roll(value);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		return false;
 	}
 	
 	/**

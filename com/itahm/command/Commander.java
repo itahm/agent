@@ -12,6 +12,7 @@ public enum Commander {
 	MESSAGE("com.itahm.command.Message"),
 	TOP("com.itahm.command.Top"),
 	LOG("com.itahm.command.Log"),
+	SYSLOG("com.itahm.command.Syslog"),
 	AGENT("com.itahm.command.Agent"),
 	ARP("com.itahm.command.ARP"),
 	NETWORK("com.itahm.command.Network");

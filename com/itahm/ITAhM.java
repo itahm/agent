@@ -21,7 +21,7 @@ import com.itahm.table.Table;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.1.3.44";
+	public final static String VERSION = "1.1.3.45";
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;
@@ -33,6 +33,7 @@ public class ITAhM {
 	public final static class agent {
 		public static SNMPAgent snmp;
 		public static ICMPAgent icmp;
+		public static SyslogAgent syslog;
 	}
 	
 	public ITAhM(int tcp, String path, String host, int timeout) throws IOException {
@@ -54,11 +55,12 @@ public class ITAhM {
 		tableMap.put(Table.GCM, new GCM());
 		
 		http = new HTTPServer("0.0.0.0", tcp);
-		log = new Log(dataRoot);
+		log = new Log();
 		gcmm = new GCMManager(API_KEY, host);
 		
 		agent.snmp = new SNMPAgent(timeout);
 		agent.icmp = new ICMPAgent(timeout);
+		agent.syslog = new SyslogAgent();
 	}
 	
 	public static File getRoot() {
@@ -74,6 +76,7 @@ public class ITAhM {
 		
 		agent.snmp.close();
 		agent.icmp.close();
+		agent.syslog.close();
 		
 		log.close();
 		

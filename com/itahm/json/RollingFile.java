@@ -72,10 +72,11 @@ public class RollingFile implements Closeable {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	
-	public void roll(long value) throws IOException {
+	public boolean roll(long value) throws IOException {
 		Calendar calendar = Calendar.getInstance();
 		long now;
 		int hour;
+		boolean roll = false;
 		String hourString;
 		
 		calendar.set(Calendar.MILLISECOND, 0);
@@ -89,6 +90,8 @@ public class RollingFile implements Closeable {
 			summarize();
 			
 			if (hour == 0) {
+				roll = true;
+				
 				initDay(hourString);
 			}
 									
@@ -96,6 +99,8 @@ public class RollingFile implements Closeable {
 		}
 		
 		roll(hourString, value);
+		
+		return roll;
 	}
 	
 	private void roll(String hourString, long value) throws IOException {
@@ -127,31 +132,7 @@ public class RollingFile implements Closeable {
 		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
 		this.file.save();
 	}
-	/*
-	private void roll(String hourString, long value) throws IOException {
-		if (this.data.has(hourString) && this.data.getLong(hourString) >= value) {
-			return;
-		}
-		 
-		this.data.put(hourString, value);
-		
-		if (this.count == 0) {
-			this.sum = BigInteger.valueOf(value);
-			this.max = value;
-			this.min = value;
-		}
-		else {
-			this.sum = this.sum.add(BigInteger.valueOf(value));
-			this.max = Math.max(this.max, value);
-			this.min = Math.min(this.min, value);
-		}
-		
-		this.count++;
-		
-		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
-		this.file.save();
-	}
-	*/
+	
 	private void initDay(String dateString) throws IOException {
 		// day directory 생성
 		this.dir = new File(this.root, dateString);

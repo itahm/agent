@@ -32,8 +32,8 @@ public class Log implements Closeable {
 	private long index;
 	private final JSONObject log;
 	
-	public Log(File dataRoot) throws IOException {
-		File logRoot = new File(dataRoot, "log");
+	public Log() throws IOException {
+		File logRoot = new File(ITAhM.getRoot(), "log");
 		File indexFile = new File(logRoot, "index");
 		
 		logRoot.mkdir();
