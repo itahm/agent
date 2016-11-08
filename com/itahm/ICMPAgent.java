@@ -76,7 +76,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 						
 						addNode(ip);
 						
-						ITAhM.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "");
+						ITAhM.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "shutdown", true);
 						
 						return;
 					}
@@ -87,7 +87,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 				}
 				
 				try {	
-					ITAhM.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown");
+					ITAhM.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown", false);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -115,7 +115,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			this.monitorTable.save();
 			
 			try {
-				ITAhM.log.write(ip, String.format("%s ICMP 정상.", ip), "");
+				ITAhM.log.write(ip, String.format("%s ICMP 정상.", ip), "shutdown", true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -142,7 +142,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			
 			try {
 				
-				ITAhM.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown");
+				ITAhM.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown", false);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

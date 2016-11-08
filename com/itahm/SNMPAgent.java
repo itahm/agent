@@ -188,7 +188,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			this.monitorTable.save();
 			
 			try {
-				ITAhM.log.write(ip, String.format("%s [%s] SNMP 정상.", ip, node.getData().getString("sysName")), "");
+				ITAhM.log.write(ip, String.format("%s [%s] SNMP 정상.", ip, node.getData().getString("sysName")), "shutdown", true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -237,7 +237,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			try {
 				
-				ITAhM.log.write(ip, message, "critical");
+				ITAhM.log.write(ip, message, "shutdown", false);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -264,7 +264,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		this.monitorTable.save();
 		
 		try {
-			ITAhM.log.write(ip, String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message), "critical");
+			ITAhM.log.write(ip, String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message), "critical", critical);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

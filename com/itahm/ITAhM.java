@@ -21,7 +21,7 @@ import com.itahm.table.Table;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.1.3.45";
+	public final static String VERSION = "1.1.3.46";
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;

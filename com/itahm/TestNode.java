@@ -37,7 +37,7 @@ public class TestNode extends TmpNode {
 		super.agent.addNode(this.ip, profileName);
 		
 		try {
-			ITAhM.log.write(ip, String.format("%s [%s] SNMP 등록 성공.", super.ip, super.sysName), "");
+			ITAhM.log.write(ip, String.format("%s [%s] SNMP 등록 성공.", super.ip, super.sysName), "", true);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -46,7 +46,7 @@ public class TestNode extends TmpNode {
 	@Override
 	public void onFailure() {
 		try {
-			ITAhM.log.write(ip, String.format("%s SNMP 등록 실패.", super.ip), "shutdown");
+			ITAhM.log.write(ip, String.format("%s SNMP 등록 실패.", super.ip), "shutdown", false);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
