@@ -7,6 +7,8 @@ import java.util.Calendar;
 
 import org.json.JSONObject;
 
+import com.itahm.util.DataCleaner;
+
 /**
  * The Class RollingFile.
  */
@@ -17,7 +19,7 @@ public class RollingFile implements Closeable {
 	private String lastHourString;
 	
 	/** rollingRoot, itahm/snmp/ip address/resource/index */
-	private File root;
+	private final File root;
 	
 	private JSONFile summary;
 	private JSONObject summaryData;
@@ -56,7 +58,7 @@ public class RollingFile implements Closeable {
 		
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		
-		initDay(Long.toString(calendar.getTimeInMillis()));
+		initDay(calendar);
 		initHour(hourString, hour);
 		
 		avg = 0;
@@ -92,7 +94,7 @@ public class RollingFile implements Closeable {
 			if (hour == 0) {
 				roll = true;
 				
-				initDay(hourString);
+				initDay(calendar);
 			}
 									
 			initHour(hourString, hour);
@@ -133,7 +135,9 @@ public class RollingFile implements Closeable {
 		this.file.save();
 	}
 	
-	private void initDay(String dateString) throws IOException {
+	private void initDay(Calendar date) throws IOException {
+		String dateString = Long.toString(date.getTimeInMillis());
+		
 		// day directory 생성
 		this.dir = new File(this.root, dateString);
 		this.dir.mkdir();
@@ -145,6 +149,15 @@ public class RollingFile implements Closeable {
 		// summary file 생성
 		this.summary = new JSONFile(new File(this.dir, "summary"));
 		this.summaryData = this.summary.getJSONObject();
+		
+		// 지난 파일 삭제
+		date.add(Calendar.MONTH, -3);
+		
+		dateString = Long.toString(date.getTimeInMillis());
+
+		if (DataCleaner.deleteDirectory(new File(this.root, dateString))) {
+			System.out.println((date.get(Calendar.MONTH) +1) +"월"+ date.get(Calendar.DAY_OF_MONTH) +"일 데이터 삭제.");
+		}
 	}
 	
 	/**

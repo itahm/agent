@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,6 +18,7 @@ import com.itahm.table.Position;
 import com.itahm.table.Profile;
 import com.itahm.table.Monitor;
 import com.itahm.table.Table;
+import com.itahm.util.DataCleaner;
 
 public class ITAhM {
 	
@@ -61,6 +63,8 @@ public class ITAhM {
 		agent.snmp = new SNMPAgent(timeout);
 		agent.icmp = new ICMPAgent(timeout);
 		agent.syslog = new SyslogAgent();
+		
+		clean(new File(dataRoot, "node"));
 	}
 	
 	public static File getRoot() {
@@ -91,6 +95,28 @@ public class ITAhM {
 		}
 		
 		System.out.println("shut down ITAhM agent");
+	}
+	
+	private void clean(File nodeRoot) {
+		Calendar date = Calendar.getInstance();
+		
+		date.set(Calendar.HOUR_OF_DAY, 0);
+		date.set(Calendar.MINUTE, 0);
+		date.set(Calendar.SECOND, 0);
+		date.set(Calendar.MILLISECOND, 0);
+		
+		date.add(Calendar.MONTH, -3);
+				
+		new DataCleaner(nodeRoot, date.getTimeInMillis(), 3) {
+
+			@Override
+			public void onDelete(File file) {
+			}
+			
+			@Override
+			public void onComplete(long count) {
+			}
+		};
 	}
 	
 	public static void main(String[] args) throws IOException {

@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -24,7 +23,6 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.snmp.TmpNode;
 import com.itahm.table.Table;
-import com.itahm.util.DataCleaner;
 
 public class SNMPAgent extends Snmp implements Closeable {
 	
@@ -75,8 +73,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 		listen();
 		
 		initNode();
-		
-		new CleanerSchedule();
 	}
 	
 	public void addNode(String ip, String profileName) {
@@ -330,47 +326,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 			super.close();
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-	}
-	
-	class CleanerSchedule {
-
-		public CleanerSchedule() {
-			clean();
-		}
-		
-		public void clean() {
-			Calendar date = Calendar.getInstance();
-			
-			date.set(Calendar.HOUR_OF_DAY, 0);
-			date.set(Calendar.MINUTE, 0);
-			date.set(Calendar.SECOND, 0);
-			date.set(Calendar.MILLISECOND, 0);
-				
-			date.add(Calendar.DATE, 1);
-			
-			timer.schedule(new TimerTask() {
-				
-				@Override
-				public void run() {
-					clean();
-				}
-				
-			}, date.getTime());
-			
-			date.add(Calendar.DATE, -1);
-			date.add(Calendar.MONTH, -3);
-					
-			new DataCleaner(nodeRoot, date.getTimeInMillis(), 3) {
-
-				@Override
-				public void onDelete(File file) {
-				}
-				
-				@Override
-				public void onComplete(long count) {
-				}
-			};
 		}
 	}
 

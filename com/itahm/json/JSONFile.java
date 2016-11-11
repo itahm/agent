@@ -22,7 +22,7 @@ public class JSONFile implements Closeable{
 	protected JSONObject json;
 	
 	/** The file. */
-	private RandomAccessFile file = null;
+	private final RandomAccessFile file;
 	
 	/** The channel. */
 	private FileChannel channel;
@@ -31,14 +31,14 @@ public class JSONFile implements Closeable{
 	 * Instantiates a new JSON file.
 	 */
 	
-	public JSONFile(File file) throws IOException {
-		this.file = new RandomAccessFile(file, "rws");
-		this.channel = this.file.getChannel();
+	public JSONFile(File f) throws IOException {
+		file = new RandomAccessFile(f, "rws");
+		channel = file.getChannel();
 		
 		try {
 			load();
 		} catch (IOException ioe) {
-			this.file.close();
+			file.close();
 			
 			throw ioe;
 		}
@@ -112,7 +112,7 @@ public class JSONFile implements Closeable{
 	/**
 	 * Gets the JSON object.
 	 *
-	 * @return the JSON object. null json 형식이 아니라던가 어떤 문제가 생겼을때
+	 * @return the JSON object.
 	 */
 	public JSONObject getJSONObject() {
 		return this.json;
@@ -145,14 +145,8 @@ public class JSONFile implements Closeable{
 	 * @see java.io.Closeable#close()
 	 */
 	@Override
-	public void close() throws IOException {		
-		if (this.channel != null) {
-			this.channel.close();
-		}
-		
-		if (this.file != null) {
-			this.file.close();
-		}
+	public void close() throws IOException {
+		this.file.close();
 	}
 	
 }
