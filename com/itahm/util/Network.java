@@ -26,6 +26,8 @@ public class Network {
 		while(mask++ < 32) {
 			this.mask <<= 1;
 		}
+		
+		this.network &= this.mask;
 	}
 	
 	public Network(String network, int mask) throws IOException {
