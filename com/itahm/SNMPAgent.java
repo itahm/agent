@@ -98,6 +98,8 @@ public class SNMPAgent extends Snmp implements Closeable {
 			return false;
 		}
 		
+		this.topTable.remove(ip);
+		
 		return true;
 	}
 	
@@ -128,10 +130,18 @@ public class SNMPAgent extends Snmp implements Closeable {
 	}
 	
 	public void testNode(final String ip) {
+		testNode(ip, true);
+	}
+	
+	public void testNode(final String ip, boolean onFailure) {
+		if (this.nodeList.containsKey(ip)) {System.out.println(ip + " 제외");
+			return;
+		}
+		
 		final JSONObject profileData = this.profileTable.getJSONObject();
 		JSONObject profile;
 		
-		TmpNode node = new TestNode(this, ip);
+		TmpNode node = new TestNode(this, ip, onFailure);
 		
 		for (Object name : profileData.keySet()) {
 			profile = profileData.getJSONObject((String)name);
@@ -168,6 +178,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	public void onSuccess(String ip) {
 		final SNMPNode node = this.nodeList.get(ip);
 		
+		// 그 사이 삭제되었으면
 		if (node == null) {
 			return;
 		}
@@ -267,6 +278,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 	}
 	
 	public void onSubmitTop(String ip, String resource, long value) {
+		if (!this.nodeList.containsKey(ip)) {
+			return;
+		}
+		
 		this.topTable.submit(ip, resource, value);
 	}
 	
@@ -425,6 +440,18 @@ public class SNMPAgent extends Snmp implements Closeable {
 	        return top;
 		}
 
+		public void remove(String ip) {
+			this.responseTop.remove(ip);
+			this.processorTop.remove(ip);
+			this.memoryTop.remove(ip);
+			this.memoryRateTop.remove(ip);
+			this.storageTop.remove(ip);
+			this.storageRateTop.remove(ip);
+			this.throughputTop.remove(ip);
+			this.throughputRateTop.remove(ip);
+			this.throughputErrTop.remove(ip);
+		}
+		
 		@Override
 		public int compare(String ip1, String ip2) {
 			Long value1 = this.sortTop.get(ip1);
@@ -433,4 +460,5 @@ public class SNMPAgent extends Snmp implements Closeable {
             return value2.compareTo(value1);
 		}
 	}
+	
 }

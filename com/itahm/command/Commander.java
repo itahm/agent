@@ -12,9 +12,11 @@ public enum Commander {
 	MESSAGE("com.itahm.command.Message"),
 	TOP("com.itahm.command.Top"),
 	LOG("com.itahm.command.Log"),
+	HISTORY("com.itahm.command.History"),
 	SYSLOG("com.itahm.command.Syslog"),
 	AGENT("com.itahm.command.Agent"),
 	ARP("com.itahm.command.ARP"),
+	SEARCH("com.itahm.command.Search"),
 	NETWORK("com.itahm.command.Network");
 	
 	private String className;

@@ -9,21 +9,38 @@ import com.itahm.table.Table;
 
 public class TestNode extends TmpNode {
 
-	public TestNode(SNMPAgent agent, String ip) {
+	private final boolean onFailure;
+	public TestNode(SNMPAgent agent, String ip, boolean onFailure) {
 		super(agent, ip);
+		
+		this.onFailure = onFailure;
 		// TODO Auto-generated constructor stub
 	}
 
 	@Override
 	public void onSuccess(String profileName) {
-		JSONObject device = ITAhM.getTable(Table.DEVICE).getJSONObject(super.ip);
+		Table deviceTable = ITAhM.getTable(Table.DEVICE);
 		Table monitorTable = ITAhM.getTable(Table.MONITOR);
+		JSONObject device = deviceTable.getJSONObject(super.ip);
 		
-		if (!device.has("name") || "".equals(device.getString("name"))) {
-			device.put("name", super.sysName);
+		String name = "";
+	
+		if (device == null) {
+			deviceTable.put(super.ip, new JSONObject()
+				.put("name", name = super.sysName)
+			);
+		}
+		else {
+			name = device.getString("name");
+		
+			if ("".equals(name)) {
+				device.put("name", name = super.sysName);
+				
+				deviceTable.save();
+			}
 		}
 		
-		ITAhM.agent.icmp.removeNode(ip);
+		ITAhM.agent.icmp.removeNode(super.ip);
 		
 		monitorTable.getJSONObject().put(super.ip, new JSONObject()
 			.put("protocol", "snmp")
@@ -37,7 +54,7 @@ public class TestNode extends TmpNode {
 		super.agent.addNode(this.ip, profileName);
 		
 		try {
-			ITAhM.log.write(ip, String.format("%s [%s] SNMP 등록 성공.", super.ip, super.sysName), "", true);
+			ITAhM.log.write(ip, String.format("%s [%s] SNMP 등록 성공.", super.ip, name), "", true);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -45,6 +62,10 @@ public class TestNode extends TmpNode {
 
 	@Override
 	public void onFailure() {
+		if (!onFailure) {
+			return;
+		}
+		
 		try {
 			ITAhM.log.write(ip, String.format("%s SNMP 등록 실패.", super.ip), "shutdown", false);
 		} catch (IOException e) {

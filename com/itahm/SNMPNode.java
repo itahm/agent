@@ -14,6 +14,7 @@ import com.itahm.snmp.Node;
 
 public class SNMPNode extends Node {
 
+	private final File nodeRoot;
 	private final RollingMap rollingMap;
 	private final String ip;
 	private final SNMPAgent agent;
@@ -28,7 +29,7 @@ public class SNMPNode extends Node {
 		this.ip = ip;
 		this.timeout = timeout;
 		
-		File nodeRoot = new File(agent.nodeRoot, ip);
+		nodeRoot = new File(agent.nodeRoot, ip);
 		nodeRoot.mkdirs();
 		
 		rollingMap = new RollingMap(nodeRoot);
@@ -51,6 +52,30 @@ public class SNMPNode extends Node {
 		}
 		
 		return data;
+	}
+	
+	public JSONObject getHistory() {
+		JSONObject history = new JSONObject();
+		JSONObject data;
+		String resource;
+		
+		for (File node: this.nodeRoot.listFiles()) {
+			if (node.isDirectory()) {
+				data = new JSONObject();
+				
+				resource = node.getName();
+				
+				history.put(resource, data);
+				
+				for (File index: node.listFiles()) {
+					if (index.isDirectory()) {
+						data.put(index.getName(), JSONObject.NULL);
+					}
+				}
+			}
+		}
+		
+		return history;
 	}
 	
 	public void setCritical(JSONObject criticalCondition) {

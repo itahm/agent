@@ -23,7 +23,7 @@ import com.itahm.util.DataCleaner;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.1.3.46";
+	public final static String VERSION = "1.1.3.48";
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;

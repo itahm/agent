@@ -49,34 +49,33 @@ public class Device extends Table {
 	public JSONObject put(String ip, JSONObject device) {
 		if (device == null) {
 			remove(ip);
-		}
-		else {
-			Table posTable = ITAhM.getTable(Table.POSITION);
 			
-			if (posTable.getJSONObject(ip) == null) {
-				posTable.put(ip, new JSONObject().put("x", 0).put("y", 0));
-			}
-			
-			if (!device.has("name")) {
-				device.put("name", "");
-			}
-			
-			if (!device.has("ip")) {
-				device.put("ip", ip);
-			}
-			
-			if (!device.has("type")) {
-				device.put("type", "unknown");
-			}
-			
-			if (!device.has("ifEntry")) {
-				device.put("ifEntry", new JSONObject());
-			}
-			
-			super.put(ip, device);
+			return super.table;
 		}
 		
-		return super.table;
+		Table posTable = ITAhM.getTable(Table.POSITION);
+		
+		if (posTable.getJSONObject(ip) == null) {
+			posTable.put(ip, new JSONObject().put("x", 0).put("y", 0));
+		}
+		
+		if (!device.has("name")) {
+			device.put("name", "");
+		}
+		
+		if (!device.has("ip")) {
+			device.put("ip", ip);
+		}
+		
+		if (!device.has("type")) {
+			device.put("type", "unknown");
+		}
+		
+		if (!device.has("ifEntry")) {
+			device.put("ifEntry", new JSONObject());
+		}
+		
+		return super.put(ip, device);
 	}
 	
 }

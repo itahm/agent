@@ -94,7 +94,7 @@ public abstract class Node implements ResponseListener {
 		sendRequest(pdu);
 	}
 	
-	public JSONObject getData() {		
+	public JSONObject getData() {
 		return this.data;
 	}
 	
@@ -274,19 +274,15 @@ public abstract class Node implements ResponseListener {
 		if (request.startsWith(RequestPDU.ipAddrTable)) {
 			if (request.startsWith(RequestPDU.ipAdEntIfIndex) && response.startsWith(RequestPDU.ipAdEntIfIndex)) {
 				if (this.data.has("ifEntry")) {
-					Integer index = ((Integer32)variable).getValue();
 					JSONObject ifEntry = this.data.getJSONObject("ifEntry");
+					Integer index = ((Integer32)variable).getValue();
 					
-					try {
+					if (ifEntry.has(index.toString())) {
 						String mac = ifEntry.getJSONObject(index.toString()).getString("ifPhysAddress");
 						
 						this.arpTable.put(mac, ip);
 						this.macTable.put(mac, index);
 						this.ipTable.put(ip, index);
-					}
-					catch(JSONException jsone) {
-						System.out.println("iterface count is "+ ifEntry.length());
-						jsone.printStackTrace();
 					}
 				}
 			}
