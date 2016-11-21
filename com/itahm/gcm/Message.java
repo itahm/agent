@@ -104,9 +104,10 @@ class Message implements DownStream.Request {
 	
 	@Override
 	public void send() throws IOException {
+	try{
 		this.connection = downstream.getConnection();
 		OutputStream os = null;
-		
+	
 		try {
 			os = this.connection.getOutputStream();
 			os.write(this.message.toString().getBytes(StandardCharsets.UTF_8.name()));
@@ -131,6 +132,10 @@ class Message implements DownStream.Request {
 		this.connection.disconnect();
 		
 		this.downstream.onComplete(status);
+	}
+	catch (RuntimeException re) {
+		re.printStackTrace();
+	}
 	}
 	
 }

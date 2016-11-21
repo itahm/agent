@@ -10,11 +10,11 @@ public abstract class DownStream implements Runnable, Closeable {
 	private final static String GCMURL = "http://gcm-http.googleapis.com/gcm/send";
 	private final static int TIMEOUT = 10000;
 	
+	private final Thread thread;
 	private final String host;
 	private final URL url;
 	private final String auth;
 	private final LinkedList<Request> queue;
-	private boolean stop;
 	
 	interface Request {
 		public void send() throws IOException;
@@ -24,11 +24,12 @@ public abstract class DownStream implements Runnable, Closeable {
 		this.host = host;
 		url = new URL(GCMURL);
 		
-		queue = new LinkedList<Request>();
+		queue = new LinkedList<>();
 		
 		auth = "key="+ apiKey;
 		
-		new Thread(this).start();
+		thread = new Thread(this);
+		thread.start();
 	}
 	
 	HttpURLConnection getConnection() throws IOException {
@@ -50,25 +51,19 @@ public abstract class DownStream implements Runnable, Closeable {
 	
 	@Override
 	public void close() {
-		this.stop = true;
+		this.thread.interrupt();
 	}
 	
 	@Override
 	public void run() {
 		onStart();
 		
-		Request request;
-		
-		while (!this.stop) {
+		while (!Thread.interrupted()) {
 			if (queue.size() > 0) {
-				request = queue.peek();
-				
 				try {
-					request.send();
-					
-					queue.pop();
+					queue.poll().send();
 				} catch (IOException ioe) {
-					// GCM 문제일것.
+					ioe.printStackTrace();
 				}
 			}
 			else {

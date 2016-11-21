@@ -18,6 +18,15 @@ public class GCMManager extends DownStream {
 		super(apiKey, host);
 		
 		gcmTable = ITAhM.getTable(Table.GCM);
+		
+		JSONObject gcmData = gcmTable.getJSONObject();
+		String id;
+		
+		for (Object key : gcmData.keySet()) {
+			id = (String)key;
+			
+			register(gcmData.getJSONObject(id).getString("token"), id);
+		}
 	}
 
 	public void broadcast(String message) {
@@ -41,7 +50,7 @@ public class GCMManager extends DownStream {
 	}
 	
 	@Override
-	public void onUnRegister(String token) {
+	public void onUnRegister(String token) {System.out.println(token+" / "+ this.index.get(token));
 		JSONObject gcmData = this.gcmTable.getJSONObject();
 		
 		gcmData.remove(this.index.get(token));

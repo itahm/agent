@@ -155,9 +155,7 @@ public class RollingFile implements Closeable {
 		
 		dateString = Long.toString(date.getTimeInMillis());
 
-		if (DataCleaner.deleteDirectory(new File(this.root, dateString))) {
-			System.out.println((date.get(Calendar.MONTH) +1) +"월"+ date.get(Calendar.DAY_OF_MONTH) +"일 데이터 삭제.");
-		}
+		DataCleaner.deleteDirectory(new File(this.root, dateString));
 	}
 	
 	/**
