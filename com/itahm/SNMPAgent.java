@@ -50,8 +50,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		nodeList = new ConcurrentHashMap<String, SNMPNode>();
 		
-		//deviceTable = ITAhM.getTable(Table.DEVICE);
-		
 		monitorTable = ITAhM.getTable(Table.MONITOR);
 		
 		profileTable = ITAhM.getTable(Table.PROFILE);
@@ -90,7 +88,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			node.request();
 		} catch (IOException | JSONException e) {
 			e.printStackTrace();
-		}
+		}System.out.println(this.nodeList.size());
 	}
 	
 	public boolean removeNode(String ip) {
@@ -134,7 +132,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	}
 	
 	public void testNode(final String ip, boolean onFailure) {
-		if (this.nodeList.containsKey(ip)) {System.out.println(ip + " 제외");
+		if (this.nodeList.containsKey(ip)) {
 			return;
 		}
 		
@@ -271,7 +269,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		this.monitorTable.save();
 		
 		try {
-			ITAhM.log.write(ip, String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message), "critical", critical);
+			ITAhM.log.write(ip, String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message), "critical", !critical);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

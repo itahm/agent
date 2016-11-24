@@ -17,19 +17,29 @@ public class Monitor extends Table {
 		Table table;
 		
 		if (monitor != null) {
-			if (monitor.getString("protocol") == "snmp") {
+			if ("snmp".equals(monitor.getString("protocol"))) {
 				if (ITAhM.agent.snmp.removeNode(ip)) {
 					table = ITAhM.getTable(Table.CRITICAL);
 					
 					table.remove(ip);
-					table.save();
+				}
+				else {
+					// 오류
+					new RuntimeException().printStackTrace();
 				}
 			}
-			else {
+			else if ("icmp".equals(monitor.getString("protocol"))) {
 				ITAhM.agent.icmp.removeNode(ip);
+			}
+			else {
+				// 오류
+				new RuntimeException().printStackTrace();
 			}
 			
 			save();
+		}
+		else {
+			// 정상
 		}
 		
 		return monitor;

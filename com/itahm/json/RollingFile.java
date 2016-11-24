@@ -3,6 +3,7 @@ package com.itahm.json;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Calendar;
 
 import org.json.JSONObject;
@@ -30,7 +31,8 @@ public class RollingFile implements Closeable {
 	
 	private long max;
 	private long min;
-	private double avg;
+	private BigInteger avg;
+	//private double avg;
 	private int count;
 	private long sum;
 	private long sumCnt;
@@ -61,7 +63,7 @@ public class RollingFile implements Closeable {
 		initDay(calendar);
 		initHour(hourString, hour);
 		
-		avg = 0;
+		avg = new BigInteger("0");
 		count = 0;
 		sum = 0;
 		sumCnt = 0;
@@ -119,12 +121,12 @@ public class RollingFile implements Closeable {
 		this.data.put(hourString, this.sum / this.sumCnt);
 		
 		if (this.count == 0) {
-			this.avg = value;
+			this.avg = BigInteger.valueOf(value);
 			this.max = value;
 			this.min = value;
 		}
 		else {
-			this.avg = this.avg / (this.count +1) * this.count + value / (this.count +1.0);
+			this.avg.add(BigInteger.valueOf(value));
 			this.max = Math.max(this.max, value);
 			this.min = Math.min(this.min, value);
 		}
@@ -180,11 +182,13 @@ public class RollingFile implements Closeable {
 	
 	private void summarize() throws IOException {
 		if (this.count > 0) {
+			long avg = this.avg.divide(BigInteger.valueOf(this.count)).longValue();
+			
 			this.summaryData.put(this.lastHourString,
 				new JSONObject()
-				.put("avg", (long)this.avg)
-				.put("max", this.max)
-				.put("min", this.min)
+				.put("avg", avg)
+				.put("max", Math.max(avg, this.max))
+				.put("min", Math.min(avg, this.min))
 			);
 			
 			this.count = 0;

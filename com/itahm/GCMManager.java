@@ -50,7 +50,7 @@ public class GCMManager extends DownStream {
 	}
 	
 	@Override
-	public void onUnRegister(String token) {System.out.println(token+" / "+ this.index.get(token));
+	public void onUnRegister(String token) {
 		JSONObject gcmData = this.gcmTable.getJSONObject();
 		
 		gcmData.remove(this.index.get(token));

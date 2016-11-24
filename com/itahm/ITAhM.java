@@ -23,11 +23,10 @@ import com.itahm.util.DataCleaner;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.1.3.48";
+	public final static String VERSION = "1.2.3.4";
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;
-	//public static SNMPAgent agent;
 	public static GCMManager gcmm;
 	
 	private static Map<String, Table> tableMap;

@@ -37,6 +37,10 @@ public class SNMPNode extends Node {
 		setCritical(criticalCondition);
 	}
 	
+	public String getAddress() {
+		return this.ip;
+	}
+	
 	public JSONObject getData(String database, String index, long start, long end, boolean summary) {
 		JSONObject data = null;
 	
