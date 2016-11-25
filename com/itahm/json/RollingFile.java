@@ -31,11 +31,10 @@ public class RollingFile implements Closeable {
 	
 	private long max;
 	private long min;
-	private BigInteger avg;
-	//private double avg;
-	private int count;
-	private long sum;
-	private long sumCnt;
+	private BigInteger hourSum;
+	private int hourCnt;
+	private BigInteger minuteSum;
+	private long minuteSumCnt;
 	/**
 	 * Instantiates a new rolling file.
 	 *
@@ -63,10 +62,10 @@ public class RollingFile implements Closeable {
 		initDay(calendar);
 		initHour(hourString, hour);
 		
-		avg = new BigInteger("0");
-		count = 0;
-		sum = 0;
-		sumCnt = 0;
+		hourSum = BigInteger.valueOf(0);
+		hourCnt = 0;
+		minuteSum = BigInteger.valueOf(0);
+		minuteSumCnt = 0;
 	}
 	
 	/**
@@ -81,14 +80,14 @@ public class RollingFile implements Closeable {
 		long now;
 		int hour;
 		boolean roll = false;
-		String hourString;
+		String minuteString;
 		
 		calendar.set(Calendar.MILLISECOND, 0);
 		calendar.set(Calendar.SECOND, 0);
 		
 		now = calendar.getTimeInMillis();
 		hour = calendar.get(Calendar.HOUR_OF_DAY);
-		hourString = Long.toString(now);
+		minuteString = Long.toString(now);
 
 		if (hour != this.lastHour) {
 			summarize();
@@ -99,39 +98,39 @@ public class RollingFile implements Closeable {
 				initDay(calendar);
 			}
 									
-			initHour(hourString, hour);
+			initHour(minuteString, hour);
 		}
 		
-		roll(hourString, value);
+		roll(minuteString, value);
 		
 		return roll;
 	}
 	
-	private void roll(String hourString, long value) throws IOException {
-		if (this.data.has(hourString)) {
-			this.sum += value;
+	private void roll(String minuteString, long value) throws IOException {
+		if (this.data.has(minuteString)) {
+			this.minuteSum = this.minuteSum.add(BigInteger.valueOf(value));
 		}
 		else {
-			this.sum = value;
-			this.sumCnt = 0;
+			this.minuteSum = BigInteger.valueOf(value);
+			this.minuteSumCnt = 0;
 		}
 		
-		this.sumCnt++;
+		this.minuteSumCnt++;
 		
-		this.data.put(hourString, this.sum / this.sumCnt);
+		this.data.put(minuteString, this.minuteSum.divide(BigInteger.valueOf(this.minuteSumCnt)));
 		
-		if (this.count == 0) {
-			this.avg = BigInteger.valueOf(value);
+		if (this.hourCnt == 0) {
+			this.hourSum = BigInteger.valueOf(value);
 			this.max = value;
 			this.min = value;
 		}
 		else {
-			this.avg.add(BigInteger.valueOf(value));
+			this.hourSum = this.hourSum.add(BigInteger.valueOf(value));
 			this.max = Math.max(this.max, value);
 			this.min = Math.min(this.min, value);
 		}
 		
-		this.count++;
+		this.hourCnt++;
 		
 		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
 		this.file.save();
@@ -181,8 +180,8 @@ public class RollingFile implements Closeable {
 	}
 	
 	private void summarize() throws IOException {
-		if (this.count > 0) {
-			long avg = this.avg.divide(BigInteger.valueOf(this.count)).longValue();
+		if (this.hourCnt > 0) {
+			long avg = this.hourSum.divide(BigInteger.valueOf(this.hourCnt)).longValue();
 			
 			this.summaryData.put(this.lastHourString,
 				new JSONObject()
@@ -191,7 +190,7 @@ public class RollingFile implements Closeable {
 				.put("min", Math.min(avg, this.min))
 			);
 			
-			this.count = 0;
+			this.hourCnt = 0;
 			
 			this.summary.save();
 		}

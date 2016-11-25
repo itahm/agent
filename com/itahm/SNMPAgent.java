@@ -88,7 +88,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			node.request();
 		} catch (IOException | JSONException e) {
 			e.printStackTrace();
-		}System.out.println(this.nodeList.size());
+		}//System.out.println(this.nodeList.size());
 	}
 	
 	public boolean removeNode(String ip) {
