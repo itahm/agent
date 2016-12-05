@@ -129,35 +129,35 @@ public class RequestPDU extends PDU {
 	//public final static OID 		enterprises = new OID(internet).append(4).append(1); // 6
 
 	// iso.org.dod.internet.snmpV2
-	public final static OID snmpV2 = new OID(new int [] {1,3,6,1,6});
+	//public final static OID snmpV2 = new OID(new int [] {1,3,6,1,6});
 	// iso.org.dod.internet.snmpV2.snmpModules
-	public final static OID snmpModules = new OID(new int [] {1,3,6,1,6,3});
+	//public final static OID snmpModules = new OID(new int [] {1,3,6,1,6,3});
 	// iso.org.dod.internet.snmpV2.snmpModules.snmpMIB
-	public final static OID snmpMIB = new OID(new int [] {1,3,6,1,6,3,1});
+	//public final static OID snmpMIB = new OID(new int [] {1,3,6,1,6,3,1});
 	// iso.org.dod.internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects
-	public final static OID snmpMIBObjects = new OID(new int [] {1,3,6,1,6,3,1,1});
+	//public final static OID snmpMIBObjects = new OID(new int [] {1,3,6,1,6,3,1,1});
 	// internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects.snmpTrap
-	public final static OID	snmpTrap = new OID(new int [] {1,3,6,1,6,3,1,1,4});
+	//public final static OID	snmpTrap = new OID(new int [] {1,3,6,1,6,3,1,1,4});
 	// internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects.snmpTrap.snmpTrapOID
-	public final static OID	snmpTrapOID = new OID(new int [] {1,3,6,1,6,3,1,1,4,1});
+	//public final static OID	snmpTrapOID = new OID(new int [] {1,3,6,1,6,3,1,1,4,1});
 	// internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects.snmpTraps
-	public final static OID	snmpTraps = new OID(new int [] {1,3,6,1,6,3,1,1,5});
+	//public final static OID	snmpTraps = new OID(new int [] {1,3,6,1,6,3,1,1,5});
 	// internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects.snmpTraps.coldStart
-	public final static OID	coldStart = new OID(new int [] {1,3,6,1,6,3,1,1,5,1});
+	//public final static OID	coldStart = new OID(new int [] {1,3,6,1,6,3,1,1,5,1});
 	// internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects.snmpTraps.warmStart
-	public final static OID	warmStart = new OID(new int [] {1,3,6,1,6,3,1,1,5,2});
+	//public final static OID	warmStart = new OID(new int [] {1,3,6,1,6,3,1,1,5,2});
 	// internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects.snmpTraps.linkDown
-	public final static OID	linkDown = new OID(new int [] {1,3,6,1,6,3,1,1,5,3});
+	//public final static OID	linkDown = new OID(new int [] {1,3,6,1,6,3,1,1,5,3});
 	// internet.snmpV2.snmpModules.snmpMIB.snmpMIBObjects.snmpTraps.linkUp
-	public final static OID	linkUp = new OID(new int [] {1,3,6,1,6,3,1,1,5,4});
+	//public final static OID	linkUp = new OID(new int [] {1,3,6,1,6,3,1,1,5,4});
 	
 	public final static OID	cisco = new OID(new int [] {1,3,6,1,4,1,9});
 	public final static OID	busyPer = new OID(new int [] {1,3,6,1,4,1,9,2,1,5,6});
 	public final static OID	cpmCPUTotal5sec = new OID(new int [] {1,3,6,1,4,1,9,9,109,1,1,1,1,3});
 	public final static OID	cpmCPUTotal5secRev = new OID(new int [] {1,3,6,1,4,1,9,9,109,1,1,1,1,6});
 	
-	public final static OID authenticationFailure = new OID(snmpTraps).append(5); // 10
-	public final static OID egpNeighborLoss = new OID(snmpTraps).append(6); // 10
+	//public final static OID authenticationFailure = new OID(snmpTraps).append(5); // 10
+	//public final static OID egpNeighborLoss = new OID(snmpTraps).append(6); // 10
 	
 	private final static int CISCO = 9;
 	

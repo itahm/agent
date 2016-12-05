@@ -332,9 +332,7 @@ public class SNMPNode extends Node {
 
 	@Override
 	protected void onFailure() {
-		if (this.critical == null || !this.critical.monitorMode) {
-			this.agent.onFailure(this.ip);
-		}
+		this.agent.onFailure(this.ip);
 	}
 	
 	@Override
@@ -352,12 +350,10 @@ public class SNMPNode extends Node {
 		public static final String STORAGE = "storage";
 		public static final String THROUGHPUT = "throughput";
 		
+		private final Map<String, Critical> responseTime = new HashMap<String, Critical>();
 		private final Map<String, Critical> processor = new HashMap<String, Critical>();
 		private final Map<String, Critical> storage = new HashMap<String, Critical>();
 		private final Map<String, Critical> throughput = new HashMap<String, Critical>();
-		
-		public boolean monitorMode = false; 
-		private Critical responseTime;
 		
 		public CriticalData(JSONObject criticalCondition) {
 			JSONObject list;
@@ -367,35 +363,32 @@ public class SNMPNode extends Node {
 			for (Object key : criticalCondition.keySet()) {
 				resource = (String)key;
 				
-				if (RESPONSETIME.equals(resource)) {
-					JSONObject critical = criticalCondition.getJSONObject(RESPONSETIME).getJSONObject("0");
+				switch (resource) {
+				case RESPONSETIME:
+					mapping = this.responseTime;
 					
-					monitorMode = (critical.getInt("limit") == 100);
+					break;
 					
-					responseTime = new Critical(critical);
+				case PROCESSOR:
+					mapping = this.processor;
+					
+					break;
+				case MEMORY:
+				case STORAGE:
+					mapping = this.storage;
+					break;
+					
+				case THROUGHPUT:
+					mapping = this.throughput;
+					break;
+					
+					default: continue;
 				}
-				else {
-					if (PROCESSOR.equals(resource)) {
-						mapping = this.processor;
-					}
-					else if (MEMORY.equals(resource)) {
-						mapping = this.storage;
-					}
-					else if (STORAGE.equals(resource)) {
-						mapping = this.storage;				
-					}
-					else if (THROUGHPUT.equals(resource)) {
-						mapping = this.throughput;
-					}
-					else {
-						continue;
-					}
+				
+				list = criticalCondition.getJSONObject(resource);
 					
-					list = criticalCondition.getJSONObject(resource);
-					
-					for (Object index: list.keySet()) {
-						mapping.put((String)index, new Critical(list.getJSONObject((String)index)));
-					}
+				for (Object index: list.keySet()) {
+					mapping.put((String)index, new Critical(list.getJSONObject((String)index)));
 				}
 			}
 		}
@@ -404,44 +397,50 @@ public class SNMPNode extends Node {
 			Map<String, Critical> mapping = null;
 			Critical critical = null;
 			
-			if (RESPONSETIME.equals(resource)) {
-				critical = this.responseTime;
-			}
-			else {
-				if (PROCESSOR.equals(resource)) {
-					mapping = this.processor;
-					
-					resource = "Processor load";
-				}
-				else if (MEMORY.equals(resource)) {
-					mapping = this.storage;
-					
-					resource = "Physical memory";
-				}
-				else if (STORAGE.equals(resource)) {
-					mapping = this.storage;
-					
-					resource = "Storage usage";
-				}
-				else if (THROUGHPUT.equals(resource)) {
-					mapping = this.throughput;
-					
-					resource = "interface throughput";
-				}
+			switch (resource) {
+			case RESPONSETIME:
+				mapping = this.responseTime;
 				
-				if (mapping != null) {
-					critical = mapping.get(index);
-				}
+				break;
+				
+			case PROCESSOR:
+				mapping = this.processor;
+				resource = "Processor load";
+				
+				break;
+			case MEMORY:
+				mapping = this.storage;
+				resource = "Physical memory";
+				
+				break;
+				
+			case STORAGE:
+				mapping = this.storage;
+				resource = "Storage usage";
+				
+				break;
+				
+			case THROUGHPUT:
+				mapping = this.throughput;
+				resource = "interface throughput";
+				
+				break;
+				
+				default: return;
 			}
 			
-			if (critical != null) {
-				long rate = current *100 / max;
-				int value = critical.value(rate);
-				
-				if ((value & Critical.DIFF) > 0) {
-					agent.onCritical(ip, (value & Critical.CRITIC) > 0
-						, String.format("%s.%s %d%% %s", resource, index, rate, (value & Critical.CRITIC) > 0? " 성능 임계 초과.": " 성능 정상."));
-				}
+			critical = mapping.get(index);
+			
+			if (critical == null) {
+				return;
+			}
+			
+			long rate = current *100 / max;
+			int value = critical.value(rate);
+			
+			if ((value & Critical.DIFF) > 0) {
+				agent.onCritical(ip, (value & Critical.CRITIC) > 0
+					, String.format("%s.%s %d%% %s", resource, index, rate, (value & Critical.CRITIC) > 0? " 성능 임계 초과.": " 성능 정상."));
 			}
 		}
 	}

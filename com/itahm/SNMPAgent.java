@@ -12,13 +12,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
+import org.snmp4j.CommandResponder;
+import org.snmp4j.CommandResponderEvent;
+import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
+import org.snmp4j.smi.Address;
 import org.snmp4j.smi.IpAddress;
+import org.snmp4j.smi.OID;
+import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.Variable;
+import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.snmp.TmpNode;
@@ -27,6 +35,9 @@ import com.itahm.table.Table;
 public class SNMPAgent extends Snmp implements Closeable {
 	
 	private final static long REQUEST_INTERVAL = 10000;
+	private final static OID OID_TRAP = new OID(new int [] {1,3,6,1,6,3,1,1,5});
+	public final static OID	OID_LINKDOWN = new OID(new int [] {1,3,6,1,6,3,1,1,5,3});
+	public final static OID	OID_LINKUP = new OID(new int [] {1,3,6,1,6,3,1,1,5,4});
 	
 	public final File nodeRoot;
 	
@@ -44,7 +55,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	//private final static PDU pdu = RequestPDU.getInstance();
 	
 	public SNMPAgent(int timeout) throws IOException {
-		super(new DefaultUdpTransportMapping());
+		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
 		
 		System.out.println("snmp agent started.");
 		
@@ -68,6 +79,19 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		this.timeout = timeout;
 		
+		addCommandResponder(new CommandResponder() {
+
+			@Override
+			public void processPdu(CommandResponderEvent event) {
+				PDU pdu = event.getPDU();
+				
+				if (pdu != null) {
+					parseTrap(event.getPeerAddress(), event.getSecurityName(), pdu);
+				}
+			}
+			
+		});
+		
 		listen();
 		
 		initNode();
@@ -88,7 +112,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			node.request();
 		} catch (IOException | JSONException e) {
 			e.printStackTrace();
-		}//System.out.println(this.nodeList.size());
+		}
 	}
 	
 	public boolean removeNode(String ip) {
@@ -328,6 +352,38 @@ public class SNMPAgent extends Snmp implements Closeable {
 				
 			}, REQUEST_INTERVAL);
 	}
+	
+	private final void parseTrap(Address addr, byte [] ba, PDU pdu) {
+		String ip = ((UdpAddress)addr).getInetAddress().getHostAddress();
+		
+		if (!this.nodeList.containsKey(ip)) {
+			return;
+		}
+		
+		//String community = new String(ba);
+		Vector<? extends VariableBinding> vbs = pdu.getVariableBindings();
+		VariableBinding vb;
+		
+		for (int i = 0, _i= vbs.size();i< _i; i++) {
+			vb = (VariableBinding)vbs.get(i);
+			
+			parseTrap(vb.getOid(), vb.getVariable());
+		}
+	}
+	
+	private void parseTrap(OID oid, Variable variable) {
+		if (OID_TRAP.leftMostCompare(OID_TRAP.size(), oid) != 0) {
+			return;
+		}
+		
+		if (OID_LINKDOWN.leftMostCompare(OID_LINKDOWN.size(), oid) == 0) {
+			System.out.println("linkDown trap : "+ oid);
+		}
+		else if (OID_LINKUP.leftMostCompare(OID_LINKUP.size(), oid) == 0) {
+			System.out.println("linkUp trap : "+ oid);
+		}
+	}
+	
 	/**
 	 * ovverride
 	 */
