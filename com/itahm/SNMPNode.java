@@ -104,6 +104,10 @@ public class SNMPNode extends Node {
 	}
 	
 	public String getPeerIFName(SNMPNode peer){
+		if (!super.data.has("ifEntry")) {
+			return "";
+		}
+		
 		JSONObject ifEntry = super.data.getJSONObject("ifEntry");
 		String mac;
 		String name;
@@ -134,6 +138,7 @@ public class SNMPNode extends Node {
 		long value;
 		long capacity;
 		long tmpValue;
+		long lastRolling;
 		
 		this.agent.onSuccess(this.ip);
 		
@@ -209,8 +214,9 @@ public class SNMPNode extends Node {
 		this.agent.onSubmitTop(this.ip, "storage", max);
 		this.agent.onSubmitTop(this.ip, "storageRate", maxRate);
 		
-		if (lastRolling > 0) {
-			long interval = super.data.getLong("lastResponse") - lastRolling;
+		lastRolling = super.data.getLong("lastResponse");
+		
+		if (this.lastRolling > 0) {
 			// 보관된 값
 			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
 			long bytes;
@@ -279,12 +285,13 @@ public class SNMPNode extends Node {
 				if (data.has("ifHCInOctets") && oldData.has("ifHCInOctets")) {
 					bytes = data.getLong("ifHCInOctets") - oldData.getLong("ifHCInOctets");
 				}
-				else if (data.has("ifInOctets") && oldData.has("ifInOctets")) {
-					bytes = data.getLong("ifInOctets") - oldData.getLong("ifInOctets");
+				
+				if (data.has("ifInOctets") && oldData.has("ifInOctets")) {
+					bytes = Math.max(bytes, data.getLong("ifInOctets") - oldData.getLong("ifInOctets"));
 				}
 				
 				if (bytes  >= 0) {
-					bytes = bytes *8000 / interval;
+					bytes = bytes *8000 / (lastRolling - this.lastRolling);
 					
 					data.put("ifInBPS", bytes);
 					
@@ -299,15 +306,16 @@ public class SNMPNode extends Node {
 				if (data.has("ifHCOutOctets") && oldData.has("ifHCOutOctets")) {
 					bytes = data.getLong("ifHCOutOctets") - oldData.getLong("ifHCOutOctets");
 				}
-				else if (data.has("ifOutOctets") && oldData.has("ifOutOctets")) {
-					bytes = data.getLong("ifOutOctets") - oldData.getLong("ifOutOctets");
+				
+				if (data.has("ifOutOctets") && oldData.has("ifOutOctets")) {
+					bytes = Math.max(bytes, data.getLong("ifOutOctets") - oldData.getLong("ifOutOctets"));
 				}
 				else {
 					continue;
 				}
 				
 				if (bytes >= 0) {
-					bytes = bytes *8000 / interval;
+					bytes = bytes *8000 / (lastRolling - this.lastRolling);
 					
 					data.put("ifOutBPS", bytes);
 					
@@ -327,7 +335,7 @@ public class SNMPNode extends Node {
 			this.agent.onSubmitTop(this.ip, "throughputErr", maxErr);
 		}
 		
-		lastRolling = super.data.getLong("lastResponse");
+		this.lastRolling = lastRolling;
 	}
 
 	@Override
@@ -336,9 +344,12 @@ public class SNMPNode extends Node {
 	}
 	
 	@Override
+	protected void onIgnore() {
+		this.agent.onIgnore(this.ip);
+	}
+	
+	@Override
 	protected void onPending() {
-		this.rollingMap.put(Resource.RESPONSETIME, "0", this.timeout);
-		
 		this.agent.onPending(this.ip);
 	}
 	

@@ -82,7 +82,7 @@ public class ICMPNode implements Runnable {
 	}
 
 	public static void main(String[] args) throws UnknownHostException {
-		ICMPListener listener = new ICMPListener() {
+		ICMPNode node = new ICMPNode(new ICMPListener() {
 
 			@Override
 			public void onSuccess(String host) {
@@ -96,9 +96,7 @@ public class ICMPNode implements Runnable {
 				System.out.println("X");
 			}
 			
-		};
-		
-		ICMPNode node = new ICMPNode(listener, "192.168.0.1", 5000);
+		}, "192.168.0.1", 5000);
 		
 		node.start();
 		

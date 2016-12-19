@@ -17,17 +17,18 @@ public class RollingFile implements Closeable {
 	
 	/** The lastHour. */
 	private int lastHour;
-	private String lastHourString;
+	private int lastDay;
 	
 	/** rollingRoot, itahm/snmp/ip address/resource/index */
 	private final File root;
 	
-	private JSONFile summary;
+	private JSONFile summaryFile;
 	private JSONObject summaryData;
+	private String summaryHour;
 	
-	private File dir;
-	private JSONFile file;
-	private JSONObject data;
+	private File dayDirectory;
+	private JSONFile hourFile;
+	private JSONObject hourData;
 	
 	private long max;
 	private long min;
@@ -35,6 +36,7 @@ public class RollingFile implements Closeable {
 	private int hourCnt;
 	private BigInteger minuteSum;
 	private long minuteSumCnt;
+	
 	/**
 	 * Instantiates a new rolling file.
 	 *
@@ -44,28 +46,27 @@ public class RollingFile implements Closeable {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public RollingFile(File rscRoot, String index) throws IOException {
-		Calendar calendar = Calendar.getInstance();
-		int hour;
-		String hourString;
+		Calendar date = getCalendar();
 		
 		root = new File(rscRoot, index);
 		root.mkdir();
 		
-		hour = calendar.get(Calendar.HOUR_OF_DAY);
-		calendar.set(Calendar.MILLISECOND, 0);
-		calendar.set(Calendar.SECOND, 0);
-		calendar.set(Calendar.MINUTE, 0);
-		hourString = Long.toString(calendar.getTimeInMillis());
-		
-		calendar.set(Calendar.HOUR_OF_DAY, 0);
-		
-		initDay(calendar);
-		initHour(hourString, hour);
+		initDay((Calendar)date.clone());
+		initHour((Calendar)date.clone());
 		
 		hourSum = BigInteger.valueOf(0);
 		hourCnt = 0;
 		minuteSum = BigInteger.valueOf(0);
 		minuteSumCnt = 0;
+	}
+	
+	private Calendar getCalendar() {
+		Calendar c = Calendar.getInstance();
+		
+		c.set(Calendar.MILLISECOND, 0);
+		c.set(Calendar.SECOND, 0);
+		
+		return c;
 	}
 	
 	/**
@@ -75,39 +76,24 @@ public class RollingFile implements Closeable {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	
-	public boolean roll(long value) throws IOException {
-		Calendar calendar = Calendar.getInstance();
-		long now;
-		int hour;
-		boolean roll = false;
-		String minuteString;
-		
-		calendar.set(Calendar.MILLISECOND, 0);
-		calendar.set(Calendar.SECOND, 0);
-		
-		now = calendar.getTimeInMillis();
-		hour = calendar.get(Calendar.HOUR_OF_DAY);
-		minuteString = Long.toString(now);
+	public void roll(long value) throws IOException {
+		Calendar date = getCalendar();
 
-		if (hour != this.lastHour) {
-			summarize();
+		if (date.get(Calendar.HOUR_OF_DAY) != this.lastHour) {
+			//summarize();
 			
-			if (hour == 0) {
-				roll = true;
-				
-				initDay(calendar);
+			if (date.get(Calendar.DAY_OF_YEAR) != this.lastDay) {
+				initDay(date);
 			}
-									
-			initHour(minuteString, hour);
+			
+			initHour(date);
 		}
 		
-		roll(minuteString, value);
-		
-		return roll;
+		roll(Long.toString(date.getTimeInMillis()), value);
 	}
 	
 	private void roll(String minuteString, long value) throws IOException {
-		if (this.data.has(minuteString)) {
+		if (this.hourData.has(minuteString)) {
 			this.minuteSum = this.minuteSum.add(BigInteger.valueOf(value));
 		}
 		else {
@@ -117,7 +103,7 @@ public class RollingFile implements Closeable {
 		
 		this.minuteSumCnt++;
 		
-		this.data.put(minuteString, this.minuteSum.divide(BigInteger.valueOf(this.minuteSumCnt)));
+		this.hourData.put(minuteString, this.minuteSum.divide(BigInteger.valueOf(this.minuteSumCnt)));
 		
 		if (this.hourCnt == 0) {
 			this.hourSum = BigInteger.valueOf(value);
@@ -132,68 +118,101 @@ public class RollingFile implements Closeable {
 		
 		this.hourCnt++;
 		
+		summarize();
+		
 		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
-		this.file.save();
+		this.hourFile.save();
 	}
 	
 	private void initDay(Calendar date) throws IOException {
-		String dateString = Long.toString(date.getTimeInMillis());
+		String dateString;
+		
+		date.set(Calendar.MINUTE, 0);
+		date.set(Calendar.HOUR_OF_DAY, 0);
+		
+		dateString = Long.toString(date.getTimeInMillis());
+		
+		this.lastDay = date.get(Calendar.DAY_OF_YEAR);
 		
 		// day directory 생성
-		this.dir = new File(this.root, dateString);
-		this.dir.mkdir();
+		this.dayDirectory = new File(this.root, dateString);
+		this.dayDirectory.mkdir();
 		
-		if (this.summary != null) {
-			this.summary.close();
+		if (this.summaryFile != null) {
+			this.summaryFile.close();
 		}
 		
 		// summary file 생성
-		this.summary = new JSONFile(new File(this.dir, "summary"));
-		this.summaryData = this.summary.getJSONObject();
+		this.summaryFile = new JSONFile(new File(this.dayDirectory, "summary"));
+		this.summaryData = this.summaryFile.getJSONObject();
 		
 		// 지난 파일 삭제
 		date.add(Calendar.MONTH, -3);
 		
-		dateString = Long.toString(date.getTimeInMillis());
-
-		DataCleaner.deleteDirectory(new File(this.root, dateString));
+		DataCleaner.deleteDirectory(new File(this.root, Long.toString(date.getTimeInMillis())));
 	}
 	
 	/**
 	 * 
-	 * @param hourString 
-	 * @param hour of day (0 ~ 23)
+	 * @param date
 	 * @throws IOException
 	 */
-	private void initHour(String hourString, int hour) throws IOException {
-		if (this.file != null) {
-			this.file.close();
+	private void initHour(Calendar date) throws IOException {
+		String hourString;
+		
+		if (this.hourFile != null) {
+			this.hourFile.close();
 		}
 		
-		// hourly file 생성
-		this.file = new JSONFile(new File(this.dir, hourString));
-		this.data = this.file.getJSONObject();
+		date.set(Calendar.MINUTE, 0);
+		
+		hourString = Long.toString(date.getTimeInMillis());
 		
 		// 마지막 시간 변경
-		this.lastHourString = hourString;
-		this.lastHour = hour;
+		this.lastHour = date.get(Calendar.HOUR_OF_DAY);
+		
+		// hourly file 생성
+		this.hourFile = new JSONFile(new File(this.dayDirectory, hourString));
+		this.hourData = this.hourFile.getJSONObject();
+		this.summaryHour = hourString;
+		this.hourCnt = 0;
 	}
-	
+	/*
 	private void summarize() throws IOException {
 		if (this.hourCnt > 0) {
 			long avg = this.hourSum.divide(BigInteger.valueOf(this.hourCnt)).longValue();
 			
-			this.summaryData.put(this.lastHourString,
-				new JSONObject()
+			this.summaryData.put(this.summaryHour, new JSONObject()
 				.put("avg", avg)
 				.put("max", Math.max(avg, this.max))
-				.put("min", Math.min(avg, this.min))
-			);
+				.put("min", Math.min(avg, this.min)));
 			
 			this.hourCnt = 0;
 			
-			this.summary.save();
+			this.summaryFile.save();
 		}
+	}
+	*/
+	private void summarize() throws IOException {
+		JSONObject summary;
+		
+		if (this.summaryData.has(this.summaryHour)) {
+			summary = this.summaryData.getJSONObject(this.summaryHour);
+		}
+		else {
+			summary = new JSONObject();
+			
+			this.summaryData.put(this.summaryHour, summary);
+		}
+		
+		long avg = this.hourSum.divide(BigInteger.valueOf(this.hourCnt)).longValue();
+		
+		summary
+			.put("avg", avg)
+			.put("max", Math.max(avg, this.max))
+			.put("min", Math.min(avg, this.min));
+		
+		this.summaryFile.save();
 	}
 	
 	public JSONObject getData(long start, long end, boolean summary) {
@@ -202,12 +221,12 @@ public class RollingFile implements Closeable {
 	
 	@Override
 	public void close() throws IOException {
-		if (this.file != null) {
-			this.file.close();
+		if (this.hourFile != null) {
+			this.hourFile.close();
 		}
 		
-		if (this.summary != null) {
-			this.summary.close();
+		if (this.summaryFile != null) {
+			this.summaryFile.close();
 		}
 	}
 }

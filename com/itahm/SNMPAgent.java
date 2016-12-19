@@ -52,8 +52,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Map<String, JSONObject> arp;
 	private final Map<String, String> network;
 	
-	//private final static PDU pdu = RequestPDU.getInstance();
-	
 	public SNMPAgent(int timeout) throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
 		
@@ -198,7 +196,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	}
 	
 	public void onSuccess(String ip) {
-		final SNMPNode node = this.nodeList.get(ip);
+		SNMPNode node = this.nodeList.get(ip);
 		
 		// 그 사이 삭제되었으면
 		if (node == null) {
@@ -212,17 +210,32 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 		
 		if (monitor.getBoolean("shutdown")) {
+			JSONObject nodeData = node.getData();
+			
 			monitor.put("shutdown", false);
 			
 			this.monitorTable.save();
 			
 			try {
-				ITAhM.log.write(ip, String.format("%s [%s] SNMP 정상.", ip, node.getData().getString("sysName")), "shutdown", true);
+				ITAhM.log.write(ip,
+					nodeData.has("sysName")? String.format("%s [%s] SNMP 정상.", ip, nodeData.getString("sysName")): String.format("%s SNMP 정상.", ip),
+					"shutdown", true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 
+		sendNextRequest(node);
+	}
+	
+	public void onIgnore(String ip) {
+		SNMPNode node = this.nodeList.get(ip);
+		
+		// 그 사이 삭제되었으면
+		if (node == null) {
+			return;
+		}
+		
 		sendNextRequest(node);
 	}
 	
@@ -251,22 +264,16 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		if (!monitor.getBoolean("shutdown")) {
 			JSONObject nodeData = node.getData();
-			String message;
 			
 			monitor.put("shutdown", true);
 			
 			this.monitorTable.save();
 			
-			if(nodeData.has("sysName")) {
-				message = String.format("%s [%s] SNMP 응답 없음.", ip, node.getData().getString("sysName"));
-			}
-			else {
-				message = String.format("%s SNMP 응답 없음.", ip);
-			}
-			
 			try {
 				
-				ITAhM.log.write(ip, message, "shutdown", false);
+				ITAhM.log.write(ip,
+					nodeData.has("sysName")? String.format("%s [%s] SNMP 응답 없음.", ip, node.getData().getString("sysName")): String.format("%s SNMP 응답 없음.", ip),
+					"shutdown", false);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -288,12 +295,16 @@ public class SNMPAgent extends Snmp implements Closeable {
 			return;
 		}
 		
+		JSONObject nodeData = node.getData();
+		
 		monitor.put("critical", critical);
 		
 		this.monitorTable.save();
 		
 		try {
-			ITAhM.log.write(ip, String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message), "critical", !critical);
+			ITAhM.log.write(ip,
+				nodeData.has("sysName")? String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message): String.format("%s %s", ip, message),
+				"critical", !critical);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -33,10 +33,12 @@ import org.snmp4j.smi.VariableBinding;
 public abstract class Node implements ResponseListener {
 	
 	private final RequestPDU pdu;
+	private final RequestPDU emptyPDU;
 	private final Snmp snmp;
 	private final CommunityTarget target;
 	private long requestTime;
 	protected long responseTime;
+	protected long lastResponse;
 	private boolean pending = false;
 	private Integer enterprise;
 	
@@ -57,9 +59,10 @@ public abstract class Node implements ResponseListener {
 	protected Map<String, Integer> remoteIPTable; //ip - index
 	protected Map<String, String> networkTable; //ip - mask
 	protected Map<Integer, String> maskTable; //index - mask
-	
-	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {
-		this.pdu = RequestPDU.getInstance();
+	String ip;
+	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {this.ip = ip;
+		pdu = RequestPDU.getInstance();
+		emptyPDU = RequestPDU.getInstance(true);
 		
 		this.snmp = snmp;
 		
@@ -71,27 +74,12 @@ public abstract class Node implements ResponseListener {
 		target.setTimeout(timeout);
 	}
 	
-	public void request () {
-		this.pdu.setRequestID(null);
-		
-		request(this.pdu);
-	}
-	
-	 private void request (PDU pdu) {
-		// 존재하지 않는 index 지워주기 위해 초기화
-		hrProcessorEntry = new HashMap<String, Integer>();
-		hrStorageEntry = new HashMap<String, JSONObject>();
-		ifEntry = new HashMap<String, JSONObject>();
-		arpTable = new HashMap<String, String>();
-		remoteIPTable = new HashMap<String, Integer>();
-		macTable = new HashMap<String, Integer>();
-		ipTable = new HashMap<String, Integer>();
-		networkTable = new HashMap<String, String>();
-		maskTable = new HashMap<Integer, String>();
+	public void request() {
+		this.emptyPDU.setRequestID(null);
 		
 		this.requestTime = Calendar.getInstance().getTimeInMillis();
 		
-		sendRequest(pdu);
+		sendRequest(this.emptyPDU);
 	}
 	
 	public JSONObject getData() {
@@ -154,10 +142,10 @@ public abstract class Node implements ResponseListener {
 			String macString = "";
 			
 			if (mac.length > 0) {
-				macString = String.format("%02X", Byte.toUnsignedInt(mac[0]));
+				macString = String.format("%02X", 0L |mac[0] & 0xff);
 				
 				for (int i=1; i<mac.length; i++) {
-					macString += String.format("-%02X", Byte.toUnsignedInt(mac[i]));
+					macString += String.format("-%02X", 0L |mac[i] & 0xff);
 				}
 			}
 			
@@ -307,10 +295,10 @@ public abstract class Node implements ResponseListener {
 			else if (request.startsWith(RequestPDU.ipNetToMediaPhysAddress) && response.startsWith(RequestPDU.ipNetToMediaPhysAddress)) {
 				if (this.remoteIPTable.containsKey(ip) && this.remoteIPTable.get(ip) == index) {
 					byte [] mac = ((OctetString)variable).getValue();
-					String macString = String.format("%02X", Byte.toUnsignedInt(mac[0]));
+					String macString = String.format("%02X", 0L |mac[0] & 0xff);
 					
 					for (int i=1; i<mac.length; i++) {
-						macString += String.format("-%02X", Byte.toUnsignedInt(mac[i]));
+						macString += String.format("-%02X", 0L |mac[i] & 0xff);
 					}
 					
 					this.macTable.put(macString, index);
@@ -414,58 +402,88 @@ public abstract class Node implements ResponseListener {
 		
 		((Snmp)event.getSource()).cancel(request, this);
 		
-		if (response == null) { // response timed out
-			if (pending) {
+		if (response == null) {
+			if (this.requestTime < 0) {
+				System.out.println(this.ip +" 으로부터 느린 응답.");
+				onIgnore();
+			}
+			else if (pending) {
 				onFailure();
-				
-				pending = false;
 			}
 			else {
-				onPending();
-				
 				pending = true;
+				
+				onPending();
 			}
+			
+			return;
+		}
+		
+		int status = response.getErrorStatus();
+		
+		pending = false;
+		
+		if (status != PDU.noError) {
+			new Exception("status: "+ status).printStackTrace();
+			
+			return;
+		}
+			
+		try {
+			PDU nextRequest = getNextRequest(request, response);
+			
+			if (nextRequest != null) {
+				sendRequest(nextRequest);
+				
+				return;
+			}
+		} catch (IOException e) {
+			// TODO fatal error
+			e.printStackTrace();
+			
+			return;
+		}
+		
+		// echo 일때는
+		if (this.requestTime >= 0) {
+			this.responseTime = Calendar.getInstance().getTimeInMillis() - this.requestTime;
+			
+			this.data.put("responseTime", this.responseTime);
+			
+			this.requestTime = -1;
+			
+			// 존재하지 않는 index 지워주기 위해 초기화
+			hrProcessorEntry = new HashMap<String, Integer>();
+			hrStorageEntry = new HashMap<String, JSONObject>();
+			ifEntry = new HashMap<String, JSONObject>();
+			arpTable = new HashMap<String, String>();
+			remoteIPTable = new HashMap<String, Integer>();
+			macTable = new HashMap<String, Integer>();
+			ipTable = new HashMap<String, Integer>();
+			networkTable = new HashMap<String, String>();
+			maskTable = new HashMap<Integer, String>();
+			
+			this.pdu.setRequestID(null);
+			
+			sendRequest(this.pdu);
 		}
 		else {
-			int status = response.getErrorStatus();
+			this.lastResponse = Calendar.getInstance().getTimeInMillis();
 			
-			pending = false;
+			this.data.put("lastResponse", this.lastResponse);
 			
-			if (status == PDU.noError) {
-				try {
-					PDU nextRequest = getNextRequest(request, response);
-					
-					if (nextRequest == null) {
-						long current = Calendar.getInstance().getTimeInMillis();
-						
-						responseTime = current - this.requestTime;
-						
-						this.data.put("responseTime", responseTime);
-						this.data.put("lastResponse", current);
-						
-						onSuccess();
-						
-						this.data.put("hrProcessorEntry", this.hrProcessorEntry);
-						this.data.put("hrStorageEntry", this.hrStorageEntry);
-						this.data.put("ifEntry", this.ifEntry);
-					}
-					else {
-						sendRequest(nextRequest);
-					}
-				} catch (IOException e) {
-					// TODO fatal error
-					e.printStackTrace();
-				}
-			}
-			else {
-				new Exception().printStackTrace();
-			}
-		}
+			onSuccess();
+			
+			this.data.put("hrProcessorEntry", this.hrProcessorEntry);
+			this.data.put("hrStorageEntry", this.hrStorageEntry);
+			this.data.put("ifEntry", this.ifEntry);
+		}		
 	}
 	
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
 	abstract protected void onPending();
+	abstract protected void onIgnore();
 	
 	public static void main(String [] args) throws IOException {
 	}

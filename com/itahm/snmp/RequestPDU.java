@@ -162,41 +162,58 @@ public class RequestPDU extends PDU {
 	private final static int CISCO = 9;
 	
 	private RequestPDU() {
-		setType(PDU.GETNEXT);
-		add(new VariableBinding(sysDescr));
-		add(new VariableBinding(sysObjectID));
-		add(new VariableBinding(sysName));
-		add(new VariableBinding(sysServices));
-		add(new VariableBinding(ifDescr));
-		add(new VariableBinding(ifType));
-		add(new VariableBinding(ifSpeed));
-		add(new VariableBinding(ifPhysAddress));
-		add(new VariableBinding(ifAdminStatus));
-		add(new VariableBinding(ifOperStatus));
-		add(new VariableBinding(ifName));
-		add(new VariableBinding(ifInOctets));
-		add(new VariableBinding(ifInErrors));
-		add(new VariableBinding(ifOutOctets));
-		add(new VariableBinding(ifOutErrors));
-		add(new VariableBinding(ifHCInOctets));
-		add(new VariableBinding(ifHCOutOctets));
-		add(new VariableBinding(ifHighSpeed));
-		add(new VariableBinding(ifAlias));
-		add(new VariableBinding(ipAdEntIfIndex));
-		add(new VariableBinding(ipAdEntNetMask));
-		add(new VariableBinding(ipNetToMediaType));
-		add(new VariableBinding(ipNetToMediaPhysAddress));
-		add(new VariableBinding(hrSystemUptime));
-		add(new VariableBinding(hrProcessorLoad));
-		add(new VariableBinding(hrStorageType));
-		add(new VariableBinding(hrStorageDescr));
-		add(new VariableBinding(hrStorageAllocationUnits));
-		add(new VariableBinding(hrStorageSize));
-		add(new VariableBinding(hrStorageUsed));
+		
 	}
 
+	public static RequestPDU getInstance(boolean emptyPDU) {
+		if (emptyPDU) {
+			RequestPDU pdu = new RequestPDU();
+			
+			pdu.setType(PDU.GET);
+			
+			return pdu;
+		}
+		else {
+			return getInstance();
+		}
+	}
+	
 	public static RequestPDU getInstance() {
-		return new RequestPDU();
+		RequestPDU pdu = new RequestPDU();
+		
+		pdu.setType(PDU.GETNEXT);
+		pdu.add(new VariableBinding(sysDescr));
+		pdu.add(new VariableBinding(sysObjectID));
+		pdu.add(new VariableBinding(sysName));
+		pdu.add(new VariableBinding(sysServices));
+		pdu.add(new VariableBinding(ifDescr));
+		pdu.add(new VariableBinding(ifType));
+		pdu.add(new VariableBinding(ifSpeed));
+		pdu.add(new VariableBinding(ifPhysAddress));
+		pdu.add(new VariableBinding(ifAdminStatus));
+		pdu.add(new VariableBinding(ifOperStatus));
+		pdu.add(new VariableBinding(ifName));
+		pdu.add(new VariableBinding(ifInOctets));
+		pdu.add(new VariableBinding(ifInErrors));
+		pdu.add(new VariableBinding(ifOutOctets));
+		pdu.add(new VariableBinding(ifOutErrors));
+		pdu.add(new VariableBinding(ifHCInOctets));
+		pdu.add(new VariableBinding(ifHCOutOctets));
+		pdu.add(new VariableBinding(ifHighSpeed));
+		pdu.add(new VariableBinding(ifAlias));
+		pdu.add(new VariableBinding(ipAdEntIfIndex));
+		pdu.add(new VariableBinding(ipAdEntNetMask));
+		pdu.add(new VariableBinding(ipNetToMediaType));
+		pdu.add(new VariableBinding(ipNetToMediaPhysAddress));
+		pdu.add(new VariableBinding(hrSystemUptime));
+		pdu.add(new VariableBinding(hrProcessorLoad));
+		pdu.add(new VariableBinding(hrStorageType));
+		pdu.add(new VariableBinding(hrStorageDescr));
+		pdu.add(new VariableBinding(hrStorageAllocationUnits));
+		pdu.add(new VariableBinding(hrStorageSize));
+		pdu.add(new VariableBinding(hrStorageUsed));
+		
+		return pdu;
 	}
 	
 	public void setEnterprise(int enterprise) {

@@ -6,7 +6,6 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Vector;
 
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
@@ -16,15 +15,14 @@ import org.snmp4j.event.ResponseListener;
 import org.snmp4j.mp.SnmpConstants;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
-import org.snmp4j.smi.VariableBinding;
-
-import com.itahm.SNMPAgent;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 abstract public class TmpNode implements ResponseListener {
 
 private static final long TIMEOUT = 5000;
 	
-	protected final SNMPAgent agent;
+	//protected final SNMPAgent agent;
+	protected final Snmp agent;
 	
 	private final PDU pdu;
 	private final LinkedList<CommunityTarget> list;
@@ -32,21 +30,16 @@ private static final long TIMEOUT = 5000;
 	
 	protected final String ip;
 	
-	protected String sysName;
-	
-	public TmpNode(SNMPAgent agent, String ip) {
+	public TmpNode(Snmp agent, String ip) {
 		this.agent = agent;
 		this.ip = ip;
 		
-		sysName = "";
+		list = new LinkedList<>();
 		
-		list = new LinkedList<CommunityTarget>();
-		
-		profileMap = new HashMap<CommunityTarget, String>();
+		profileMap = new HashMap<>();
 		
 		pdu = new PDU();
-		pdu.setType(PDU.GETNEXT);
-		pdu.add(new VariableBinding(RequestPDU.sysName));
+		pdu.setType(PDU.GET);
 	}
 	
 	public TmpNode addProfile(String name, int udp, String community) throws UnknownHostException{
@@ -77,15 +70,6 @@ private static final long TIMEOUT = 5000;
 		}
 	}
 	
-	private void onResponse(String profileName) {
-		if (profileName == null) {
-			onFailure();
-		}
-		else {
-			onSuccess(profileName);
-		}
-	}
-	
 	abstract public void onSuccess(String profileName);
 	abstract public void onFailure();
 	
@@ -99,29 +83,39 @@ private static final long TIMEOUT = 5000;
 			test();
 		}
 		else {
-			PDU response = event.getResponse();
-			int status = response.getErrorStatus();
+			int status = event.getResponse().getErrorStatus();
 			
-			if (status == PDU.noError) {
-				Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
-				VariableBinding responseVB = (VariableBinding)responseVBs.get(0);
-				if (responseVB.getOid().startsWith(RequestPDU.sysName)) {
-					this.sysName = ((OctetString)responseVB.getVariable()).toString();
-					
-					onResponse(this.profileMap.get(this.list.peek()));
-				}
-				else {
-					System.out.println("sysName 지원하지 않는 snmp.");
-					
-					onFailure();
-				}
-			}
-			else {
-				new Exception().printStackTrace();
+			onSuccess(this.profileMap.get(this.list.peek()));
+			
+			if (status != PDU.noError) {
+				new Exception("status "+ status).printStackTrace();
 			}
 		}
 	}
 	
 	public static void main(String[] args) throws IOException {
+		Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+		
+		snmp.listen();
+		
+		TmpNode node = new TmpNode(snmp, args[0]) {
+
+			@Override
+			public void onSuccess(String profileName) {
+				System.out.println("success profile name is "+ profileName);
+			}
+
+			@Override
+			public void onFailure() {
+				System.out.println("falure");
+			}};
+			
+		node.addProfile("test", Integer.parseInt(args[2]), args[1]);
+		
+		node.test();
+		
+		System.in.read();
+			
+		snmp.close();
 	}
 }

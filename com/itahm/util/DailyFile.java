@@ -10,9 +10,9 @@ import java.util.Calendar;
 public class DailyFile {
 
 	private final File root;
-	private int day;
-	private RandomAccessFile file;
-	private FileChannel channel;
+	private int day = 0;
+	private RandomAccessFile file = null;
+	private FileChannel channel = null;
 	
 	public DailyFile() throws IOException {
 		this(new File("."));
@@ -24,7 +24,7 @@ public class DailyFile {
 	
 	public boolean roll() throws IOException {
 		Calendar calendar = Calendar.getInstance();
-		int day = calendar.get(Calendar.DAY_OF_WEEK);
+		int day = calendar.get(Calendar.DAY_OF_YEAR);
 		boolean roll = false;
 		
 		if (this.day != day) {
@@ -43,25 +43,6 @@ public class DailyFile {
 		}
 		
 		return roll;
-	}
-	
-	private byte [] read(File file) throws IOException {
-		RandomAccessFile raf = new RandomAccessFile(file, "r");
-		FileChannel channel = raf.getChannel();
-		int size = (int)channel.size();
-		ByteBuffer buffer = ByteBuffer.allocate(size);
-		byte[] bytes = new byte [size];
-		
-		channel.read(buffer);
-		
-		channel.close();
-		raf.close();
-		
-		buffer.flip();
-		
-		buffer.get(bytes);
-		
-		return bytes;
 	}
 	
 	public byte [] read(long mills) throws IOException {
@@ -98,6 +79,25 @@ public class DailyFile {
 		return c;
 	}
 	
+	private byte [] read(File file) throws IOException {
+		RandomAccessFile raf = new RandomAccessFile(file, "r");
+		FileChannel channel = raf.getChannel();
+		int size = (int)channel.size();
+		ByteBuffer buffer = ByteBuffer.allocate(size);
+		byte[] bytes = new byte [size];
+		
+		channel.read(buffer);
+		
+		channel.close();
+		raf.close();
+		
+		buffer.flip();
+		
+		buffer.get(bytes);
+		
+		return bytes;
+	}
+
 	public static void main(String[] args) throws IOException {
 		DailyFile df = new DailyFile();
 		String s = "테스트";
@@ -110,5 +110,5 @@ public class DailyFile {
 		
 		System.out.println(java.nio.charset.StandardCharsets.UTF_8.name());
 	}
-
+	
 }

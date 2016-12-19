@@ -23,7 +23,7 @@ import com.itahm.util.DataCleaner;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.2.3.7";
+	public final static String VERSION = "1.2.2.14";
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;
@@ -55,11 +55,26 @@ public class ITAhM {
 		tableMap.put(Table.CRITICAL, new Critical());
 		tableMap.put(Table.GCM, new GCM());
 		
-		http = new HTTPServer("0.0.0.0", tcp);
+		try {
+			http = new HTTPServer("0.0.0.0", tcp);
+		}
+		catch (BindException be) {
+			System.out.println("tcp "+ tcp + " is already used.");
+			
+			throw be;
+		}
+		
 		log = new Log();
 		gcmm = new GCMManager(API_KEY, host);
 		
-		agent.snmp = new SNMPAgent(timeout);
+		try {
+			agent.snmp = new SNMPAgent(timeout);
+		}
+		catch (BindException be) {
+			System.out.println("udp " + 162 +" is already used.");
+			
+			throw be;
+		}
 		agent.icmp = new ICMPAgent(timeout);
 		agent.syslog = new SyslogAgent();
 		
@@ -181,7 +196,7 @@ public class ITAhM {
 			System.out.println("dns is not responding.");
 		}
 		catch (BindException be) {
-			System.out.println("tcp "+ tcp + " is already used.");
+			
 		}
 
 	}
