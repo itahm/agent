@@ -59,7 +59,7 @@ public class RollingMap {
 		}
 		
 		try {
-			rollingFile.roll(value);
+			rollingFile._roll(value);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
