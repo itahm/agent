@@ -9,7 +9,10 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.json.JSONObject;
+
 import com.itahm.table.Account;
+import com.itahm.table.Config;
 import com.itahm.table.Critical;
 import com.itahm.table.Device;
 import com.itahm.table.GCM;
@@ -23,7 +26,7 @@ import com.itahm.util.DataCleaner;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.2.2.15";
+	public final static String VERSION = "1.3.2.1";
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;
@@ -37,7 +40,10 @@ public class ITAhM {
 		public static SyslogAgent syslog;
 	}
 	
-	public ITAhM(int tcp, String path, String host, int timeout) throws IOException {
+	public ITAhM(int tcp, String path, String host) throws IOException {
+		Config configTable;
+		JSONObject config;
+		
 		System.out.println(String.format("Version %s", VERSION));
 		System.out.println("start up ITAhM agent");
 		System.out.println("TCP "+ tcp);
@@ -51,6 +57,7 @@ public class ITAhM {
 		tableMap.put(Table.DEVICE, new Device());
 		tableMap.put(Table.POSITION, new Position());
 		tableMap.put(Table.MONITOR, new Monitor());
+		tableMap.put(Table.CONFIG, configTable = new Config());
 		tableMap.put(Table.ICON, new Icon());
 		tableMap.put(Table.CRITICAL, new Critical());
 		tableMap.put(Table.GCM, new GCM());
@@ -64,18 +71,23 @@ public class ITAhM {
 			throw be;
 		}
 		
+		
 		log = new Log();
 		gcmm = new GCMManager(API_KEY, host);
 		
+		config = configTable.getJSONObject();
+		
 		try {
-			agent.snmp = new SNMPAgent(timeout);
+			agent.snmp = new SNMPAgent(config.getInt("timeout"));
 		}
 		catch (BindException be) {
 			System.out.println("udp " + 162 +" is already used.");
 			
 			throw be;
 		}
-		agent.icmp = new ICMPAgent(timeout);
+		
+		agent.icmp = new ICMPAgent(config.getInt("timeout"));
+		
 		agent.syslog = new SyslogAgent();
 		
 		clean(new File(dataRoot, "node"));
@@ -136,7 +148,6 @@ public class ITAhM {
 	public static void main(String[] args) throws IOException {
 		String path = ".";
 		int tcp = 2014;
-		int timeout = 5000;
 		String host = InetAddress.getLocalHost().getHostAddress();
 		
 		for(int i=0, length = args.length; i<length;) {
@@ -148,7 +159,7 @@ public class ITAhM {
 					return;
 				}
 			}
-			if (args[i].equals("-path")) {
+			else if (args[i].equals("-path")) {System.out.println("여기?");
 				if (++i < length) {
 					path = args[i++];
 				}
@@ -159,14 +170,6 @@ public class ITAhM {
 			else if (args[i].equals("-tcp")) {
 				if (++i < length) {
 					tcp = Integer.parseInt(args[i++]);
-				}
-				else {
-					return;
-				}
-			}
-			else if (args[i].equals("-timeout")) {
-				if (++i < length) {
-					timeout = Integer.parseInt(args[i++]);
 				}
 				else {
 					return;
@@ -189,8 +192,8 @@ public class ITAhM {
 			}
 		}
 		
-		try {
-			new ITAhM(tcp, path, host, timeout);
+		try {System.out.println(path);
+			new ITAhM(tcp, path, host);
 		}
 		catch (UnknownHostException uhe) {
 			System.out.println("dns is not responding.");

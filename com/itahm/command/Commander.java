@@ -16,6 +16,7 @@ public enum Commander {
 	SYSLOG("com.itahm.command.Syslog"),
 	AGENT("com.itahm.command.Agent"),
 	ARP("com.itahm.command.ARP"),
+	CONFIG("com.itahm.command.Config"),
 	SEARCH("com.itahm.command.Search"),
 	NETWORK("com.itahm.command.Network");
 	

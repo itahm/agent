@@ -17,6 +17,7 @@ public class Table implements Closeable {
 	public final static String ICON = "icon";
 	public final static String POSITION = "position";
 	public final static String PROFILE = "profile";
+	public final static String CONFIG = "config";
 	public final static String GCM = "gcm";
 	
 	private final static File dataRoot = ITAhM.getRoot();

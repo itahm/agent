@@ -42,8 +42,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 	public final File nodeRoot;
 	
 	private final Map<String, SNMPNode> nodeList;
-	private final int timeout;
-	//private final Table deviceTable;
 	private final Table monitorTable;
 	private final Table profileTable;
 	private final Table criticalTable;
@@ -51,6 +49,8 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Timer timer;
 	private final Map<String, JSONObject> arp;
 	private final Map<String, String> network;
+	
+	private int timeout;
 	
 	public SNMPAgent(int timeout) throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
@@ -97,17 +97,23 @@ public class SNMPAgent extends Snmp implements Closeable {
 	
 	public void addNode(String ip, String profileName) {
 		JSONObject profile = profileTable.getJSONObject(profileName);
+		
+		if (profile == null) {
+			System.out.println(ip +" 의 프로파일 "+ profileName +" 이 존재하지 않음.");
+			
+			return;
+		}
+		
 		SNMPNode node;
 		
 		try {
 			node = new SNMPNode(this, ip, profile.getInt("udp")
 					, profile.getString("community")
-					, this.timeout
 					, this.criticalTable.getJSONObject(ip));
 			
 			this.nodeList.put(ip, node);
 			
-			node.request();
+			node.request(this.timeout);
 		} catch (IOException | JSONException e) {
 			e.printStackTrace();
 		}
@@ -137,6 +143,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 				addNode(ip, monitor.getString("profile"));
 			}
 		}
+	}
+	
+	public void setTimeout(int timeout) {
+		this.timeout = timeout;
 	}
 	
 	public void resetCritical(String ip, JSONObject critical) {
@@ -246,7 +256,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			return;
 		}
 		
-		node.request();
+		node.request(this.timeout);
 	}
 	
 	public void onFailure(String ip) {
@@ -279,7 +289,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			}
 		}
 		
-		node.request();
+		node.request(this.timeout);
 	}
 	
 	public void onCritical(String ip, boolean critical, String message) {
@@ -358,7 +368,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 
 				@Override
 				public void run() {
-					node.request();
+					node.request(timeout);
 				}
 				
 			}, REQUEST_INTERVAL);

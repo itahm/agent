@@ -59,8 +59,8 @@ public abstract class Node implements ResponseListener {
 	protected Map<String, Integer> remoteIPTable; //ip - index
 	protected Map<String, String> networkTable; //ip - mask
 	protected Map<Integer, String> maskTable; //index - mask
-	String ip;
-	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {this.ip = ip;
+	
+	public Node(Snmp snmp, String ip, int udp, String community) throws IOException {
 		pdu = RequestPDU.getInstance();
 		emptyPDU = RequestPDU.getInstance(true);
 		
@@ -71,7 +71,12 @@ public abstract class Node implements ResponseListener {
 		// target 설정
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
 		target.setVersion(SnmpConstants.version2c);
-		target.setTimeout(timeout);
+	}
+	
+	public void request(int timeout) {
+		this.target.setTimeout(timeout);
+		
+		request();
 	}
 	
 	public void request() {
@@ -404,7 +409,6 @@ public abstract class Node implements ResponseListener {
 		
 		if (response == null) {
 			if (this.requestTime < 0) {
-				System.out.println(this.ip +" 으로부터 느린 응답.");
 				onIgnore();
 			}
 			else if (pending) {

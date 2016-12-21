@@ -18,16 +18,14 @@ public class SNMPNode extends Node {
 	private final RollingMap rollingMap;
 	private final String ip;
 	private final SNMPAgent agent;
-	private final int timeout;
 	private long lastRolling;
 	private CriticalData critical;
 	
-	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, int timeout, JSONObject criticalCondition) throws IOException {
-		super(agent, ip, udp, community, timeout);
+	public SNMPNode(SNMPAgent agent, String ip, int udp, String community/*, int timeout*/, JSONObject criticalCondition) throws IOException {
+		super(agent, ip, udp, community);
 		
 		this.agent = agent;
 		this.ip = ip;
-		this.timeout = timeout;
 		
 		nodeRoot = new File(agent.nodeRoot, ip);
 		nodeRoot.mkdirs();
@@ -155,10 +153,6 @@ public class SNMPNode extends Node {
 		}
 	
 		this.rollingMap.put(Resource.RESPONSETIME, "0", super.responseTime);
-		
-		if (this.critical != null) {
-			this.critical.analyze(CriticalData.RESPONSETIME, "0", this.timeout, super.responseTime);
-		}
 		
 		this.agent.onSubmitTop(this.ip, "responseTime", super.responseTime);
 		
@@ -355,13 +349,11 @@ public class SNMPNode extends Node {
 	
 	class CriticalData {
 	
-		public static final String RESPONSETIME = "responseTime";
 		public static final String PROCESSOR = "processor";
 		public static final String MEMORY = "memory";
 		public static final String STORAGE = "storage";
 		public static final String THROUGHPUT = "throughput";
 		
-		private final Map<String, Critical> responseTime = new HashMap<String, Critical>();
 		private final Map<String, Critical> processor = new HashMap<String, Critical>();
 		private final Map<String, Critical> storage = new HashMap<String, Critical>();
 		private final Map<String, Critical> throughput = new HashMap<String, Critical>();
@@ -375,11 +367,6 @@ public class SNMPNode extends Node {
 				resource = (String)key;
 				
 				switch (resource) {
-				case RESPONSETIME:
-					mapping = this.responseTime;
-					
-					break;
-					
 				case PROCESSOR:
 					mapping = this.processor;
 					
@@ -409,11 +396,6 @@ public class SNMPNode extends Node {
 			Critical critical = null;
 			
 			switch (resource) {
-			case RESPONSETIME:
-				mapping = this.responseTime;
-				
-				break;
-				
 			case PROCESSOR:
 				mapping = this.processor;
 				resource = "Processor load";

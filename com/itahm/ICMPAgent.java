@@ -36,7 +36,9 @@ public class ICMPAgent implements ICMPListener, Closeable {
 		try {
 			ICMPNode node = new ICMPNode(this, ip, timeout);
 			
-			this.nodeList.put(ip, node);
+			synchronized (this.nodeList) {
+				this.nodeList.put(ip, node);
+			}
 			
 			node.start();
 		} catch (UnknownHostException uhe) {
@@ -45,7 +47,11 @@ public class ICMPAgent implements ICMPListener, Closeable {
 	}
 	
 	public boolean removeNode(String ip) {
-		ICMPNode node = this.nodeList.remove(ip);
+		ICMPNode node;
+		
+		synchronized (this.nodeList) {
+			node = this.nodeList.remove(ip);
+		}
 		
 		if (node == null) {
 			return false;
@@ -56,8 +62,18 @@ public class ICMPAgent implements ICMPListener, Closeable {
 		return true;
 	}
 	
+	public void setTimeout(int timeout) {
+		synchronized(this.nodeList) {
+			for (String ip : this.nodeList.keySet()) {
+				this.nodeList.get(ip).setTimeout(timeout);
+			}
+		}
+	}
+	
 	public ICMPNode getNode(String ip) {
-		return this.nodeList.get(ip);
+		synchronized(this.nodeList) {
+			return this.nodeList.get(ip);
+		}
 	}
 	
 	public void testNode(final String ip) {
@@ -97,7 +113,11 @@ public class ICMPAgent implements ICMPListener, Closeable {
 	}
 	
 	public void onSuccess(String ip) {
-		ICMPNode node = this.nodeList.get(ip);
+		ICMPNode node;
+		
+		synchronized (this.nodeList) {
+			node = this.nodeList.get(ip);
+		}
 		
 		if (node == null) {
 			return;
@@ -123,7 +143,11 @@ public class ICMPAgent implements ICMPListener, Closeable {
 	}
 	
 	public void onFailure(String ip) {
-		ICMPNode node = this.nodeList.get(ip);
+		ICMPNode node;
+		
+		synchronized (this.nodeList) {
+			node = this.nodeList.get(ip);
+		}
 		
 		if (node == null) {
 			return;
@@ -154,8 +178,10 @@ public class ICMPAgent implements ICMPListener, Closeable {
 	 */
 	@Override
 	public void close() {
-		for (Object ip : this.nodeList.keySet()) {
-			this.nodeList.get(ip).stop();
+		synchronized (this.nodeList) {
+			for (Object ip : this.nodeList.keySet()) {
+				this.nodeList.get(ip).stop();
+			}
 		}
 	}
 	
