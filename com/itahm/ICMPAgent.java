@@ -59,14 +59,6 @@ public class ICMPAgent implements ICMPListener, Closeable {
 		return true;
 	}
 	
-	public void setTimeout(int timeout) {
-		synchronized(this.nodeList) {
-			for (String ip : this.nodeList.keySet()) {
-				this.nodeList.get(ip).setTimeout(timeout);
-			}
-		}
-	}
-	
 	public ICMPNode getNode(String ip) {
 		synchronized(this.nodeList) {
 			return this.nodeList.get(ip);

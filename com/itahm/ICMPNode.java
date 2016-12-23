@@ -15,7 +15,7 @@ public class ICMPNode extends AbstractNode {
 	private int failure = 0;
 	
 	public ICMPNode(ICMPListener listener, String host) throws UnknownHostException {
-		super(host);
+		super(host, ITAhM.DEF_TIMEOUT, ITAhM.ICMP_INTV);
 		
 		this.host = host;
 		this.listener = listener;

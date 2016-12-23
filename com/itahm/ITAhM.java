@@ -9,7 +9,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONObject;
+//import org.json.JSONObject;
 
 import com.itahm.table.Account;
 import com.itahm.table.Config;
@@ -26,8 +26,9 @@ import com.itahm.util.DataCleaner;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.3.2";
+	public final static String VERSION = "1.3.3.3";
 	public final static int MAX_TIMEOUT = 10000;
+	public final static int ICMP_INTV = 1000;
 	public final static int MID_TIMEOUT = 5000;
 	public final static int DEF_TIMEOUT = 3000;
 	private static File dataRoot;
@@ -43,8 +44,8 @@ public class ITAhM {
 	}
 	
 	public ITAhM(int tcp, String path, String host) throws IOException {
-		Config configTable;
-		JSONObject config;
+		//Config configTable;
+		//JSONObject config;
 		
 		System.out.println(String.format("Version %s", VERSION));
 		System.out.println("start up ITAhM agent");
@@ -59,7 +60,7 @@ public class ITAhM {
 		tableMap.put(Table.DEVICE, new Device());
 		tableMap.put(Table.POSITION, new Position());
 		tableMap.put(Table.MONITOR, new Monitor());
-		tableMap.put(Table.CONFIG, configTable = new Config());
+		tableMap.put(Table.CONFIG, new Config());
 		tableMap.put(Table.ICON, new Icon());
 		tableMap.put(Table.CRITICAL, new Critical());
 		tableMap.put(Table.GCM, new GCM());
@@ -77,10 +78,10 @@ public class ITAhM {
 		log = new Log();
 		gcmm = new GCMManager(API_KEY, host);
 		
-		config = configTable.getJSONObject();
+		//config = configTable.getJSONObject();
 		
 		try {
-			agent.snmp = new SNMPAgent(config.getInt("timeout"));
+			agent.snmp = new SNMPAgent();
 		}
 		catch (BindException be) {
 			System.out.println("udp " + 162 +" 는 사용중입니다.");

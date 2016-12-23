@@ -25,7 +25,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	private long lastRolling = 0;
 	private CriticalData critical;
 	
-	public SNMPNode(SNMPAgent agent, String ip, int udp, String community/*, int timeout*/, JSONObject criticalCondition) throws IOException {
+	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
 		super(agent, ip, udp, community);
 		
 		this.agent = agent;

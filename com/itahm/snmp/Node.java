@@ -70,15 +70,9 @@ public abstract class Node implements ResponseListener {
 		target.setVersion(SnmpConstants.version2c);
 	}
 	
-	public void request(int timeout) {
-		this.target.setTimeout(timeout);
-		
+	public void request() {
 		this.request++;
 		
-		request();
-	}
-	
-	public void request() {
 		// 존재하지 않는 index 지워주기 위해 초기화
 		hrProcessorEntry = new HashMap<String, Integer>();
 		hrStorageEntry = new HashMap<String, JSONObject>();

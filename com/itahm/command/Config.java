@@ -20,13 +20,8 @@ public class Config implements Command {
 			int timeout = data.getInt("timeout");
 			
 			config.put("timeout", timeout);
-			
-			System.out.println("타임아웃 시간 변경");
-			
-			ITAhM.agent.snmp.setTimeout(timeout);
 		}
 		else {
-			System.out.println(data);
 		}
 		
 		table.save();

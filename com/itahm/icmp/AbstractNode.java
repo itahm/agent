@@ -7,13 +7,15 @@ import java.util.Calendar;
 
 public abstract class AbstractNode implements Runnable {
 
-	private long interval = 1000;
-	private int timeout = 3000;
+	private long interval;
+	private int timeout;
 	private final InetAddress target;
 	private Thread thread;
 
-	public AbstractNode(String host) throws UnknownHostException {
-		target = InetAddress.getByName(host);	
+	public AbstractNode(String host, int timeout, long interval) throws UnknownHostException {
+		target = InetAddress.getByName(host);
+		this.timeout = timeout;
+		this.interval = interval;
 	}
 	
 	public void setInterval(long interval) {
@@ -71,7 +73,7 @@ public abstract class AbstractNode implements Runnable {
 	abstract protected void onFailure();
 	
 	public static void main(String[] args) throws UnknownHostException {
-		AbstractNode node = new AbstractNode("192.168.0.1") {
+		AbstractNode node = new AbstractNode("192.168.0.1", 3000, 1000) {
 
 			@Override
 			public void onSuccess(long time) {

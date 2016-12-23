@@ -19,20 +19,21 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 abstract public class TmpNode implements ResponseListener {
 
-private static final long TIMEOUT = 5000;
+
 	
 	//protected final SNMPAgent agent;
 	protected final Snmp agent;
-	
+	private long timeout;
 	private final PDU pdu;
 	private final LinkedList<CommunityTarget> list;
 	private final Map<CommunityTarget, String> profileMap;
 	
 	protected final String ip;
 	
-	public TmpNode(Snmp agent, String ip) {
+	public TmpNode(Snmp agent, String ip, long timeout) {
 		this.agent = agent;
 		this.ip = ip;
+		this.timeout = timeout;
 		
 		list = new LinkedList<>();
 		
@@ -47,7 +48,7 @@ private static final long TIMEOUT = 5000;
 			
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(this.ip), udp), new OctetString(community));
 		target.setVersion(SnmpConstants.version2c);
-		target.setTimeout(TIMEOUT);
+		target.setTimeout(this.timeout);
 		
 		this.list.add(target);
 		this.profileMap.put(target, name);	
@@ -98,7 +99,7 @@ private static final long TIMEOUT = 5000;
 		
 		snmp.listen();
 		
-		TmpNode node = new TmpNode(snmp, args[0]) {
+		TmpNode node = new TmpNode(snmp, args[0], 10000) {
 
 			@Override
 			public void onSuccess(String profileName) {

@@ -50,9 +50,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Map<String, JSONObject> arp;
 	private final Map<String, String> network;
 	
-	private int timeout;
-	
-	public SNMPAgent(int timeout) throws IOException {
+	public SNMPAgent() throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
 		
 		System.out.println("snmp agent started.");
@@ -74,8 +72,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 		 
 		nodeRoot = new File(ITAhM.getRoot(), "node");
 		nodeRoot.mkdir();
-		
-		this.timeout = timeout;
 		
 		addCommandResponder(new CommandResponder() {
 
@@ -113,7 +109,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			this.nodeList.put(ip, node);
 			
-			node.request(this.timeout);
+			node.request();
 		} catch (IOException | JSONException e) {
 			e.printStackTrace();
 		}
@@ -143,10 +139,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 				addNode(ip, monitor.getString("profile"));
 			}
 		}
-	}
-	
-	public void setTimeout(int timeout) {
-		this.timeout = timeout;
 	}
 	
 	public void resetCritical(String ip, JSONObject critical) {
@@ -266,7 +258,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			}
 		}
 		
-		node.request(this.timeout);
+		node.request();
 	}
 	
 	public void onResponse(String ip) {
@@ -286,7 +278,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			return;
 		}
 		
-		node.request(this.timeout);
+		node.request();
 	}
 	
 	public void onCritical(String ip, boolean critical, String message) {
@@ -365,7 +357,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 
 				@Override
 				public void run() {
-					node.request(timeout);
+					node.request();
 				}
 				
 			}, REQUEST_INTERVAL);

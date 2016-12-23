@@ -13,7 +13,7 @@ public class TestNode extends TmpNode {
 	private final boolean onFailure;
 	
 	public TestNode(SNMPAgent agent, String ip, boolean onFailure) {
-		super(agent, ip);
+		super(agent, ip, ITAhM.MAX_TIMEOUT);
 		
 		this.agent = agent;
 		
