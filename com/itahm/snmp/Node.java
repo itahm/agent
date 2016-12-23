@@ -33,14 +33,12 @@ import org.snmp4j.smi.VariableBinding;
 public abstract class Node implements ResponseListener {
 	
 	private final RequestPDU pdu;
-	private final RequestPDU emptyPDU;
 	private final Snmp snmp;
 	private final CommunityTarget target;
-	private long requestTime;
-	protected long responseTime;
 	protected long lastResponse;
-	private boolean pending = false;
 	private Integer enterprise;
+	private long request = 0;
+	private long failure = 0;
 	
 	/**
 	 * 이전 데이터 보관소
@@ -62,7 +60,6 @@ public abstract class Node implements ResponseListener {
 	
 	public Node(Snmp snmp, String ip, int udp, String community) throws IOException {
 		pdu = RequestPDU.getInstance();
-		emptyPDU = RequestPDU.getInstance(true);
 		
 		this.snmp = snmp;
 		
@@ -76,18 +73,31 @@ public abstract class Node implements ResponseListener {
 	public void request(int timeout) {
 		this.target.setTimeout(timeout);
 		
+		this.request++;
+		
 		request();
 	}
 	
 	public void request() {
-		this.emptyPDU.setRequestID(null);
+		// 존재하지 않는 index 지워주기 위해 초기화
+		hrProcessorEntry = new HashMap<String, Integer>();
+		hrStorageEntry = new HashMap<String, JSONObject>();
+		ifEntry = new HashMap<String, JSONObject>();
+		arpTable = new HashMap<String, String>();
+		remoteIPTable = new HashMap<String, Integer>();
+		macTable = new HashMap<String, Integer>();
+		ipTable = new HashMap<String, Integer>();
+		networkTable = new HashMap<String, String>();
+		maskTable = new HashMap<Integer, String>();
 		
-		this.requestTime = Calendar.getInstance().getTimeInMillis();
-		
-		sendRequest(this.emptyPDU);
+		this.pdu.setRequestID(null);
+					
+		sendRequest(this.pdu);
 	}
 	
 	public JSONObject getData() {
+		this.data.put("success", (this.request - this.failure) *100L / this.request);
+		
 		return this.data;
 	}
 	
@@ -408,24 +418,14 @@ public abstract class Node implements ResponseListener {
 		((Snmp)event.getSource()).cancel(request, this);
 		
 		if (response == null) {
-			if (this.requestTime < 0) {
-				onIgnore();
-			}
-			else if (pending) {
-				onFailure();
-			}
-			else {
-				pending = true;
-				
-				onPending();
-			}
+			onFailure();
+			
+			this.failure++;
 			
 			return;
 		}
 		
 		int status = response.getErrorStatus();
-		
-		pending = false;
 		
 		if (status != PDU.noError) {
 			new Exception("status: "+ status).printStackTrace();
@@ -448,46 +448,18 @@ public abstract class Node implements ResponseListener {
 			return;
 		}
 		
-		// echo 일때는
-		if (this.requestTime >= 0) {
-			this.responseTime = Calendar.getInstance().getTimeInMillis() - this.requestTime;
+		this.lastResponse = Calendar.getInstance().getTimeInMillis();
+		this.data.put("lastResponse", this.lastResponse);
+		
+		onSuccess();
 			
-			this.data.put("responseTime", this.responseTime);
-			
-			this.requestTime = -1;
-			
-			// 존재하지 않는 index 지워주기 위해 초기화
-			hrProcessorEntry = new HashMap<String, Integer>();
-			hrStorageEntry = new HashMap<String, JSONObject>();
-			ifEntry = new HashMap<String, JSONObject>();
-			arpTable = new HashMap<String, String>();
-			remoteIPTable = new HashMap<String, Integer>();
-			macTable = new HashMap<String, Integer>();
-			ipTable = new HashMap<String, Integer>();
-			networkTable = new HashMap<String, String>();
-			maskTable = new HashMap<Integer, String>();
-			
-			this.pdu.setRequestID(null);
-			
-			sendRequest(this.pdu);
-		}
-		else {
-			this.lastResponse = Calendar.getInstance().getTimeInMillis();
-			
-			this.data.put("lastResponse", this.lastResponse);
-			
-			onSuccess();
-			
-			this.data.put("hrProcessorEntry", this.hrProcessorEntry);
-			this.data.put("hrStorageEntry", this.hrStorageEntry);
-			this.data.put("ifEntry", this.ifEntry);
-		}		
+		this.data.put("hrProcessorEntry", this.hrProcessorEntry);
+		this.data.put("hrStorageEntry", this.hrStorageEntry);
+		this.data.put("ifEntry", this.ifEntry);	
 	}
 	
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
-	abstract protected void onPending();
-	abstract protected void onIgnore();
 	
 	public static void main(String [] args) throws IOException {
 	}

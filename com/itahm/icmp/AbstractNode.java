@@ -3,23 +3,16 @@ package com.itahm.icmp;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Calendar;
 
-public class ICMPNode implements Runnable {
+public abstract class AbstractNode implements Runnable {
 
-	private final ICMPListener listener;
-	private long interval = 10000;
-	private int timeout;
-	private boolean pending = false;
-	
+	private long interval = 1000;
+	private int timeout = 3000;
 	private final InetAddress target;
-	private final String host;
 	private Thread thread;
 
-	public ICMPNode(ICMPListener listener, String host, int timeout) throws UnknownHostException {
-		this.listener = listener;
-		this.host = host;
-		this.timeout = timeout;
-		
+	public AbstractNode(String host) throws UnknownHostException {
 		target = InetAddress.getByName(host);	
 	}
 	
@@ -50,24 +43,17 @@ public class ICMPNode implements Runnable {
 	
 	@Override
 	public void run() {
+		long sent;
+		
 		while(!this.thread.isInterrupted()) {
+			sent = Calendar.getInstance().getTimeInMillis();
+			
 			try {
 				if (this.target.isReachable(this.timeout)) {
-					this.pending = false;
-					
-					listener.onSuccess(this.host);
+					onSuccess(Calendar.getInstance().getTimeInMillis() - sent);
 				}
 				else {
-					if (this.pending) {
-						this.pending = false;
-						
-						listener.onFailure(this.host);
-					}
-					else {
-						this.pending = true;
-					}
-					
-					continue;
+					onFailure();
 				}
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
@@ -81,22 +67,25 @@ public class ICMPNode implements Runnable {
 		}
 	}
 
+	abstract protected void onSuccess(long time);
+	abstract protected void onFailure();
+	
 	public static void main(String[] args) throws UnknownHostException {
-		ICMPNode node = new ICMPNode(new ICMPListener() {
+		AbstractNode node = new AbstractNode("192.168.0.1") {
 
 			@Override
-			public void onSuccess(String host) {
+			public void onSuccess(long time) {
 				// TODO Auto-generated method stub
 				System.out.println("O");
 			}
 
 			@Override
-			public void onFailure(String host) {
+			public void onFailure() {
 				// TODO Auto-generated method stub
 				System.out.println("X");
 			}
 			
-		}, "192.168.0.1", 5000);
+		};
 		
 		node.start();
 		

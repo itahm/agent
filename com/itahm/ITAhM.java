@@ -26,7 +26,10 @@ import com.itahm.util.DataCleaner;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.2.1";
+	public final static String VERSION = "1.3.3.2";
+	public final static int MAX_TIMEOUT = 10000;
+	public final static int MID_TIMEOUT = 5000;
+	public final static int DEF_TIMEOUT = 3000;
 	private static File dataRoot;
 	public static HTTPServer http;
 	public static Log log;
@@ -37,7 +40,6 @@ public class ITAhM {
 	public final static class agent {
 		public static SNMPAgent snmp;
 		public static ICMPAgent icmp;
-		public static SyslogAgent syslog;
 	}
 	
 	public ITAhM(int tcp, String path, String host) throws IOException {
@@ -66,7 +68,7 @@ public class ITAhM {
 			http = new HTTPServer("0.0.0.0", tcp);
 		}
 		catch (BindException be) {
-			System.out.println("tcp "+ tcp + " is already used.");
+			System.out.println("tcp "+ tcp + " 는 사용중입니다.");
 			
 			throw be;
 		}
@@ -81,14 +83,12 @@ public class ITAhM {
 			agent.snmp = new SNMPAgent(config.getInt("timeout"));
 		}
 		catch (BindException be) {
-			System.out.println("udp " + 162 +" is already used.");
+			System.out.println("udp " + 162 +" 는 사용중입니다.");
 			
 			throw be;
 		}
 		
-		agent.icmp = new ICMPAgent(config.getInt("timeout"));
-		
-		agent.syslog = new SyslogAgent();
+		agent.icmp = new ICMPAgent();
 		
 		clean(new File(dataRoot, "node"));
 	}
@@ -106,7 +106,6 @@ public class ITAhM {
 		
 		agent.snmp.close();
 		agent.icmp.close();
-		agent.syslog.close();
 		
 		log.close();
 		

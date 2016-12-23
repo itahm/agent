@@ -1,5 +1,6 @@
 package com.itahm;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -7,18 +8,21 @@ import java.util.Map;
 
 import org.json.JSONObject;
 
+import com.itahm.icmp.ICMPListener;
 import com.itahm.json.RollingFile;
 import com.itahm.json.RollingMap;
 import com.itahm.json.RollingMap.Resource;
 import com.itahm.snmp.Node;
 
-public class SNMPNode extends Node {
+public class SNMPNode extends Node implements ICMPListener, Closeable {
 
 	private final File nodeRoot;
 	private final RollingMap rollingMap;
 	private final String ip;
 	private final SNMPAgent agent;
-	private long lastRolling;
+	private final ICMPNode icmp;
+	private long responseTime;
+	private long lastRolling = 0;
 	private CriticalData critical;
 	
 	public SNMPNode(SNMPAgent agent, String ip, int udp, String community/*, int timeout*/, JSONObject criticalCondition) throws IOException {
@@ -32,7 +36,11 @@ public class SNMPNode extends Node {
 		
 		rollingMap = new RollingMap(nodeRoot);
 		
+		icmp = new ICMPNode(this, ip);
+		
 		setCritical(criticalCondition);
+		
+		icmp.start();
 	}
 	
 	public String getAddress() {
@@ -136,9 +144,6 @@ public class SNMPNode extends Node {
 		long value;
 		long capacity;
 		long tmpValue;
-		long lastRolling;
-		
-		this.agent.onSuccess(this.ip);
 		
 		for (String network : super.networkTable.keySet()) {
 			if ("127.0.0.1".equals(network)) {
@@ -152,9 +157,9 @@ public class SNMPNode extends Node {
 			this.agent.onARP(mac, super.arpTable.get(mac), super.maskTable.get(super.macTable.get(mac)));
 		}
 	
-		this.rollingMap.put(Resource.RESPONSETIME, "0", super.responseTime);
+		this.rollingMap.put(Resource.RESPONSETIME, "0", this.responseTime);
 		
-		this.agent.onSubmitTop(this.ip, "responseTime", super.responseTime);
+		this.agent.onSubmitTop(this.ip, "responseTime", this.responseTime);
 		
 		max = 0;
 		for(String index: super.hrProcessorEntry.keySet()) {
@@ -207,8 +212,6 @@ public class SNMPNode extends Node {
 		
 		this.agent.onSubmitTop(this.ip, "storage", max);
 		this.agent.onSubmitTop(this.ip, "storageRate", maxRate);
-		
-		lastRolling = super.data.getLong("lastResponse");
 		
 		if (this.lastRolling > 0) {
 			// 보관된 값
@@ -285,7 +288,7 @@ public class SNMPNode extends Node {
 				}
 				
 				if (bytes  >= 0) {
-					bytes = bytes *8000 / (lastRolling - this.lastRolling);
+					bytes = bytes *8000 / (super.lastResponse - this.lastRolling);
 					
 					data.put("ifInBPS", bytes);
 					
@@ -309,7 +312,7 @@ public class SNMPNode extends Node {
 				}
 				
 				if (bytes >= 0) {
-					bytes = bytes *8000 / (lastRolling - this.lastRolling);
+					bytes = bytes *8000 / (super.lastResponse - this.lastRolling);
 					
 					data.put("ifOutBPS", bytes);
 					
@@ -329,22 +332,33 @@ public class SNMPNode extends Node {
 			this.agent.onSubmitTop(this.ip, "throughputErr", maxErr);
 		}
 		
-		this.lastRolling = lastRolling;
+		this.lastRolling = super.lastResponse;
+		
+		this.agent.onResponse(this.ip);
 	}
 
 	@Override
 	protected void onFailure() {
+		this.agent.onTimeout(this.ip);
+	}
+	
+	@Override
+	public void onSuccess(String host, long time) {
+		this.responseTime = time;
+		
+		super.data.put("responseTime", time);
+		
+		this.agent.onSuccess(this.ip, time);
+	}
+
+	@Override
+	public void onFailure(String host) {
 		this.agent.onFailure(this.ip);
 	}
-	
+
 	@Override
-	protected void onIgnore() {
-		this.agent.onIgnore(this.ip);
-	}
-	
-	@Override
-	protected void onPending() {
-		this.agent.onPending(this.ip);
+	public void close() throws IOException {
+		this.icmp.stop();
 	}
 	
 	class CriticalData {
@@ -468,4 +482,5 @@ public class SNMPNode extends Node {
 			return value;
 		}
 	}
+	
 }

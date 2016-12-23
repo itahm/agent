@@ -205,7 +205,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		return peerNode.getPeerIFName(node);
 	}
 	
-	public void onSuccess(String ip) {
+	public void onSuccess(String ip, long time) {
 		SNMPNode node = this.nodeList.get(ip);
 		
 		// 그 사이 삭제되었으면
@@ -228,35 +228,12 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			try {
 				ITAhM.log.write(ip,
-					nodeData.has("sysName")? String.format("%s [%s] SNMP 정상.", ip, nodeData.getString("sysName")): String.format("%s SNMP 정상.", ip),
+					nodeData.has("sysName")? String.format("%s [%s] 정상.", ip, nodeData.getString("sysName")): String.format("%s 정상.", ip),
 					"shutdown", true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-
-		sendNextRequest(node);
-	}
-	
-	public void onIgnore(String ip) {
-		SNMPNode node = this.nodeList.get(ip);
-		
-		// 그 사이 삭제되었으면
-		if (node == null) {
-			return;
-		}
-		
-		sendNextRequest(node);
-	}
-	
-	public void onPending(String ip) {
-		SNMPNode node = this.nodeList.get(ip);
-
-		if (node == null) {
-			return;
-		}
-		
-		node.request(this.timeout);
 	}
 	
 	public void onFailure(String ip) {
@@ -282,11 +259,31 @@ public class SNMPAgent extends Snmp implements Closeable {
 			try {
 				
 				ITAhM.log.write(ip,
-					nodeData.has("sysName")? String.format("%s [%s] SNMP 응답 없음.", ip, node.getData().getString("sysName")): String.format("%s SNMP 응답 없음.", ip),
+					nodeData.has("sysName")? String.format("%s [%s] 응답 없음.", ip, node.getData().getString("sysName")): String.format("%s 응답 없음.", ip),
 					"shutdown", false);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		}
+		
+		node.request(this.timeout);
+	}
+	
+	public void onResponse(String ip) {
+		SNMPNode node = this.nodeList.get(ip);
+		
+		if (node == null) {
+			return;
+		}
+		
+		sendNextRequest(node);
+	}
+	
+	public void onTimeout(String ip) {
+		SNMPNode node = this.nodeList.get(ip);
+
+		if (node == null) {
+			return;
 		}
 		
 		node.request(this.timeout);

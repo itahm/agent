@@ -10,31 +10,28 @@ import java.util.Map;
 import org.json.JSONObject;
 
 import com.itahm.icmp.ICMPListener;
-import com.itahm.icmp.ICMPNode;
 import com.itahm.table.Table;
 
 public class ICMPAgent implements ICMPListener, Closeable {
 	
 	private final Map<String, ICMPNode> nodeList = new HashMap<String, ICMPNode>();
 	private final Table monitorTable = ITAhM.getTable(Table.MONITOR);
-	private final int timeout;
 	
-	public ICMPAgent(int timeout) throws IOException {
-		this.timeout = timeout;
-		
+	public ICMPAgent() throws IOException {
 		JSONObject snmpData = monitorTable.getJSONObject();
+		
 		for (Object ip : snmpData.keySet()) {
 			if ("icmp".equals(snmpData.getJSONObject((String)ip).getString("protocol"))) {
 				addNode((String)ip);
 			}
 		}
 		
-		System.out.println("ICMP agent ready.");
+		System.out.println("ICMP 매니저 정상.");
 	}
 	
 	private void addNode(String ip) {
 		try {
-			ICMPNode node = new ICMPNode(this, ip, timeout);
+			ICMPNode node = new ICMPNode(this, ip);
 			
 			synchronized (this.nodeList) {
 				this.nodeList.put(ip, node);
@@ -82,7 +79,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			@Override
 			public void run() {
 				try {
-					if (InetAddress.getByName(ip).isReachable(timeout)) {
+					if (InetAddress.getByName(ip).isReachable(ITAhM.DEF_TIMEOUT)) {
 						monitorTable.getJSONObject().put(ip, new JSONObject()
 							.put("protocol", "icmp")
 							.put("ip", ip)
@@ -112,7 +109,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 		}).start();
 	}
 	
-	public void onSuccess(String ip) {
+	public void onSuccess(String ip, long time) {
 		ICMPNode node;
 		
 		synchronized (this.nodeList) {
@@ -183,6 +180,8 @@ public class ICMPAgent implements ICMPListener, Closeable {
 				this.nodeList.get(ip).stop();
 			}
 		}
+		
+		this.nodeList.clear();
 	}
 	
 }
