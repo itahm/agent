@@ -37,8 +37,8 @@ public abstract class Node implements ResponseListener {
 	private final CommunityTarget target;
 	protected long lastResponse;
 	private Integer enterprise;
-	private long request = 0;
-	private long failure = 0;
+	private long requestCount = 0;
+	private long failureCount = 0;
 	private boolean reset = false;
 	
 	/**
@@ -75,11 +75,11 @@ public abstract class Node implements ResponseListener {
 		if (reset) {
 			reset = false;
 			
-			this.request = 0;
-			this.failure = 0;
+			this.requestCount = 0;
+			this.failureCount = 0;
 		}
 		
-		this.request++;
+		this.requestCount++;
 		
 		// 존재하지 않는 index 지워주기 위해 초기화
 		hrProcessorEntry = new HashMap<String, Integer>();
@@ -99,11 +99,11 @@ public abstract class Node implements ResponseListener {
 	
 	public int getFailureRate() {
 		
-		return (int)(this.request > 0? (this.failure *100 / this.request): 0);
+		return (int)(this.requestCount > 0? (this.failureCount *100 / this.requestCount): 0);
 	}
 	
 	public void resetResponse() {
-		this.request = 0;
+		this.reset = true;
 	}
 
 	public JSONObject getData() {
@@ -431,7 +431,7 @@ public abstract class Node implements ResponseListener {
 		if (response == null) {
 			onFailure();
 			
-			this.failure++;
+			this.failureCount++;
 			
 			return;
 		}
