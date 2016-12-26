@@ -59,7 +59,7 @@ public abstract class Node implements ResponseListener {
 	protected Map<String, String> networkTable; //ip - mask
 	protected Map<Integer, String> maskTable; //index - mask
 	
-	public Node(Snmp snmp, String ip, int udp, String community) throws IOException {
+	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {
 		pdu = RequestPDU.getInstance();
 		
 		this.snmp = snmp;
@@ -69,11 +69,12 @@ public abstract class Node implements ResponseListener {
 		// target 설정
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
 		target.setVersion(SnmpConstants.version2c);
+		target.setTimeout(timeout);
 	}
 	
 	public void request() {
-		if (reset) {
-			reset = false;
+		if (this.reset) {
+			this.reset = false;
 			
 			this.requestCount = 0;
 			this.failureCount = 0;
