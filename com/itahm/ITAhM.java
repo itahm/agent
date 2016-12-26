@@ -26,7 +26,7 @@ import com.itahm.util.DataCleaner;
 public class ITAhM {
 	
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.2.4";
+	public final static String VERSION = "1.3.2.5";
 	public final static int MAX_TIMEOUT = 10000;
 	public final static int ICMP_INTV = 1000;
 	public final static int MID_TIMEOUT = 5000;

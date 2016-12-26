@@ -39,6 +39,7 @@ public abstract class Node implements ResponseListener {
 	private Integer enterprise;
 	private long request = 0;
 	private long failure = 0;
+	private boolean reset = false;
 	
 	/**
 	 * 이전 데이터 보관소
@@ -71,6 +72,13 @@ public abstract class Node implements ResponseListener {
 	}
 	
 	public void request() {
+		if (reset) {
+			reset = false;
+			
+			this.request = 0;
+			this.failure = 0;
+		}
+		
 		this.request++;
 		
 		// 존재하지 않는 index 지워주기 위해 초기화
@@ -423,12 +431,7 @@ public abstract class Node implements ResponseListener {
 		if (response == null) {
 			onFailure();
 			
-			if (this.request == 0) {
-				this.failure = 0;
-			}
-			else {
-				this.failure++;
-			}
+			this.failure++;
 			
 			return;
 		}
