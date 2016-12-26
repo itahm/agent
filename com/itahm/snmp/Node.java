@@ -89,8 +89,17 @@ public abstract class Node implements ResponseListener {
 		sendRequest(this.pdu);
 	}
 	
+	public int getFailureRate() {
+		
+		return (int)(this.request > 0? (this.failure *100 / this.request): 0);
+	}
+	
+	public void resetResponse() {
+		this.request = 0;
+	}
+
 	public JSONObject getData() {
-		this.data.put("success", (this.request - this.failure) *100L / this.request);
+		this.data.put("failure", getFailureRate());
 		
 		return this.data;
 	}
@@ -414,7 +423,12 @@ public abstract class Node implements ResponseListener {
 		if (response == null) {
 			onFailure();
 			
-			this.failure++;
+			if (this.request == 0) {
+				this.failure = 0;
+			}
+			else {
+				this.failure++;
+			}
 			
 			return;
 		}

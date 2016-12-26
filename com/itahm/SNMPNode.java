@@ -159,7 +159,8 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	
 		this.rollingMap.put(Resource.RESPONSETIME, "0", this.responseTime);
 		
-		this.agent.onSubmitTop(this.ip, "responseTime", this.responseTime);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.RESPONSETIME, this.responseTime);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.FAILURERATE, getFailureRate());
 		
 		max = 0;
 		for(String index: super.hrProcessorEntry.keySet()) {
@@ -173,7 +174,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			max = Math.max(max, value);
 		}
 		
-		this.agent.onSubmitTop(this.ip, "processor", max);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.PROCESSOR, max);
 		
 		max = 0;
 		maxRate = 0;
@@ -196,8 +197,8 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 					this.critical.analyze(CriticalData.MEMORY, index, capacity, tmpValue);
 				}
 				
-				this.agent.onSubmitTop(this.ip, "memory", value);
-				this.agent.onSubmitTop(this.ip, "memoryRate", tmpValue *100L / capacity);
+				this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.MEMORY, value);
+				this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.MEMORYRATE, tmpValue *100L / capacity);
 				
 				break;
 			case 4:
@@ -210,8 +211,8 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			}
 		}
 		
-		this.agent.onSubmitTop(this.ip, "storage", max);
-		this.agent.onSubmitTop(this.ip, "storageRate", maxRate);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.STORAGE, max);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.STORAGERATE, maxRate);
 		
 		if (this.lastRolling > 0) {
 			// 보관된 값
@@ -327,9 +328,9 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 				}
 			}
 			
-			this.agent.onSubmitTop(this.ip, "throughput", max);
-			this.agent.onSubmitTop(this.ip, "throughputRate", maxRate);
-			this.agent.onSubmitTop(this.ip, "throughputErr", maxErr);
+			this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.THROUGHPUT, max);
+			this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.THROUGHPUTRATE, maxRate);
+			this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.THROUGHPUTERR, maxErr);
 		}
 		
 		this.lastRolling = super.lastResponse;

@@ -141,6 +141,16 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 	}
 	
+	public void resetResponse(String ip) {
+		SNMPNode node = this.nodeList.get(ip);
+		
+		if (node == null) {
+			return;
+		}
+		
+		node.resetResponse();
+	}
+	
 	public void resetCritical(String ip, JSONObject critical) {
 		SNMPNode node = this.nodeList.get(ip);
 		
@@ -409,7 +419,19 @@ public class SNMPAgent extends Snmp implements Closeable {
 	}
 
 	class TopTable implements Comparator<String> {
+		public final static String RESPONSETIME = "responseTime";
+		public final static String FAILURERATE = "failureRate";
+		public final static String PROCESSOR = "processor";
+		public final static String MEMORY = "memory";
+		public final static String MEMORYRATE = "memoryRate";
+		public final static String STORAGE = "storage";
+		public final static String STORAGERATE = "storageRate";
+		public final static String THROUGHPUT = "throughput";
+		public final static String THROUGHPUTRATE = "throughputRate";
+		public final static String THROUGHPUTERR = "throughputErr";
+		
 		private final Map<String, Long> responseTop = new HashMap<String, Long>();
+		private final Map<String, Long> failureTop = new HashMap<String, Long>();
 		private final Map<String, Long> processorTop = new HashMap<String, Long>();
 		private final Map<String, Long> memoryTop =  new HashMap<String, Long>();
 		private final Map<String, Long> memoryRateTop =  new HashMap<String, Long>();
@@ -424,39 +446,43 @@ public class SNMPAgent extends Snmp implements Closeable {
 			Map<String, Long> top = null;
 			
 			switch (resource) {
-			case "responseTime":
+			case RESPONSETIME:
 				top = this.responseTop;
 				
 				break;
-			case "processor":
+			case FAILURERATE:
+				top = this.failureTop;
+				
+				break;
+			case PROCESSOR:
 				top = this.processorTop;
 				
 				break;
-			case "memory":
+			case MEMORY:
 				top = this.memoryTop;
 				
 				break;
-			case "memoryRate":
+			case MEMORYRATE:
 				top = this.memoryRateTop;
 				
 				break;
-			case "storage":
+			case STORAGE:
 				top = this.storageTop;
 				
 				break;
-			case "storageRate":
+			case STORAGERATE:
 				top = this.storageRateTop;
 				
 				break;
-			case "throughput":
+			case THROUGHPUT:
 				top = this.throughputTop;
 				
 				break;
-			case "throughputRate":
+			case THROUGHPUTRATE:
 				top = this.throughputRateTop;
 				
 				break;
-			case "throughputErr":
+			case THROUGHPUTERR:
 				top = this.throughputErrTop;
 				
 				break;					
@@ -470,15 +496,16 @@ public class SNMPAgent extends Snmp implements Closeable {
 		public synchronized JSONObject getTop(int count) {
 			JSONObject top = new JSONObject();
 			
-			top.put("responseTime", getTop(this.responseTop, count));
-			top.put("processor", getTop(this.processorTop, count));
-			top.put("memory", getTop(this.memoryTop, count));
-			top.put("memoryRate", getTop(this.memoryRateTop, count));
-			top.put("storage", getTop(this.storageTop, count));
-			top.put("storageRate", getTop(this.storageRateTop, count));
-			top.put("throughput", getTop(this.throughputTop, count));
-			top.put("throughputRate", getTop(this.throughputRateTop, count));
-			top.put("throughputErr", getTop(this.throughputErrTop, count));
+			top.put(RESPONSETIME, getTop(this.responseTop, count));
+			top.put(FAILURERATE, getTop(this.failureTop, count));
+			top.put(PROCESSOR, getTop(this.processorTop, count));
+			top.put(MEMORY, getTop(this.memoryTop, count));
+			top.put(MEMORYRATE, getTop(this.memoryRateTop, count));
+			top.put(STORAGE, getTop(this.storageTop, count));
+			top.put(STORAGERATE, getTop(this.storageRateTop, count));
+			top.put(THROUGHPUT, getTop(this.throughputTop, count));
+			top.put(THROUGHPUTRATE, getTop(this.throughputRateTop, count));
+			top.put(THROUGHPUTERR, getTop(this.throughputErrTop, count));
 			
 			return top;
 		}
@@ -506,6 +533,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 
 		public void remove(String ip) {
 			this.responseTop.remove(ip);
+			this.failureTop.remove(ip);
 			this.processorTop.remove(ip);
 			this.memoryTop.remove(ip);
 			this.memoryRateTop.remove(ip);

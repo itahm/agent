@@ -18,6 +18,7 @@ public enum Commander {
 	ARP("com.itahm.command.ARP"),
 	CONFIG("com.itahm.command.Config"),
 	SEARCH("com.itahm.command.Search"),
+	EXTRA("com.itahm.command.Extra"),
 	NETWORK("com.itahm.command.Network");
 	
 	private String className;
