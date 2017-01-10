@@ -1,6 +1,6 @@
 package com.itahm.json;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
 public interface Data {
 	public JSONObject getJSON(long startMills, long endMills);

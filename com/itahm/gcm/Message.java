@@ -6,9 +6,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
+import com.itahm.json.JSONTokener;
 
 class Message implements DownStream.Request {
 

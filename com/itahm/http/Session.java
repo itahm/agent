@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Session {
 
-	private static final Map<String, Session> sessions = new ConcurrentHashMap<String, Session>();
+	private static final Map<String, Session> sessions = new ConcurrentHashMap<>();
 	private static final Timer timer = new Timer(true);
 	
 	private static long timeout = 30*60*1000;

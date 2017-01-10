@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,8 +16,8 @@ import java.util.TimerTask;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 import org.snmp4j.CommandResponder;
 import org.snmp4j.CommandResponderEvent;
 import org.snmp4j.PDU;
@@ -31,6 +32,7 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import com.itahm.snmp.TmpNode;
 import com.itahm.table.Table;
+import com.itahm.util.DataCleaner;
 
 public class SNMPAgent extends Snmp implements Closeable {
 	
@@ -50,18 +52,18 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Map<String, JSONObject> arp;
 	private final Map<String, String> network;
 	
-	public SNMPAgent() throws IOException {
+	public SNMPAgent(File root) throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
 		
-		System.out.println("snmp agent started.");
+		System.out.println("SNMP manager start.");
 		
 		nodeList = new ConcurrentHashMap<String, SNMPNode>();
 		
-		monitorTable = ITAhM.getTable(Table.MONITOR);
+		monitorTable = Agent.getTable(Table.MONITOR);
 		
-		profileTable = ITAhM.getTable(Table.PROFILE);
+		profileTable = Agent.getTable(Table.PROFILE);
 		
-		criticalTable = ITAhM.getTable(Table.CRITICAL);
+		criticalTable = Agent.getTable(Table.CRITICAL);
 		
 		topTable = new TopTable();
 		
@@ -70,8 +72,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 		arp = new HashMap<String, JSONObject>();
 		network = new HashMap<String, String>();
 		 
-		nodeRoot = new File(ITAhM.getRoot(), "node");
+		nodeRoot = new File(root, "node");
 		nodeRoot.mkdir();
+		
+		clean();
 		
 		addCommandResponder(new CommandResponder() {
 
@@ -207,6 +211,28 @@ public class SNMPAgent extends Snmp implements Closeable {
 		return peerNode.getPeerIFName(node);
 	}
 	
+	private void clean() {
+		Calendar date = Calendar.getInstance();
+		
+		date.set(Calendar.HOUR_OF_DAY, 0);
+		date.set(Calendar.MINUTE, 0);
+		date.set(Calendar.SECOND, 0);
+		date.set(Calendar.MILLISECOND, 0);
+		
+		date.add(Calendar.MONTH, -3);
+				
+		new DataCleaner(this.nodeRoot, date.getTimeInMillis(), 3) {
+
+			@Override
+			public void onDelete(File file) {
+			}
+			
+			@Override
+			public void onComplete(long count) {
+			}
+		};
+	}
+	
 	public void onSuccess(String ip, long time) {
 		SNMPNode node = this.nodeList.get(ip);
 		
@@ -229,7 +255,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			this.monitorTable.save();
 			
 			try {
-				ITAhM.log.write(ip,
+				Agent.manager.log.write(ip,
 					nodeData.has("sysName")? String.format("%s [%s] 정상.", ip, nodeData.getString("sysName")): String.format("%s 정상.", ip),
 					"shutdown", true);
 			} catch (IOException e) {
@@ -260,7 +286,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			try {
 				
-				ITAhM.log.write(ip,
+				Agent.manager.log.write(ip,
 					nodeData.has("sysName")? String.format("%s [%s] 응답 없음.", ip, node.getData().getString("sysName")): String.format("%s 응답 없음.", ip),
 					"shutdown", false);
 			} catch (IOException e) {
@@ -311,7 +337,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		this.monitorTable.save();
 		
 		try {
-			ITAhM.log.write(ip,
+			Agent.manager.log.write(ip,
 				nodeData.has("sysName")? String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message): String.format("%s %s", ip, message),
 				"critical", !critical);
 		} catch (IOException e) {

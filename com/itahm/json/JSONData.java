@@ -4,8 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 
 public class JSONData implements Data{
 

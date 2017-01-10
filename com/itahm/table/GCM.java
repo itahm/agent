@@ -1,16 +1,17 @@
 package com.itahm.table;
 
+import java.io.File;
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 import com.itahm.table.Table;
 
 public class GCM extends Table {
 
-	public GCM() throws IOException {
-		super.load(GCM);
+	public GCM(File dataRoot) throws IOException {
+		super(dataRoot, GCM);
 	}
 	
 	@Override
@@ -18,12 +19,12 @@ public class GCM extends Table {
 		if (gcm == null) {
 			gcm = super.remove(id);
 			
-			ITAhM.gcmm.unregister(gcm.getString("token"));
+			Agent.manager.gcmm.unregister(gcm.getString("token"));
 		}
 		else {
 			super.put(id,  gcm);
 			
-			ITAhM.gcmm.register(gcm.getString("token"), id);
+			Agent.manager.gcmm.register(gcm.getString("token"), id);
 		}
 		
 		return super.table;

@@ -2,10 +2,10 @@ package com.itahm.command;
 
 import java.io.IOException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 import com.itahm.table.Table;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
@@ -15,7 +15,7 @@ public class Push implements Command {
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			Table table = ITAhM.getTable(data.getString("database"));
+			Table table = Agent.getTable(data.getString("database"));
 			
 			if (table == null) {
 				return Response.getInstance(Response.Status.BADREQUEST,

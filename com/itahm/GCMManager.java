@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
 import com.itahm.gcm.DownStream;
 import com.itahm.table.Table;
@@ -17,7 +17,7 @@ public class GCMManager extends DownStream {
 	public GCMManager(String apiKey, String host) throws IOException {
 		super(apiKey, host);
 		
-		gcmTable = ITAhM.getTable(Table.GCM);
+		gcmTable = Agent.getTable(Table.GCM);
 		
 		JSONObject gcmData = gcmTable.getJSONObject();
 		String id;
@@ -75,18 +75,18 @@ public class GCMManager extends DownStream {
 	@Override
 	public void onComplete(int status) {
 		if (status != 200) {
-			System.out.println("gcm failure");
+			System.out.println("GCM failed.");
 		}
 	}
 
 	@Override
 	public void onStart() {
-		System.out.println("GCM DownStream ON.");
+		System.out.println("GCM manager start.");
 	}
 
 	@Override
 	public void onStop() {
-		System.out.println("GCM DownStream OFF.");
+		System.out.println("GCM manager stop.");
 	}
 	
 }

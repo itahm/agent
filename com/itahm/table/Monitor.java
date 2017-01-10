@@ -1,15 +1,16 @@
 package com.itahm.table;
 
+import java.io.File;
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 
 public class Monitor extends Table {
 	
-	public Monitor() throws IOException {
-		load(MONITOR);
+	public Monitor(File dataRoot) throws IOException {
+		super(dataRoot, MONITOR);
 	}
 
 	public JSONObject remove(String ip) {
@@ -18,8 +19,8 @@ public class Monitor extends Table {
 		
 		if (monitor != null) {
 			if ("snmp".equals(monitor.getString("protocol"))) {
-				if (ITAhM.agent.snmp.removeNode(ip)) {
-					table = ITAhM.getTable(Table.CRITICAL);
+				if (Agent.manager.snmp.removeNode(ip)) {
+					table = Agent.getTable(Table.CRITICAL);
 					
 					table.remove(ip);
 				}
@@ -29,7 +30,7 @@ public class Monitor extends Table {
 				}
 			}
 			else if ("icmp".equals(monitor.getString("protocol"))) {
-				ITAhM.agent.icmp.removeNode(ip);
+				Agent.manager.icmp.removeNode(ip);
 			}
 			else {
 				// 오류
@@ -50,10 +51,10 @@ public class Monitor extends Table {
 		
 		if (monitor != null) {
 			if ("snmp".equals(monitor.getString("protocol"))) {
-				ITAhM.agent.snmp.testNode(ip);
+				Agent.manager.snmp.testNode(ip);
 			}
 			else if ("icmp".equals(monitor.getString("protocol"))) {
-				ITAhM.agent.icmp.testNode(ip);
+				Agent.manager.icmp.testNode(ip);
 			}
 		}
 		

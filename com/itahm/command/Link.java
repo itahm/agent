@@ -2,10 +2,10 @@ package com.itahm.command;
 
 import java.io.IOException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 import com.itahm.table.Table;
@@ -14,7 +14,7 @@ public class Link implements Command {
 	
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
-		Table table = ITAhM.getTable("device");
+		Table table = Agent.getTable("device");
 		JSONObject deviceData = table.getJSONObject();
 		
 		try {
@@ -28,8 +28,8 @@ public class Link implements Command {
 			
 			if (link) {
 				try {
-					ifEntry1.put(ip2, ITAhM.agent.snmp.getPeerIFName(ip1, ip2));
-					ifEntry2.put(ip1, ITAhM.agent.snmp.getPeerIFName(ip2, ip1));
+					ifEntry1.put(ip2, Agent.manager.snmp.getPeerIFName(ip1, ip2));
+					ifEntry2.put(ip1, Agent.manager.snmp.getPeerIFName(ip2, ip1));
 				}
 				catch(NullPointerException npe) {
 					return Response.getInstance(Response.Status.UNAVAILABLE);

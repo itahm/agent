@@ -2,9 +2,9 @@ package com.itahm.command;
 
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
@@ -17,7 +17,7 @@ public class Extra implements Command {
 		
 		switch(data.getString("extra")) {
 		case RESET_RESPONSE:
-			ITAhM.agent.snmp.resetResponse(data.getString("ip"));
+			Agent.manager.snmp.resetResponse(data.getString("ip"));
 			
 			break;
 		}

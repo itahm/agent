@@ -7,15 +7,15 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
 import com.itahm.icmp.ICMPListener;
 import com.itahm.table.Table;
 
 public class ICMPAgent implements ICMPListener, Closeable {
 	
-	private final Map<String, ICMPNode> nodeList = new HashMap<String, ICMPNode>();
-	private final Table monitorTable = ITAhM.getTable(Table.MONITOR);
+	private final Map<String, ICMPNode> nodeList = new HashMap<>();
+	private final Table monitorTable = Agent.getTable(Table.MONITOR);
 	
 	public ICMPAgent() throws IOException {
 		JSONObject snmpData = monitorTable.getJSONObject();
@@ -26,7 +26,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			}
 		}
 		
-		System.out.println("ICMP 매니저 정상.");
+		System.out.println("ICMP manager start.");
 	}
 	
 	private void addNode(String ip) {
@@ -71,7 +71,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			@Override
 			public void run() {
 				try {
-					if (InetAddress.getByName(ip).isReachable(ITAhM.DEF_TIMEOUT)) {
+					if (InetAddress.getByName(ip).isReachable(Agent.DEF_TIMEOUT)) {
 						monitorTable.getJSONObject().put(ip, new JSONObject()
 							.put("protocol", "icmp")
 							.put("ip", ip)
@@ -81,7 +81,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 						
 						addNode(ip);
 						
-						ITAhM.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "shutdown", true);
+						Agent.manager.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "shutdown", true);
 						
 						return;
 					}
@@ -92,7 +92,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 				}
 				
 				try {	
-					ITAhM.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown", false);
+					Agent.manager.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown", false);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -124,7 +124,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			this.monitorTable.save();
 			
 			try {
-				ITAhM.log.write(ip, String.format("%s ICMP 정상.", ip), "shutdown", true);
+				Agent.manager.log.write(ip, String.format("%s ICMP 정상.", ip), "shutdown", true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -155,7 +155,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			
 			try {
 				
-				ITAhM.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown", false);
+				Agent.manager.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown", false);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -168,8 +168,8 @@ public class ICMPAgent implements ICMPListener, Closeable {
 	@Override
 	public void close() {
 		synchronized (this.nodeList) {
-			for (Object ip : this.nodeList.keySet()) {
-				this.nodeList.get(ip).stop();
+			for (ICMPNode node : this.nodeList.values()) {
+				node.stop();
 			}
 		}
 		

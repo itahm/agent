@@ -1,13 +1,14 @@
 package com.itahm.table;
 
+import java.io.File;
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
 public class Profile extends Table {
 	
-	public Profile() throws IOException {
-		load(PROFILE);
+	public Profile(File dataRoot) throws IOException {
+		super(dataRoot, PROFILE);
 		
 		if (isEmpty()) {
 			getJSONObject().put("public", new JSONObject()

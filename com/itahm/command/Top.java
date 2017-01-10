@@ -2,10 +2,10 @@ package com.itahm.command;
 
 import java.io.IOException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
@@ -22,7 +22,7 @@ public class Top implements Command {
 				count = Math.min(data.getInt("count"), TOP_MAX);
 			}
 			
-			return Response.getInstance(Response.Status.OK, ITAhM.agent.snmp.getTop(count).toString());
+			return Response.getInstance(Response.Status.OK, Agent.manager.snmp.getTop(count).toString());
 		}
 		catch(NullPointerException npe) {
 			return Response.getInstance(Response.Status.UNAVAILABLE);

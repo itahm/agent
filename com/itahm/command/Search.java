@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Iterator;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
@@ -19,7 +19,7 @@ public class Search implements Command {
 			Iterator<String> it = network.iterator();
 			
 			while(it.hasNext()) {
-				ITAhM.agent.snmp.testNode(it.next(), false);
+				Agent.manager.snmp.testNode(it.next(), false);
 			}
 			
 			return Response.getInstance(Response.Status.OK);

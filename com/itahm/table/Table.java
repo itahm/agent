@@ -4,9 +4,8 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
 import com.itahm.json.JSONFile;
 
 public class Table implements Closeable {
@@ -20,11 +19,10 @@ public class Table implements Closeable {
 	public final static String CONFIG = "config";
 	public final static String GCM = "gcm";
 	
-	private final static File dataRoot = ITAhM.getRoot();
 	protected JSONFile file;
 	protected JSONObject table;
 	
-	protected void load(String tableName) throws IOException {
+	public Table(File dataRoot, String tableName) throws IOException {
 		this.file = new JSONFile((new File(dataRoot, tableName)));
 		this.table = file.getJSONObject();
 	}

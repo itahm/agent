@@ -8,8 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;

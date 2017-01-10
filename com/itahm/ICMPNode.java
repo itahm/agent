@@ -7,7 +7,7 @@ import com.itahm.icmp.ICMPListener;
 
 public class ICMPNode extends AbstractNode {
 
-	private static final int [] TIMEOUT = new int [] {ITAhM.DEF_TIMEOUT, ITAhM.MID_TIMEOUT, ITAhM.MAX_TIMEOUT};
+	private static final int [] TIMEOUT = new int [] {Agent.DEF_TIMEOUT, Agent.MID_TIMEOUT, Agent.MAX_TIMEOUT};
 	private static final int MAX_RETRY = 3; 
 	
 	private final ICMPListener listener;
@@ -15,7 +15,7 @@ public class ICMPNode extends AbstractNode {
 	private int failure = 0;
 	
 	public ICMPNode(ICMPListener listener, String host) throws UnknownHostException {
-		super(host, ITAhM.DEF_TIMEOUT, ITAhM.ICMP_INTV);
+		super(host, Agent.DEF_TIMEOUT, Agent.ICMP_INTV);
 		
 		this.host = host;
 		this.listener = listener;

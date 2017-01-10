@@ -34,7 +34,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 	
 	public Listener() throws IOException {
 		this("0.0.0.0", 80);
-	}
+	}  
 
 	public Listener(String ip) throws IOException {
 		this(ip, 80);
@@ -197,14 +197,9 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 		}
 	}
 	
-	protected void onStart() {
-	}
-	
-	protected void onRequest(Request request) {
-	}
-	
-	protected void onClose(Request request) {
-	}
+	abstract protected void onStart();
+	abstract protected void onRequest(Request request);
+	abstract protected void onClose(Request request);
 	
 	public static void main(String [] args) throws IOException {
 		final Listener server = new Listener() {
@@ -246,6 +241,11 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 			@Override
 			protected void onClose(Request request) {
 			}
+
+			@Override
+			protected void onStart() {				
+			}
+
 
 		};
 		

@@ -40,6 +40,12 @@ public abstract class AbstractNode implements Runnable {
 	public synchronized void stop() {
 		this.thread.interrupt();
 		
+		try {
+			this.thread.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 		this.thread = null;
 	}
 	
@@ -47,7 +53,7 @@ public abstract class AbstractNode implements Runnable {
 	public void run() {
 		long sent;
 		
-		while(!this.thread.isInterrupted()) {
+		while(!Thread.interrupted()) {
 			sent = Calendar.getInstance().getTimeInMillis();
 			
 			try {

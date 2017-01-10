@@ -11,7 +11,7 @@ import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
 import com.itahm.http.Request;
 import com.itahm.http.Response;
@@ -32,8 +32,8 @@ public class Log implements Closeable {
 	private long index;
 	private final JSONObject log;
 	
-	public Log() throws IOException {
-		File logRoot = new File(ITAhM.getRoot(), "log");
+	public Log(File root) throws IOException {
+		File logRoot = new File(root, "log");
 		File indexFile = new File(logRoot, "index");
 		
 		logRoot.mkdir();
@@ -128,7 +128,7 @@ public class Log implements Closeable {
 			waiter.clear();
 		}
 			
-		ITAhM.gcmm.broadcast(logData.getString("message"));
+		Agent.manager.gcmm.broadcast(logData.getString("message"));
 	}
 	
 	

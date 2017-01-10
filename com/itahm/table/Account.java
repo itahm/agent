@@ -1,15 +1,16 @@
 package com.itahm.table;
 
+import java.io.File;
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
 import com.itahm.table.Table;
 
 public class Account extends Table {
 
-	public Account() throws IOException {
-		load("account");
+	public Account(File dataRoot) throws IOException {
+		super(dataRoot, ACCOUNT);
 		
 		if (isEmpty()) {
 			getJSONObject()

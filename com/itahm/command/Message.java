@@ -2,10 +2,10 @@ package com.itahm.command;
 
 import java.io.IOException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
@@ -14,7 +14,7 @@ public class Message implements Command {
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			ITAhM.gcmm.broadcast(data.getString("message"));
+			Agent.manager.gcmm.broadcast(data.getString("message"));
 			
 			return Response.getInstance(Response.Status.OK);
 		}

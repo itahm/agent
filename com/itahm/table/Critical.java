@@ -1,19 +1,20 @@
 package com.itahm.table;
 
+import java.io.File;
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 
 public class Critical extends Table {
 	
-	public Critical() throws IOException {
-		load("critical");
+	public Critical(File dataRoot) throws IOException {
+		super(dataRoot, CRITICAL);
 	}
 	
 	public JSONObject put(String ip, JSONObject critical) {
-		ITAhM.agent.snmp.resetCritical(ip, critical);
+		Agent.manager.snmp.resetCritical(ip, critical);
 		
 		return super.put(ip, critical);
 	}

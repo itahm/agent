@@ -1,15 +1,16 @@
 package com.itahm.table;
 
+import java.io.File;
 import java.io.IOException;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
-import com.itahm.ITAhM;
+import com.itahm.Agent;
 
 public class Device extends Table {
 	
-	public Device() throws IOException {
-		load("device");
+	public Device(File dataRoot) throws IOException {
+		super(dataRoot, DEVICE);
 		
 		if (isEmpty()) {
 			getJSONObject().put("127.0.0.1", new JSONObject()
@@ -36,8 +37,8 @@ public class Device extends Table {
 				save();
 			}
 			
-			ITAhM.getTable(Table.POSITION).remove(ip);
-			ITAhM.getTable(Table.MONITOR).remove(ip);
+			Agent.getTable(Table.POSITION).remove(ip);
+			Agent.getTable(Table.MONITOR).remove(ip);
 		}
 		
 		return device;
@@ -53,7 +54,7 @@ public class Device extends Table {
 			return super.table;
 		}
 		
-		Table posTable = ITAhM.getTable(Table.POSITION);
+		Table posTable = Agent.getTable(Table.POSITION);
 		
 		if (posTable.getJSONObject(ip) == null) {
 			posTable.put(ip, new JSONObject().put("x", 0).put("y", 0));

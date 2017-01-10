@@ -9,74 +9,61 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-// TODO: Auto-generated Javadoc
 /**
  * The Class JSONFile.
  */
 public class JSONFile implements Closeable{
 	
-	/** The json. */
 	protected JSONObject json;
-	
-	/** The file. */
 	private final RandomAccessFile file;
-	
-	/** The channel. */
 	private FileChannel channel;
-	
-	/**
-	 * Instantiates a new JSON file.
-	 */
 	
 	public JSONFile(File f) throws IOException {
 		file = new RandomAccessFile(f, "rws");
 		channel = file.getChannel();
 		
 		try {
-			load();
+			json = getJSONObject(this.channel);
+			
+			if (json == null) {
+				json = new JSONObject();
+				
+				save();
+			}
 		} catch (IOException ioe) {
 			file.close();
 			
 			throw ioe;
 		}
 	}
-
-	private void load() throws IOException {
-		long size = this.channel.size();
+	
+	private static JSONObject getJSONObject(FileChannel fc) throws IOException {
+		long size = fc.size();
 		
 		if (size != (int)size) {
-			throw new IOException("custom ITAhM exception: file size.");
+			throw new IOException("file size " +size);
 		}
 		
-		if (size > 0) {
-			ByteBuffer buffer = ByteBuffer.allocate((int)size);
-			
-			this.channel.read(buffer);
-			buffer.flip();
-			try {
-				this.json = new JSONObject(StandardCharsets.UTF_8.decode(buffer).toString());
-			}
-			catch (JSONException jsone) {
-				throw new IOException("custom ITAhM exception: invalid json file.");
-			}
+		if (size <= 0) {
+			return null;
 		}
-		else {
-			this.json = new JSONObject();
-			
-			save();
+		
+		ByteBuffer buffer = ByteBuffer.allocate((int)size);
+		
+		while (size > 0) {
+			size -= fc.read(buffer);
+		}
+		
+		buffer.flip();
+		
+		try {
+			return new JSONObject(StandardCharsets.UTF_8.decode(buffer).toString());
+		}
+		catch (JSONException jsone) {
+			throw new IOException(jsone);
 		}
 	}
 	
-	/**
-	 * Gets the JSON object.
-	 *
-	 * @param file the file
-	 * @return the JSON object. return null if file size is more than Integer.MAX_VALUE, or invalid json format, or empty file.
-	 * @throws IOException 
-	 */
 	public static JSONObject getJSONObject(File file) throws IOException {
 		if (!file.isFile()) {
 			return null;
@@ -84,24 +71,8 @@ public class JSONFile implements Closeable{
 		
 		try (
 			RandomAccessFile raf = new RandomAccessFile(file, "r");
-			FileChannel fc = raf.getChannel();
 		) {
-			long size = fc.size();
-			if (size != (int)size) {				
-				return null;
-			}
-			else if (size > 0) {
-				ByteBuffer bb = ByteBuffer.allocate((int)size);
-				fc.read(bb);
-				
-				bb.flip();
-			
-				try {
-					return new JSONObject(StandardCharsets.UTF_8.decode(bb).toString());
-				}
-				catch (JSONException jsone) {
-				}
-			}
+			return getJSONObject(raf.getChannel());
 		}
 		catch (FileNotFoundException fnfe) {
 		}
@@ -109,20 +80,14 @@ public class JSONFile implements Closeable{
 		return null;
 	}
 	
-	/**
-	 * Gets the JSON object.
-	 *
-	 * @return the JSON object.
-	 */
 	public JSONObject getJSONObject() {
 		return this.json;
 	}
 	
-	/**
-	 * Save.
-	 *
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 */
+	public Object get(String key) {
+		return this.json.has(key)? this.json.get(key): null;
+	}
+	
 	public void save() throws IOException {	
 		ByteBuffer buffer = ByteBuffer.wrap(this.json.toString().getBytes(StandardCharsets.UTF_8.name()));
 		
@@ -130,20 +95,12 @@ public class JSONFile implements Closeable{
 		this.channel.write(buffer);
 	}
 	
-	/**
-	 * Save.
-	 *
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 */
 	public void save(JSONObject json) throws IOException {	
 		this.json = json;
 		
 		save();
 	}
 	
-	/* (non-Javadoc)
-	 * @see java.io.Closeable#close()
-	 */
 	@Override
 	public void close() throws IOException {
 		this.file.close();

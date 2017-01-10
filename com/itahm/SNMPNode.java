@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONObject;
+import com.itahm.json.JSONObject;
 
 import com.itahm.icmp.ICMPListener;
 import com.itahm.json.RollingFile;
@@ -26,7 +26,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	private CriticalData critical;
 	
 	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
-		super(agent, ip, udp, community, ITAhM.MAX_TIMEOUT);
+		super(agent, ip, udp, community, Agent.MAX_TIMEOUT);
 		
 		this.agent = agent;
 		this.ip = ip;

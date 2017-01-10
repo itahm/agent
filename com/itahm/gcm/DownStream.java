@@ -52,6 +52,12 @@ public abstract class DownStream implements Runnable, Closeable {
 	@Override
 	public void close() {
 		this.thread.interrupt();
+		
+		try {
+			this.thread.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@Override
@@ -70,7 +76,7 @@ public abstract class DownStream implements Runnable, Closeable {
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException ie) {
-					ie.printStackTrace();
+					break;
 				}
 			}
 		}
