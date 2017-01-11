@@ -38,7 +38,7 @@ public class Query implements Command {
 					new JSONObject().put("error", "node not found").toString());
 			}
 		}
-		catch(NullPointerException npe) {
+		catch(NullPointerException npe) {npe.printStackTrace();
 			return Response.getInstance(Response.Status.UNAVAILABLE);
 		}
 		catch (JSONException jsone) {
