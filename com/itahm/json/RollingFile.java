@@ -23,6 +23,7 @@ public class RollingFile implements Closeable {
 	
 	/** rollingRoot, itahm/snmp/ip address/resource/index */
 	private final File root;
+	private final JSONSummary summary;
 	
 	private JSONFile summaryFile;
 	private JSONObject summaryData;
@@ -50,6 +51,8 @@ public class RollingFile implements Closeable {
 	public RollingFile(File rscRoot, String index) throws IOException {
 		root = new File(rscRoot, index);
 		root.mkdir();
+		
+		summary = new JSONSummary(root);
 	}
 	
 	private Calendar getCalendar() {
@@ -270,7 +273,7 @@ public class RollingFile implements Closeable {
 	}
 	
 	public JSONObject getData(long start, long end, boolean summary) {
-		return (summary? new JSONSummary(this.root): new JSONData(this.root)).getJSON(start, end);
+		return (summary? this.summary: new JSONData(this.root)).getJSON(start, end);
 	}
 	
 	@Override

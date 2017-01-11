@@ -4,93 +4,61 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 
-import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 public class JSONSummary implements Data {
 	
-	/** rollingRoot, itahm/snmp/ip address/resource/index */
 	private final File root;
-	
-	private Calendar date;
 	private long end;
-	private long nextDay;
-	private JSONObject data = null;
 	
 	public JSONSummary(File rollingRoot) {
-		this.root = rollingRoot;
+		root = rollingRoot;
 	}
 	
-	public JSONObject getJSON(JSONObject json) {
-		long date = this.date.getTimeInMillis();
-		String key = Long.toString(date);
+	public JSONObject getJSON(JSONObject json, Calendar date) {
+		JSONObject data;
 		
-		if (this.end < date) {
+		if (this.end < date.getTimeInMillis()) {
 			return json;
 		}
 		
-		if (date >= this.nextDay) {
-			nextDate();
-		}
+		data = getNextData(date);
 		
-		try {
-			if (this.data != null && this.data.has(key)) {
-				json.put(key, this.data.getJSONObject(key));
+		if (data != null) {
+			for (Object key : data.keySet()) {
+				json.put((String)key, data.getJSONObject((String)key));
 			}
 		}
-		catch (JSONException jsone) {
-		}
 		
-		this.date.add(Calendar.HOUR_OF_DAY, 1);
+		date.add(Calendar.DATE, 1);
 		
-		return getJSON(json);
+		return getJSON(json, date);
 	}
 	
-	private void nextDate() {
-		Calendar calendar = Calendar.getInstance();
-		long day = this.nextDay;
+	private JSONObject getNextData(Calendar date) {
+		File dir = new File(this.root, Long.toString(date.getTimeInMillis()));
+		File file = new File(dir, "summary");
 		
-		calendar.setTimeInMillis(this.nextDay);
-		calendar.add(Calendar.DATE, 1);
-		
-		this.nextDay = calendar.getTimeInMillis();
-		
-		try {
-			File dir = new File(this.root, Long.toString(day));
-			File file = new File(dir, "summary");
-			
-			this.data = JSONFile.getJSONObject(file);
+		try {	
+			return JSONFile.getJSONObject(file);
 		} catch (IOException e) {
-			this.data = null;
-			
-			this.date.setTimeInMillis(this.nextDay);
+			return null;
 		}
 	}
 
 	@Override
 	public JSONObject getJSON(long startMills, long endMills) {
-		Calendar calendar = Calendar.getInstance();
+		Calendar date = Calendar.getInstance();
 		
-		this.date = Calendar.getInstance();
+		date.setTimeInMillis(startMills);
 		
-		this.date.setTimeInMillis(startMills);
 		this.end = endMills;
 		
-		this.date.set(Calendar.MILLISECOND, 0);
-		this.date.set(Calendar.SECOND, 0);
-		this.date.set(Calendar.MINUTE, 0);
+		date.set(Calendar.MILLISECOND, 0);
+		date.set(Calendar.SECOND, 0);
+		date.set(Calendar.MINUTE, 0);
 		
-		calendar.setTimeInMillis(startMills);
-		calendar.set(Calendar.MILLISECOND, 0);
-		calendar.set(Calendar.SECOND, 0);
-		calendar.set(Calendar.MINUTE, 0);
-		calendar.set(Calendar.HOUR_OF_DAY, 0);
-		
-		nextDay = calendar.getTimeInMillis();
-		
-		nextDate();
-		
-		return getJSON(new JSONObject());
+		return getJSON(new JSONObject(), date);
 	}
 	
 }
