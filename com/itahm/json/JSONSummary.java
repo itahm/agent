@@ -20,7 +20,7 @@ public class JSONSummary extends Data {
 				JSONObject data = JSONFile.getJSONObject(file);
 				
 				for (Object key : data.keySet()) {
-					super.data.put((String)key, data.getJSONObject((String)key));
+					super.put((String)key, data.getJSONObject((String)key));
 				}
 			} catch (IOException e) {}
 		}

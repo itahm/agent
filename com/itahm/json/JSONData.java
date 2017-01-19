@@ -31,7 +31,7 @@ public class JSONData extends Data{
 					data = JSONFile.getJSONObject(f);
 					
 					for (Object key : data.keySet()) {
-						super.data.put((String)key, data.getLong((String)key));
+						super.put((String)key, data.getLong((String)key));
 					}
 				} catch (IOException | JSONException e) {
 					e.printStackTrace();

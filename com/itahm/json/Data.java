@@ -7,46 +7,50 @@ import com.itahm.json.JSONObject;
 
 public abstract class Data {
 
-	protected final JSONObject data;
-	
+	private final JSONObject data;
 	private final File root;
-	private Calendar date;
-	private long end;
 	
 	public Data(File f) {
 		root = f;
 		data = new JSONObject();
-		date = Calendar.getInstance();
 	}
 	
-	public void buildJSON() {
-		long mills = this.date.getTimeInMillis();
+	public void buildJSON(final long end, Calendar calendar) {
+		long mills = calendar.getTimeInMillis();
 		
-		if (this.end <= mills) {
+		if (end <= mills) {
 			return;
 		}
 		
 		buildNext(new File(this.root, Long.toString(mills)));
 		
-		this.date.add(Calendar.DATE, 1);
+		calendar.add(Calendar.DATE, 1);
 		
-		buildJSON();
+		buildJSON(end, calendar);
 	}
 	
 	public JSONObject getJSON(long startMills, long endMills) {
+		Calendar calendar = Calendar.getInstance();
+		
 		this.data.clear();
 		
-		this.end = endMills;
+		calendar.setTimeInMillis(startMills);
+		calendar.set(Calendar.MILLISECOND, 0);
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		
-		this.date.setTimeInMillis(startMills);
-		this.date.set(Calendar.MILLISECOND, 0);
-		this.date.set(Calendar.SECOND, 0);
-		this.date.set(Calendar.MINUTE, 0);
-		this.date.set(Calendar.HOUR_OF_DAY, 0);
-		
-		buildJSON();
+		buildJSON(endMills, calendar);
 		
 		return this.data;
+	}
+	
+	protected void put(String key, long value) {
+		this.data.put(key, value);
+	}
+	
+	protected void put(String key, JSONObject value) {
+		this.data.put(key, value);
 	}
 	
 	abstract protected void buildNext(File dir);
