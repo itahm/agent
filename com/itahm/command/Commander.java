@@ -12,7 +12,6 @@ public enum Commander {
 	MESSAGE("com.itahm.command.Message"),
 	TOP("com.itahm.command.Top"),
 	LOG("com.itahm.command.Log"),
-	HISTORY("com.itahm.command.History"),
 	SYSLOG("com.itahm.command.Syslog"),
 	ARP("com.itahm.command.ARP"),
 	CONFIG("com.itahm.command.Config"),

@@ -6,7 +6,6 @@ import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 import com.itahm.Agent;
-import com.itahm.SNMPNode;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
@@ -15,10 +14,10 @@ public class Select implements Command {
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			SNMPNode node = Agent.manager.snmp.getNode(data.getString("ip"));
+			JSONObject nodeData = Agent.manager.snmp.getNodeData(data.getString("ip"));
 			
-			if (node != null) {
-				return Response.getInstance(Response.Status.OK, node.getData().toString());
+			if (nodeData != null) {
+				return Response.getInstance(Response.Status.OK, nodeData.toString());
 			}
 			else {
 				return Response.getInstance(Response.Status.BADREQUEST,

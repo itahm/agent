@@ -101,6 +101,21 @@ public class JSONFile implements Closeable{
 		save();
 	}
 	
+	public static void save(File f, JSONObject json) throws IOException {
+		if (!f.isFile()) {
+			return;
+		}
+		
+		try (
+			RandomAccessFile raf = new RandomAccessFile(f, "w");
+		) {
+			raf.setLength(0);
+			raf.getChannel().write(ByteBuffer.wrap(json.toString().getBytes(StandardCharsets.UTF_8.name())));
+		}
+		catch (FileNotFoundException fnfe) {
+		}
+	}
+	
 	@Override
 	public void close() throws IOException {
 		this.file.close();

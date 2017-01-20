@@ -64,30 +64,6 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		return data;
 	}
 	
-	public JSONObject getHistory() {
-		JSONObject history = new JSONObject();
-		JSONObject data;
-		String resource;
-		
-		for (File node: this.nodeRoot.listFiles()) {
-			if (node.isDirectory()) {
-				data = new JSONObject();
-				
-				resource = node.getName();
-				
-				history.put(resource, data);
-				
-				for (File index: node.listFiles()) {
-					if (index.isDirectory()) {
-						data.put(index.getName(), JSONObject.NULL);
-					}
-				}
-			}
-		}
-		
-		return history;
-	}
-	
 	public void setCritical(JSONObject criticalCondition) {
 		if (criticalCondition == null) {
 			this.critical = null;

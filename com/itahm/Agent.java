@@ -27,7 +27,7 @@ import com.itahm.table.Table;
 public class Agent implements ITAhMAgent {
 
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.3.6";
+	public final static String VERSION = "1.3.3.7";
 	public final static int MAX_TIMEOUT = 10000;
 	public final static int ICMP_INTV = 1000;
 	public final static int MID_TIMEOUT = 5000;

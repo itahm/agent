@@ -17,6 +17,7 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.itahm.json.JSONException;
+import com.itahm.json.JSONFile;
 import com.itahm.json.JSONObject;
 import org.snmp4j.CommandResponder;
 import org.snmp4j.CommandResponderEvent;
@@ -196,6 +197,28 @@ public class SNMPAgent extends Snmp implements Closeable {
 		return this.nodeList.get(ip);
 	}
 	
+	public JSONObject getNodeData(String ip) {
+		SNMPNode node = this.nodeList.get(ip);
+		
+		if (node == null) {
+			return null;
+		}
+		
+		JSONObject data = node.getData();
+		
+		if (data.length() > 0) {
+			return data;
+		}
+		
+		try {
+			return JSONFile.getJSONObject(new File(nodeRoot, ip));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
 	public JSONObject getTop(int count) {
 		return this.topTable.getTop(count);		
 	}
@@ -247,9 +270,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 			return;
 		}
 		
-		if (monitor.getBoolean("shutdown")) {
-			JSONObject nodeData = node.getData();
-			
+		JSONObject nodeData = node.getData();
+		
+		if (monitor.getBoolean("shutdown")) {	
 			monitor.put("shutdown", false);
 			
 			this.monitorTable.save();
@@ -261,6 +284,12 @@ public class SNMPAgent extends Snmp implements Closeable {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		}
+		
+		try {
+			JSONFile.save(new File(new File(nodeRoot, ip), "node"), nodeData);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -287,7 +316,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			try {
 				
 				Agent.manager.log.write(ip,
-					nodeData.has("sysName")? String.format("%s [%s] 응답 없음.", ip, node.getData().getString("sysName")): String.format("%s 응답 없음.", ip),
+					nodeData.has("sysName")? String.format("%s [%s] 응답 없음.", ip, nodeData.getString("sysName")): String.format("%s 응답 없음.", ip),
 					"shutdown", false);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -338,7 +367,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		try {
 			Agent.manager.log.write(ip,
-				nodeData.has("sysName")? String.format("%s [%s] %s", ip, node.getData().getString("sysName"), message): String.format("%s %s", ip, message),
+				nodeData.has("sysName")? String.format("%s [%s] %s", ip, nodeData.getString("sysName"), message): String.format("%s %s", ip, message),
 				"critical", !critical);
 		} catch (IOException e) {
 			e.printStackTrace();

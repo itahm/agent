@@ -11,16 +11,6 @@ public class Device extends Table {
 	
 	public Device(File dataRoot) throws IOException {
 		super(dataRoot, DEVICE);
-		
-		if (isEmpty()) {
-			getJSONObject().put("127.0.0.1", new JSONObject()
-				.put("ip", "127.0.0.1")
-				.put("type", "unknown")
-				.put("ifEntry", new JSONObject())
-			);
-			
-			save();
-		}
 	}
 	
 	public JSONObject remove (String ip) {
@@ -74,6 +64,10 @@ public class Device extends Table {
 		
 		if (!device.has("ifEntry")) {
 			device.put("ifEntry", new JSONObject());
+		}
+		
+		if (!device.has("ifSpeed")) {
+			device.put("ifSpeed", new JSONObject());
 		}
 		
 		return super.put(ip, device);
