@@ -4,12 +4,8 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -19,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.itahm.json.JSONException;
 import com.itahm.json.JSONFile;
 import com.itahm.json.JSONObject;
+
 import org.snmp4j.CommandResponder;
 import org.snmp4j.CommandResponderEvent;
 import org.snmp4j.PDU;
@@ -34,6 +31,7 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 import com.itahm.snmp.TmpNode;
 import com.itahm.table.Table;
 import com.itahm.util.DataCleaner;
+import com.itahm.util.TopTable;
 
 public class SNMPAgent extends Snmp implements Closeable {
 	
@@ -42,13 +40,36 @@ public class SNMPAgent extends Snmp implements Closeable {
 	public final static OID	OID_LINKDOWN = new OID(new int [] {1,3,6,1,6,3,1,1,5,3});
 	public final static OID	OID_LINKUP = new OID(new int [] {1,3,6,1,6,3,1,1,5,4});
 	
+	public enum Resource {
+		RESPONSETIME("responseTime"),
+		FAILURERATE("failureRate"),
+		PROCESSOR("processor"),
+		MEMORY("memory"),
+		MEMORYRATE("memoryRate"),
+		STORAGE("storage"),
+		STORAGERATE("storageRate"),
+		THROUGHPUT("throughput"),
+		THROUGHPUTRATE("throughputRate"),
+		THROUGHPUTERR("throughputErr");
+		
+		private String string;
+		
+		private Resource(String string) {
+			this.string = string;
+		}
+		
+		public String toString() {
+			return this.string;
+		}
+	};
+	
 	public final File nodeRoot;
 	
 	private final Map<String, SNMPNode> nodeList;
 	private final Table monitorTable;
 	private final Table profileTable;
 	private final Table criticalTable;
-	private final TopTable topTable;
+	private final TopTable<Resource> topTable;
 	private final Timer timer;
 	private final Map<String, JSONObject> arp;
 	private final Map<String, String> network;
@@ -66,7 +87,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		criticalTable = Agent.getTable(Table.CRITICAL);
 		
-		topTable = new TopTable();
+		topTable = new TopTable<>(Resource.class);
 		
 		timer = new Timer();
 		
@@ -256,6 +277,20 @@ public class SNMPAgent extends Snmp implements Closeable {
 		};
 	}
 	
+	public JSONObject getFailureRate(String ip) {
+		SNMPNode node = this.nodeList.get(ip);
+		
+		if (node == null) {
+			return null;
+		}
+		
+		JSONObject json = new JSONObject();
+		
+		node.getFailureRate(json);
+		
+		return json;
+	}
+	
 	public void onSuccess(String ip, long time) {
 		SNMPNode node = this.nodeList.get(ip);
 		
@@ -374,7 +409,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 	}
 	
-	public void onSubmitTop(String ip, String resource, long value) {
+	public void onSubmitTop(String ip, Resource resource, long value) {
 		if (!this.nodeList.containsKey(ip)) {
 			return;
 		}
@@ -470,141 +505,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 			super.close();
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-	}
-
-	class TopTable implements Comparator<String> {
-		public final static String RESPONSETIME = "responseTime";
-		public final static String FAILURERATE = "failureRate";
-		public final static String PROCESSOR = "processor";
-		public final static String MEMORY = "memory";
-		public final static String MEMORYRATE = "memoryRate";
-		public final static String STORAGE = "storage";
-		public final static String STORAGERATE = "storageRate";
-		public final static String THROUGHPUT = "throughput";
-		public final static String THROUGHPUTRATE = "throughputRate";
-		public final static String THROUGHPUTERR = "throughputErr";
-		
-		private final Map<String, Long> responseTop = new HashMap<String, Long>();
-		private final Map<String, Long> failureTop = new HashMap<String, Long>();
-		private final Map<String, Long> processorTop = new HashMap<String, Long>();
-		private final Map<String, Long> memoryTop =  new HashMap<String, Long>();
-		private final Map<String, Long> memoryRateTop =  new HashMap<String, Long>();
-		private final Map<String, Long> storageTop = new HashMap<String, Long>();
-		private final Map<String, Long> storageRateTop = new HashMap<String, Long>();
-		private final Map<String, Long> throughputTop = new HashMap<String, Long>();
-		private final Map<String, Long> throughputRateTop = new HashMap<String, Long>();
-		private final Map<String, Long> throughputErrTop = new HashMap<String, Long>();
-		private Map<String, Long> sortTop;
-		
-		public synchronized void submit(String ip, String resource, long value) {
-			Map<String, Long> top = null;
-			
-			switch (resource) {
-			case RESPONSETIME:
-				top = this.responseTop;
-				
-				break;
-			case FAILURERATE:
-				top = this.failureTop;
-				
-				break;
-			case PROCESSOR:
-				top = this.processorTop;
-				
-				break;
-			case MEMORY:
-				top = this.memoryTop;
-				
-				break;
-			case MEMORYRATE:
-				top = this.memoryRateTop;
-				
-				break;
-			case STORAGE:
-				top = this.storageTop;
-				
-				break;
-			case STORAGERATE:
-				top = this.storageRateTop;
-				
-				break;
-			case THROUGHPUT:
-				top = this.throughputTop;
-				
-				break;
-			case THROUGHPUTRATE:
-				top = this.throughputRateTop;
-				
-				break;
-			case THROUGHPUTERR:
-				top = this.throughputErrTop;
-				
-				break;					
-			}
-			
-			if (top != null) {
-				top.put(ip, value);
-			}
-		}
-		
-		public synchronized JSONObject getTop(int count) {
-			JSONObject top = new JSONObject();
-			
-			top.put(RESPONSETIME, getTop(this.responseTop, count));
-			top.put(FAILURERATE, getTop(this.failureTop, count));
-			top.put(PROCESSOR, getTop(this.processorTop, count));
-			top.put(MEMORY, getTop(this.memoryTop, count));
-			top.put(MEMORYRATE, getTop(this.memoryRateTop, count));
-			top.put(STORAGE, getTop(this.storageTop, count));
-			top.put(STORAGERATE, getTop(this.storageRateTop, count));
-			top.put(THROUGHPUT, getTop(this.throughputTop, count));
-			top.put(THROUGHPUTRATE, getTop(this.throughputRateTop, count));
-			top.put(THROUGHPUTERR, getTop(this.throughputErrTop, count));
-			
-			return top;
-		}
-		
-		private Map<String, Long> getTop(Map<String, Long> sortTop, int count) {
-			Map<String, Long > top = new HashMap<String, Long>();
-			List<String> list = new ArrayList<String>();
-			String ip;
-			
-			this.sortTop = sortTop;
-			
-	        list.addAll(sortTop.keySet());
-	         
-	        Collections.sort(list, this);
-	        
-	        count = Math.min(list.size(), count);
-	        for (int i=0; i< count; i++) {
-	        	ip = list.get(i);
-	        	
-	        	top.put(ip, this.sortTop.get(ip));
-	        }
-	        
-	        return top;
-		}
-
-		public void remove(String ip) {
-			this.responseTop.remove(ip);
-			this.failureTop.remove(ip);
-			this.processorTop.remove(ip);
-			this.memoryTop.remove(ip);
-			this.memoryRateTop.remove(ip);
-			this.storageTop.remove(ip);
-			this.storageRateTop.remove(ip);
-			this.throughputTop.remove(ip);
-			this.throughputRateTop.remove(ip);
-			this.throughputErrTop.remove(ip);
-		}
-		
-		@Override
-		public int compare(String ip1, String ip2) {
-			Long value1 = this.sortTop.get(ip1);
-            Long value2 = this.sortTop.get(ip2);
-             
-            return value2.compareTo(value1);
 		}
 	}
 	

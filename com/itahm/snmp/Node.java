@@ -32,14 +32,13 @@ import org.snmp4j.smi.VariableBinding;
 
 public abstract class Node implements ResponseListener {
 	
+	private final static int MAX_REQUEST = 100;
 	private final RequestPDU pdu;
 	private final Snmp snmp;
 	private final CommunityTarget target;
 	protected long lastResponse;
 	private Integer enterprise;
-	private long requestCount = 0;
 	private long failureCount = 0;
-	private boolean reset = false;
 	
 	/**
 	 * 이전 데이터 보관소
@@ -72,16 +71,7 @@ public abstract class Node implements ResponseListener {
 		target.setTimeout(timeout);
 	}
 	
-	public void request() {
-		if (this.reset) {
-			this.reset = false;
-			
-			this.requestCount = 0;
-			this.failureCount = 0;
-		}
-		
-		this.requestCount++;
-		
+	public void request() {		
 		// 존재하지 않는 index 지워주기 위해 초기화
 		hrProcessorEntry = new HashMap<String, Integer>();
 		hrStorageEntry = new HashMap<String, JSONObject>();
@@ -98,13 +88,16 @@ public abstract class Node implements ResponseListener {
 		sendRequest(this.pdu);
 	}
 	
-	public int getFailureRate() {
-		
-		return (int)(this.requestCount > 0? (this.failureCount *100 / this.requestCount): 0);
+	public void getFailureRate(JSONObject json) {
+		json.put("failure", this.failureCount);
+	}
+	
+	public long getFailureRate() {
+		return this.failureCount;
 	}
 	
 	public void resetResponse() {
-		this.reset = true;
+		this.failureCount = 0;
 	}
 
 	public JSONObject getData() {
@@ -432,7 +425,7 @@ public abstract class Node implements ResponseListener {
 		if (response == null) {
 			onFailure();
 			
-			this.failureCount++;
+			this.failureCount = Math.min(MAX_REQUEST, this.failureCount +1);
 			
 			return;
 		}
@@ -462,6 +455,8 @@ public abstract class Node implements ResponseListener {
 		
 		this.lastResponse = Calendar.getInstance().getTimeInMillis();
 		this.data.put("lastResponse", this.lastResponse);
+		
+		this.failureCount = Math.max(0, this.failureCount -1);
 		
 		onSuccess();
 			

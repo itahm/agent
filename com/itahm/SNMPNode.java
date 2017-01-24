@@ -10,31 +10,57 @@ import com.itahm.json.JSONObject;
 
 import com.itahm.icmp.ICMPListener;
 import com.itahm.json.RollingFile;
-import com.itahm.json.RollingMap;
-import com.itahm.json.RollingMap.Resource;
 import com.itahm.snmp.Node;
+import com.itahm.table.Table;
 
 public class SNMPNode extends Node implements ICMPListener, Closeable {
-
+	
+	public enum Rolling {
+		HRPROCESSORLOAD("hrProcessorLoad"),
+		IFINBYTES("ifInBytes"),
+		IFOUTBYTES("ifOutBytes"),
+		IFINOCTETS("ifInOctets"),
+		IFOUTOCTETS("ifOutOctets"),
+		IFINERRORS("ifInErrors"),
+		IFOUTERRORS("ifOutErrors"),
+		HRSTORAGEUSED("hrStorageUsed"),
+		RESPONSETIME("responseTime");
+		
+		private String database;
+		
+		private Rolling(String database) {
+			this.database = database;
+		}
+		
+		public String toString() {
+			return this.database;
+		}
+	}
+	
 	private final File nodeRoot;
-	private final RollingMap rollingMap;
+	private final Map<Rolling, HashMap<String, RollingFile>> rollingMap = new HashMap<Rolling, HashMap<String, RollingFile>>();
 	private final String ip;
 	private final SNMPAgent agent;
+	private final Table deviceTable;
 	private final ICMPNode icmp;
 	private long responseTime;
 	private long lastRolling = 0;
-	private CriticalData critical;
+	private Critical critical;
 	
 	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
 		super(agent, ip, udp, community, Agent.MAX_TIMEOUT);
 		
 		this.agent = agent;
 		this.ip = ip;
-		
+		deviceTable = Agent.getTable(Table.DEVICE);
 		nodeRoot = new File(agent.nodeRoot, ip);
 		nodeRoot.mkdirs();
 		
-		rollingMap = new RollingMap(nodeRoot);
+		for (Rolling database : Rolling.values()) {
+			rollingMap.put(database, new HashMap<String, RollingFile>());
+			
+			new File(nodeRoot, database.toString()).mkdir();
+		}
 		
 		icmp = new ICMPNode(this, ip);
 		
@@ -47,11 +73,30 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		return this.ip;
 	}
 	
+	private void putData(Rolling database, String index, long value) {
+		Map<String, RollingFile> map = this.rollingMap.get(database);
+		RollingFile rollingFile = map.get(index);
+		
+		if (rollingFile == null) {
+			try {
+				map.put(index, rollingFile = new RollingFile(new File(this.nodeRoot, database.toString()), index));
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+		
+		try {
+			rollingFile._roll(value);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public JSONObject getData(String database, String index, long start, long end, boolean summary) {
 		JSONObject data = null;
 	
 		try {
-			RollingFile rollingFile = this.rollingMap.getFile(Resource.valueOf(database.toUpperCase()), index);
+			RollingFile rollingFile = this.rollingMap.get(Rolling.valueOf(database.toUpperCase())).get(index);
 			
 			if (rollingFile != null) {
 				data = rollingFile.getData(start, end, summary);
@@ -69,7 +114,12 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			this.critical = null;
 		}
 		else {
-			this.critical = new CriticalData(criticalCondition);
+			this.critical = new Critical(criticalCondition) {
+				
+				@Override
+				public void onCritical(boolean isCritical, Resource resource, String index, long rate) {
+					agent.onCritical(ip, isCritical, String.format("%s.%s %d%% %s.", resource, index, rate, isCritical? "임계 초과": "정상"));
+				}};
 		}
 	}
 	
@@ -109,9 +159,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		return "";
 	}
 	
-	@Override
-	public void onSuccess() {
-		
+	private void processSuccess() {
 		JSONObject data;
 		JSONObject oldData;
 		long max;
@@ -133,24 +181,24 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			this.agent.onARP(mac, super.arpTable.get(mac), super.maskTable.get(super.macTable.get(mac)));
 		}
 	
-		this.rollingMap.put(Resource.RESPONSETIME, "0", this.responseTime);
+		putData(Rolling.RESPONSETIME, "0", this.responseTime);
 		
-		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.RESPONSETIME, this.responseTime);
-		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.FAILURERATE, getFailureRate());
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.RESPONSETIME, this.responseTime);
 		
 		max = 0;
 		for(String index: super.hrProcessorEntry.keySet()) {
 			value = super.hrProcessorEntry.get(index);
 			
-			this.rollingMap.put(Resource.HRPROCESSORLOAD, index, value);
+			putData(Rolling.HRPROCESSORLOAD, index, value);
+			
 			if (this.critical != null) {
-				this.critical.analyze(CriticalData.PROCESSOR, index, 100, value);
+				this.critical.analyze(Critical.Resource.PROCESSOR, index, 100, value);
 			}
 			
 			max = Math.max(max, value);
 		}
 		
-		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.PROCESSOR, max);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.PROCESSOR, max);
 		
 		max = 0;
 		maxRate = 0;
@@ -165,21 +213,22 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			}
 			
 			value = 1L* tmpValue * data.getInt("hrStorageAllocationUnits");
-			this.rollingMap.put(Resource.HRSTORAGEUSED, index, value);
+			
+			putData(Rolling.HRSTORAGEUSED, index, value);
 			
 			switch(data.getInt("hrStorageType")) {
 			case 2:
 				if (this.critical != null) {
-					this.critical.analyze(CriticalData.MEMORY, index, capacity, tmpValue);
+					this.critical.analyze(Critical.Resource.MEMORY, index, capacity, tmpValue);
 				}
 				
-				this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.MEMORY, value);
-				this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.MEMORYRATE, tmpValue *100L / capacity);
+				this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.MEMORY, value);
+				this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.MEMORYRATE, tmpValue *100L / capacity);
 				
 				break;
 			case 4:
 				if (this.critical != null) {
-					this.critical.analyze(CriticalData.STORAGE, index, capacity, tmpValue);
+					this.critical.analyze(Critical.Resource.STORAGE, index, capacity, tmpValue);
 				}
 				
 				max = Math.max(max, value);
@@ -187,12 +236,14 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			}
 		}
 		
-		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.STORAGE, max);
-		this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.STORAGERATE, maxRate);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.STORAGE, max);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.STORAGERATE, maxRate);
 		
 		if (this.lastRolling > 0) {
 			// 보관된 값
 			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
+			JSONObject device = deviceTable.getJSONObject(this.ip);
+			JSONObject ifSpeed = device.has("ifSpeed")? device.getJSONObject("ifSpeed"): null;
 			long bytes;
 			
 			max = 0;
@@ -214,15 +265,20 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 					continue;
 				}
 				
-				if (data.has("ifHighSpeed")) {
-					capacity = data.getLong("ifHighSpeed");
+				if (ifSpeed !=null && ifSpeed.has(index)) {
+					capacity = ifSpeed.getLong(index);
+				}
+				else {
+					if (data.has("ifHighSpeed")) {
+						capacity = data.getLong("ifHighSpeed");
+					}
+					
+					if (capacity == 0 && data.has("ifSpeed")) {
+						capacity = data.getLong("ifSpeed");
+					}
 				}
 				
-				if (capacity == 0 && data.has("ifSpeed")) {
-					capacity = data.getLong("ifSpeed");
-				}
-				
-				if (capacity == 0) {
+				if (capacity <= 0) {
 					continue;
 				}
 				
@@ -234,7 +290,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 						
 						data.put("ifInErrors", value);
 					
-						this.rollingMap.put(Resource.IFINERRORS, index, value);
+						putData(Rolling.IFINERRORS, index, value);
 						
 						maxErr = Math.max(maxErr, value);
 					}
@@ -248,7 +304,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 						
 						data.put("ifOutErrors", value);
 						
-						this.rollingMap.put(Resource.IFOUTERRORS, index, value);
+						putData(Rolling.IFOUTERRORS, index, value);
 						
 						maxErr = Math.max(maxErr, value);
 					}
@@ -269,7 +325,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 					
 					data.put("ifInBPS", bytes);
 					
-					this.rollingMap.put(Resource.IFINOCTETS, index, bytes);
+					putData(Rolling.IFINOCTETS, index, bytes);
 					
 					max = Math.max(max, bytes);
 					maxRate = Math.max(maxRate, bytes *100L / capacity);
@@ -293,21 +349,33 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 					
 					data.put("ifOutBPS", bytes);
 					
-					this.rollingMap.put(Resource.IFOUTOCTETS, index, bytes);
+					putData(Rolling.IFOUTOCTETS, index, bytes);
 					
 					max = Math.max(max, bytes);
 					maxRate = Math.max(maxRate, bytes *100L / capacity);
 				}
 				
 				if (this.critical != null) {
-					this.critical.analyze(CriticalData.THROUGHPUT, index, capacity, max);
+					this.critical.analyze(Critical.Resource.THROUGHPUT, index, capacity, max);
 				}
 			}
 			
-			this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.THROUGHPUT, max);
-			this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.THROUGHPUTRATE, maxRate);
-			this.agent.onSubmitTop(this.ip, SNMPAgent.TopTable.THROUGHPUTERR, maxErr);
+			this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUT, max);
+			this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUTRATE, maxRate);
+			this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUTERR, maxErr);
 		}
+		
+	}
+	@Override
+	public void onSuccess() {
+		try {
+			processSuccess();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.FAILURERATE, getFailureRate());
 		
 		this.lastRolling = super.lastResponse;
 		
@@ -316,6 +384,8 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 
 	@Override
 	protected void onFailure() {
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.FAILURERATE, getFailureRate());
+		
 		this.agent.onTimeout(this.ip);
 	}
 	
@@ -336,128 +406,6 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	@Override
 	public void close() throws IOException {
 		this.icmp.stop();
-	}
-	
-	class CriticalData {
-	
-		public static final String PROCESSOR = "processor";
-		public static final String MEMORY = "memory";
-		public static final String STORAGE = "storage";
-		public static final String THROUGHPUT = "throughput";
-		
-		private final Map<String, Critical> processor = new HashMap<String, Critical>();
-		private final Map<String, Critical> storage = new HashMap<String, Critical>();
-		private final Map<String, Critical> throughput = new HashMap<String, Critical>();
-		
-		public CriticalData(JSONObject criticalCondition) {
-			JSONObject list;
-			Map<String, Critical> mapping;
-			String resource;
-			
-			for (Object key : criticalCondition.keySet()) {
-				resource = (String)key;
-				
-				switch (resource) {
-				case PROCESSOR:
-					mapping = this.processor;
-					
-					break;
-				case MEMORY:
-				case STORAGE:
-					mapping = this.storage;
-					break;
-					
-				case THROUGHPUT:
-					mapping = this.throughput;
-					break;
-					
-					default: continue;
-				}
-				
-				list = criticalCondition.getJSONObject(resource);
-					
-				for (Object index: list.keySet()) {
-					mapping.put((String)index, new Critical(list.getJSONObject((String)index)));
-				}
-			}
-		}
-		
-		public void analyze(String resource, String index, long max, long current) {
-			Map<String, Critical> mapping = null;
-			Critical critical = null;
-			
-			switch (resource) {
-			case PROCESSOR:
-				mapping = this.processor;
-				resource = "Processor load";
-				
-				break;
-			case MEMORY:
-				mapping = this.storage;
-				resource = "Physical memory";
-				
-				break;
-				
-			case STORAGE:
-				mapping = this.storage;
-				resource = "Storage usage";
-				
-				break;
-				
-			case THROUGHPUT:
-				mapping = this.throughput;
-				resource = "interface throughput";
-				
-				break;
-				
-				default: return;
-			}
-			
-			critical = mapping.get(index);
-			
-			if (critical == null) {
-				return;
-			}
-			
-			long rate = current *100 / max;
-			int value = critical.value(rate);
-			
-			if ((value & Critical.DIFF) > 0) {
-				agent.onCritical(ip, (value & Critical.CRITIC) > 0
-					, String.format("%s.%s %d%% %s", resource, index, rate, (value & Critical.CRITIC) > 0? " 성능 임계 초과.": " 성능 정상."));
-			}
-		}
-	}
-	
-	class Critical {
-		
-		public static final int DIFF = 0x01;
-		public static final int CRITIC = 0x10;
-		
-		private final int limit;
-		private Boolean status;
-		
-		public Critical(JSONObject criticalData) {
-			this.limit = criticalData.getInt("limit");			
-		}
-		
-		public int value(long current) {
-			boolean critical = this.limit <= current;
-			int value = critical? CRITIC: 0;
-			
-			if (this.status == null) {
-				this.status = new Boolean(critical);
-			}
-			else {
-				if (this.status != critical) {
-					value |= DIFF;
-				}
-				
-				this.status = critical;
-			}
-		
-			return value;
-		}
 	}
 	
 }

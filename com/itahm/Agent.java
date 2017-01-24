@@ -27,13 +27,13 @@ import com.itahm.table.Table;
 public class Agent implements ITAhMAgent {
 
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.3.7";
+	public final static String VERSION = "1.3.3.77";
 	public final static int MAX_TIMEOUT = 10000;
 	public final static int ICMP_INTV = 1000;
 	public final static int MID_TIMEOUT = 5000;
 	public final static int DEF_TIMEOUT = 3000;
 	
-	private static Map<String, Table> tableMap;
+	private static Map<String, Table> tableMap = new HashMap<>();
 	
 	public final static class manager {
 		public static Log log;
@@ -43,8 +43,6 @@ public class Agent implements ITAhMAgent {
 	}
 	
 	public Agent() {
-		tableMap = new HashMap<>();
-		
 		System.out.println(String.format("ITAhM Agent version %s ready.", VERSION));
 	}
 	
