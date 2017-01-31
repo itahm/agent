@@ -200,6 +200,14 @@ public class SNMPAgent extends Snmp implements Closeable {
 	
 	public void testNode(final String ip, boolean onFailure) {
 		if (this.nodeList.containsKey(ip)) {
+			if(onFailure) {
+				try {
+					Agent.manager.log.write(ip, "이미 등록된 노드 입니다.", "information", false, false);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
 			return;
 		}
 		
@@ -214,7 +222,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			try {
 				node.addProfile((String)name, profile.getInt("udp"), profile.getString("community"));
 			} catch (UnknownHostException | JSONException e) {
-				return;
+				e.printStackTrace();
 			}
 		}
 		
@@ -239,7 +247,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 		
 		try {
-			return JSONFile.getJSONObject(new File(nodeRoot, ip));
+			return JSONFile.getJSONObject(new File(this.nodeRoot, ip));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -298,6 +306,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 		return json;
 	}
 	
+	/*
+	 * ICMP 요청에 대한 응답
+	 */
 	public void onSuccess(String ip, long time) {
 		SNMPNode node = this.nodeList.get(ip);
 		
@@ -312,9 +323,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 			return;
 		}
 		
-		JSONObject nodeData = node.getData();
-		
 		if (monitor.getBoolean("shutdown")) {	
+			JSONObject nodeData = node.getData();
+			
 			monitor.put("shutdown", false);
 			
 			this.monitorTable.save();
@@ -322,16 +333,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 			try {
 				Agent.manager.log.write(ip,
 					nodeData.has("sysName")? String.format("%s [%s] 정상.", ip, nodeData.getString("sysName")): String.format("%s 정상.", ip),
-					"shutdown", true);
+					"shutdown", true, true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		}
-		
-		try {
-			JSONFile.save(new File(new File(nodeRoot, ip), "node"), nodeData);
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 	}
 	
@@ -359,7 +364,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 				
 				Agent.manager.log.write(ip,
 					nodeData.has("sysName")? String.format("%s [%s] 응답 없음.", ip, nodeData.getString("sysName")): String.format("%s 응답 없음.", ip),
-					"shutdown", false);
+					"shutdown", false, true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -368,11 +373,23 @@ public class SNMPAgent extends Snmp implements Closeable {
 		node.request();
 	}
 	
+	/**
+	 * snmp 요청에 대한 응답
+	 * @param ip
+	 */
 	public void onResponse(String ip) {
 		SNMPNode node = this.nodeList.get(ip);
 		
 		if (node == null) {
 			return;
+		}
+		
+		try {
+			File f = new File(new File(this.nodeRoot, ip), "node");
+			
+			JSONFile.save(f, node.getData());
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		
 		sendNextRequest(node);
@@ -410,7 +427,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		try {
 			Agent.manager.log.write(ip,
 				nodeData.has("sysName")? String.format("%s [%s] %s", ip, nodeData.getString("sysName"), message): String.format("%s %s", ip, message),
-				"critical", !critical);
+				"critical", !critical, true);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

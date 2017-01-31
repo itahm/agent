@@ -75,31 +75,36 @@ public class ICMPAgent implements ICMPListener, Closeable {
 
 			@Override
 			public void run() {
+				boolean isReachable = false;
+				
 				try {
-					if (InetAddress.getByName(ip).isReachable(Agent.DEF_TIMEOUT)) {
-						monitorTable.getJSONObject().put(ip, new JSONObject()
-							.put("protocol", "icmp")
-							.put("ip", ip)
-							.put("shutdown", false));
-						
-						monitorTable.save();
-						
-						addNode(ip);
-						
-						Agent.manager.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "shutdown", true);
-						
-						return;
-					}
-					
+					isReachable = InetAddress.getByName(ip).isReachable(Agent.DEF_TIMEOUT);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				
-				try {	
-					Agent.manager.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown", false);
-				} catch (IOException e) {
-					e.printStackTrace();
+				if (!isReachable) {
+					try {	
+						Agent.manager.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown", false, false);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				else {
+					monitorTable.getJSONObject().put(ip, new JSONObject()
+						.put("protocol", "icmp")
+						.put("ip", ip)
+						.put("shutdown", false));
+					
+					monitorTable.save();
+					
+					addNode(ip);
+					
+					try {
+						Agent.manager.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "shutdown", true, false);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 			
@@ -129,7 +134,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			this.monitorTable.save();
 			
 			try {
-				Agent.manager.log.write(ip, String.format("%s ICMP 정상.", ip), "shutdown", true);
+				Agent.manager.log.write(ip, String.format("%s ICMP 정상.", ip), "shutdown", true, true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -160,7 +165,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			
 			try {
 				
-				Agent.manager.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown", false);
+				Agent.manager.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown", false, true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

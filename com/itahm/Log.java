@@ -94,7 +94,7 @@ public class Log implements Closeable {
 		return index; 
 	}
 	
-	public void write(String ip, String message, String type, boolean status) throws IOException {
+	public void write(String ip, String message, String type, boolean status, boolean broadcast) throws IOException {
 		JSONObject logData = new JSONObject();
 		long index = getIndex();
 		
@@ -127,8 +127,10 @@ public class Log implements Closeable {
 			
 			waiter.clear();
 		}
-			
-		Agent.manager.gcmm.broadcast(logData.getString("message"));
+		
+		if(broadcast) {
+			Agent.manager.gcmm.broadcast(logData.getString("message"));
+		}
 	}
 	
 	

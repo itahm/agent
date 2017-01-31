@@ -44,7 +44,7 @@ public class TestNode extends TmpNode {
 		this.agent.addNode(this.ip, profileName);
 		
 		try {
-			Agent.manager.log.write(ip, String.format("%s SNMP 등록 성공.", super.ip), "", true);
+			Agent.manager.log.write(ip, String.format("%s SNMP 등록 성공.", super.ip), "", true, false);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -52,12 +52,12 @@ public class TestNode extends TmpNode {
 
 	@Override
 	public void onFailure() {
-		if (!onFailure) {
+		if (!this.onFailure) {
 			return;
 		}
 		
 		try {
-			Agent.manager.log.write(ip, String.format("%s SNMP 등록 실패.", super.ip), "shutdown", false);
+			Agent.manager.log.write(ip, String.format("%s SNMP 등록 실패.", super.ip), "shutdown", false, false);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -196,11 +196,14 @@ public class Communicator extends Listener {
 			}
 		}
 		
-		try(Communicator c = new Communicator(tcp, path, clean)) {
+		try {
+		
+			final Communicator c = new Communicator(tcp, path, clean);
 			
 			Runtime.getRuntime().addShutdownHook(
 				new Thread() {
 					public void run() {
+						c.close();
 					}
 				});
 		}

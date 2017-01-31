@@ -78,15 +78,15 @@ abstract public class TmpNode implements ResponseListener {
 	public void onResponse(ResponseEvent event) {
 		((Snmp)event.getSource()).cancel(event.getRequest(), this);
 
-		if (event.getResponse() == null) { // response timed out
-			this.list.pop();
-			
+		CommunityTarget target = this.list.pop();
+		
+		if (event.getResponse() == null) { // response timed out	
 			test();
 		}
 		else {
 			int status = event.getResponse().getErrorStatus();
 			
-			onSuccess(this.profileMap.get(this.list.peek()));
+			onSuccess(this.profileMap.get(target));
 			
 			if (status != PDU.noError) {
 				new Exception("status "+ status).printStackTrace();

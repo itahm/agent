@@ -172,16 +172,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		return "";
 	}
 	
-	private void processSuccess() {
-		JSONObject data;
-		JSONObject oldData;
-		long max;
-		long maxRate;
-		long maxErr;
-		long value;
-		long capacity;
-		long tmpValue;
-		
+	private void parseNetwork() {
 		for (String network : super.networkTable.keySet()) {
 			if ("127.0.0.1".equals(network)) {
 				continue;
@@ -189,16 +180,29 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			
 			this.agent.onNetwork(network, super.networkTable.get(network));
 		}
-		
-		for (String mac : super.arpTable.keySet()) {
-			this.agent.onARP(mac, super.arpTable.get(mac), super.maskTable.get(super.macTable.get(mac)));
-		}
+	}
 	
+	private void parseARP() {
+		Integer index;
+		for (String mac : super.arpTable.keySet()) {
+			index = super.macTable.get(mac);
+			
+			if (index != null) {
+				this.agent.onARP(mac, super.arpTable.get(mac), super.maskTable.get(index));
+			}
+		}
+	}
+	
+	private void parseResponseTime() {
 		putData(Rolling.RESPONSETIME, "0", this.responseTime);
 		
 		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.RESPONSETIME, this.responseTime);
+	}
+	
+	private void parseProcessor() {
+		long max = 0;
+		long value;
 		
-		max = 0;
 		for(String index: super.hrProcessorEntry.keySet()) {
 			value = super.hrProcessorEntry.get(index);
 			
@@ -210,26 +214,40 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			
 			max = Math.max(max, value);
 		}
-		
+	
 		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.PROCESSOR, max);
+	}
+	
+	private void parseStorage() {
+		JSONObject data;
+		long max = 0;
+		long maxRate = 0;
+		long value;
+		long capacity;
+		long tmpValue;
+		int type;
 		
-		max = 0;
-		maxRate = 0;
 		for(String index: super.hrStorageEntry.keySet()) {
 			data = super.hrStorageEntry.get(index);
 			
-			capacity = data.getInt("hrStorageSize");
-			tmpValue = data.getInt("hrStorageUsed");
+			try {
+				capacity = data.getInt("hrStorageSize");
+				tmpValue = data.getInt("hrStorageUsed");
+				value = 1L* tmpValue * data.getInt("hrStorageAllocationUnits");
+				type = data.getInt("hrStorageType");
+			} catch (JSONException jsone) {
+				System.out.println(jsone);
+				
+				return;
+			}
 			
 			if (capacity <= 0) {
 				continue;
 			}
 			
-			value = 1L* tmpValue * data.getInt("hrStorageAllocationUnits");
-			
 			putData(Rolling.HRSTORAGEUSED, index, value);
 			
-			switch(data.getInt("hrStorageType")) {
+			switch(type) {
 			case 2:
 				if (this.critical != null) {
 					this.critical.analyze(Critical.Resource.MEMORY, index, capacity, tmpValue);
@@ -251,139 +269,151 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		
 		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.STORAGE, max);
 		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.STORAGERATE, maxRate);
+	}
+	
+	private void parseInterface(JSONObject ifEntry) {
+		JSONObject device = deviceTable.getJSONObject(this.ip);
+		JSONObject ifSpeed = device.has("ifSpeed")? device.getJSONObject("ifSpeed"): null;
+		JSONObject data;
+		JSONObject oldData;
+		long value;
+		long capacity;
+		long bytes;
+		long max = 0;
+		long maxRate = 0;
+		long maxErr = 0;
 		
-		if (this.lastRolling > 0) {
-			// 보관된 값
-			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
-			JSONObject device = deviceTable.getJSONObject(this.ip);
-			JSONObject ifSpeed = device.has("ifSpeed")? device.getJSONObject("ifSpeed"): null;
-			long bytes;
+		for(String index: super.ifEntry.keySet()) {
+			// 특정 index가 새로 생성되었다면 보관된 값이 없을수도 있음.
+			if (!ifEntry.has(index)) {
+				continue;
+			}
 			
-			max = 0;
-			maxRate = 0;
-			maxErr = 0;
+			data = super.ifEntry.get(index);
+			capacity = 0;
 			
-			for(String index: super.ifEntry.keySet()) {
-				// 특정 index가 새로 생성되었다면 보관된 값이 없을수도 있음.
-				if (!ifEntry.has(index)) {
-					continue;
-				}
+			oldData = ifEntry.getJSONObject(index);
+			
+			if (!data.has("ifAdminStatus") || data.getInt("ifAdminStatus") != 1) {
+				continue;
+			}
+			
+			if (ifSpeed !=null && ifSpeed.has(index)) {
+				capacity = ifSpeed.getLong(index);
+			}
+			else if (data.has("ifHighSpeed")) {
+				capacity = data.getLong("ifHighSpeed");
+			}
+			else if (capacity == 0 && data.has("ifSpeed")) {
+				capacity = data.getLong("ifSpeed");
+			}
+			
+			if (capacity <= 0) {
+				continue;
+			}
+			
+			if (data.has("ifInErrors")) {
+				value = data.getInt("ifInErrors");
 				
-				data = super.ifEntry.get(index);
-				capacity = 0;
-				
-				oldData = ifEntry.getJSONObject(index);
-				
-				if (!data.has("ifAdminStatus") || data.getInt("ifAdminStatus") != 1) {
-					continue;
-				}
-				
-				if (ifSpeed !=null && ifSpeed.has(index)) {
-					capacity = ifSpeed.getLong(index);
-				}
-				else if (data.has("ifHighSpeed")) {
-					capacity = data.getLong("ifHighSpeed");
-				}
-				else if (capacity == 0 && data.has("ifSpeed")) {
-					capacity = data.getLong("ifSpeed");
-				}
-				
-				if (capacity <= 0) {
-					continue;
-				}
-				
-				if (data.has("ifInErrors")) {
-					value = data.getInt("ifInErrors");
+				if (oldData.has("ifInErrors")) {
+					value -= oldData.getInt("ifInErrors");
 					
-					if (oldData.has("ifInErrors")) {
-						value -= oldData.getInt("ifInErrors");
-						
-						data.put("ifInErrors", value);
+					data.put("ifInErrors", value);
+				
+					putData(Rolling.IFINERRORS, index, value);
 					
-						putData(Rolling.IFINERRORS, index, value);
-						
-						maxErr = Math.max(maxErr, value);
-					}
-				}
-				
-				if (data.has("ifOutErrors")) {
-					value = data.getInt("ifOutErrors");
-					
-					if (oldData.has("ifOutErrors")) {
-						value -= oldData.getInt("ifOutErrors");
-						
-						data.put("ifOutErrors", value);
-						
-						putData(Rolling.IFOUTERRORS, index, value);
-						
-						maxErr = Math.max(maxErr, value);
-					}
-				}
-				
-				bytes = -1;
-				
-				if (data.has("ifHCInOctets") && oldData.has("ifHCInOctets")) {
-					bytes = data.getLong("ifHCInOctets") - oldData.getLong("ifHCInOctets");
-				}
-				
-				if (data.has("ifInOctets") && oldData.has("ifInOctets")) {
-					bytes = Math.max(bytes, data.getLong("ifInOctets") - oldData.getLong("ifInOctets"));
-				}
-				
-				if (bytes  >= 0) {
-					bytes = bytes *8000 / (super.lastResponse - this.lastRolling);
-					
-					data.put("ifInBPS", bytes);
-					
-					putData(Rolling.IFINOCTETS, index, bytes);
-					
-					max = Math.max(max, bytes);
-					maxRate = Math.max(maxRate, bytes *100L / capacity);
-				}
-				
-				bytes = -1;
-				
-				if (data.has("ifHCOutOctets") && oldData.has("ifHCOutOctets")) {
-					bytes = data.getLong("ifHCOutOctets") - oldData.getLong("ifHCOutOctets");
-				}
-				
-				if (data.has("ifOutOctets") && oldData.has("ifOutOctets")) {
-					bytes = Math.max(bytes, data.getLong("ifOutOctets") - oldData.getLong("ifOutOctets"));
-				}
-				else {
-					continue;
-				}
-				
-				if (bytes >= 0) {
-					bytes = bytes *8000 / (super.lastResponse - this.lastRolling);
-					
-					data.put("ifOutBPS", bytes);
-					
-					putData(Rolling.IFOUTOCTETS, index, bytes);
-					
-					max = Math.max(max, bytes);
-					maxRate = Math.max(maxRate, bytes *100L / capacity);
-				}
-				
-				if (this.critical != null) {
-					this.critical.analyze(Critical.Resource.THROUGHPUT, index, capacity, max);
+					maxErr = Math.max(maxErr, value);
 				}
 			}
 			
-			this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUT, max);
-			this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUTRATE, maxRate);
-			this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUTERR, maxErr);
+			if (data.has("ifOutErrors")) {
+				value = data.getInt("ifOutErrors");
+				
+				if (oldData.has("ifOutErrors")) {
+					value -= oldData.getInt("ifOutErrors");
+					
+					data.put("ifOutErrors", value);
+					
+					putData(Rolling.IFOUTERRORS, index, value);
+					
+					maxErr = Math.max(maxErr, value);
+				}
+			}
+			
+			bytes = -1;
+			
+			if (data.has("ifHCInOctets") && oldData.has("ifHCInOctets")) {
+				bytes = data.getLong("ifHCInOctets") - oldData.getLong("ifHCInOctets");
+			}
+			
+			if (data.has("ifInOctets") && oldData.has("ifInOctets")) {
+				bytes = Math.max(bytes, data.getLong("ifInOctets") - oldData.getLong("ifInOctets"));
+			}
+			
+			if (bytes  >= 0) {
+				bytes = bytes *8000 / (super.lastResponse - this.lastRolling);
+				
+				data.put("ifInBPS", bytes);
+				
+				putData(Rolling.IFINOCTETS, index, bytes);
+				
+				max = Math.max(max, bytes);
+				maxRate = Math.max(maxRate, bytes *100L / capacity);
+			}
+			
+			bytes = -1;
+			
+			if (data.has("ifHCOutOctets") && oldData.has("ifHCOutOctets")) {
+				bytes = data.getLong("ifHCOutOctets") - oldData.getLong("ifHCOutOctets");
+			}
+			
+			if (data.has("ifOutOctets") && oldData.has("ifOutOctets")) {
+				bytes = Math.max(bytes, data.getLong("ifOutOctets") - oldData.getLong("ifOutOctets"));
+			}
+			else {
+				continue;
+			}
+			
+			if (bytes >= 0) {
+				bytes = bytes *8000 / (super.lastResponse - this.lastRolling);
+				
+				data.put("ifOutBPS", bytes);
+				
+				putData(Rolling.IFOUTOCTETS, index, bytes);
+				
+				max = Math.max(max, bytes);
+				maxRate = Math.max(maxRate, bytes *100L / capacity);
+			}
+			
+			if (this.critical != null) {
+				this.critical.analyze(Critical.Resource.THROUGHPUT, index, capacity, max);
+			}
 		}
 		
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUT, max);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUTRATE, maxRate);
+		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.THROUGHPUTERR, maxErr);
 	}
+	
+	private void processSuccess() {		
+		parseNetwork();
+		
+		parseARP();
+	
+		parseResponseTime();
+		
+		parseProcessor();
+		
+		parseStorage();
+		
+		if (super.data.has("ifEntry")) {
+			parseInterface(super.data.getJSONObject("ifEntry"));
+		}		
+	}
+	
 	@Override
 	public void onSuccess() {
-		try {
-			processSuccess();
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+		processSuccess();
 		
 		this.agent.onSubmitTop(this.ip, SNMPAgent.Resource.FAILURERATE, getFailureRate());
 		

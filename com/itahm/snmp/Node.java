@@ -48,15 +48,15 @@ public abstract class Node implements ResponseListener {
 	/**
 	 * 최신 데이터 보관소
 	 */
-	protected Map<String, Integer> hrProcessorEntry;
-	protected Map<String, JSONObject> hrStorageEntry;
-	protected Map<String, JSONObject> ifEntry;
-	protected Map<String, String> arpTable; // mac - ip
-	protected Map<String, Integer> macTable; // mac - index
-	protected Map<String, Integer> ipTable; // ip - index
-	protected Map<String, Integer> remoteIPTable; //ip - index
-	protected Map<String, String> networkTable; //ip - mask
-	protected Map<Integer, String> maskTable; //index - mask
+	protected final Map<String, Integer> hrProcessorEntry = new HashMap<>();
+	protected final Map<String, JSONObject> hrStorageEntry = new HashMap<>();
+	protected final Map<String, JSONObject> ifEntry = new HashMap<>();
+	protected final Map<String, String> arpTable = new HashMap<>(); // mac - ip
+	protected final Map<String, Integer> macTable = new HashMap<>(); // mac - index
+	protected final Map<String, Integer> ipTable = new HashMap<>(); // ip - index
+	protected final Map<String, Integer> remoteIPTable = new HashMap<>(); //ip - index
+	protected final Map<String, String> networkTable = new HashMap<>(); //ip - mask
+	protected final Map<Integer, String> maskTable = new HashMap<>(); //index - mask
 	
 	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {
 		pdu = RequestPDU.getInstance();
@@ -73,17 +73,17 @@ public abstract class Node implements ResponseListener {
 	
 	public void request() {		
 		// 존재하지 않는 index 지워주기 위해 초기화
-		hrProcessorEntry = new HashMap<String, Integer>();
-		hrStorageEntry = new HashMap<String, JSONObject>();
-		ifEntry = new HashMap<String, JSONObject>();
-		arpTable = new HashMap<String, String>();
-		remoteIPTable = new HashMap<String, Integer>();
-		macTable = new HashMap<String, Integer>();
-		ipTable = new HashMap<String, Integer>();
-		networkTable = new HashMap<String, String>();
-		maskTable = new HashMap<Integer, String>();
+		hrProcessorEntry.clear();
+		hrStorageEntry.clear();
+		ifEntry.clear();
+		arpTable.clear();
+		remoteIPTable.clear();
+		macTable.clear();
+		ipTable.clear();
+		networkTable.clear();
+		maskTable.clear();
 		
-		this.pdu.setRequestID(null);
+		this.pdu.setRequestID(new Integer32(0));
 					
 		sendRequest(this.pdu);
 	}
