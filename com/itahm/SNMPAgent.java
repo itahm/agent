@@ -306,10 +306,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 		return json;
 	}
 	
-	/*
+	/**
 	 * ICMP 요청에 대한 응답
 	 */
-	public void onSuccess(String ip, long time) {
+	public void onSuccess(String ip) {
 		SNMPNode node = this.nodeList.get(ip);
 		
 		// 그 사이 삭제되었으면
@@ -340,6 +340,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 	}
 	
+	/**
+	 * ICMP 요청에 대한 응답
+	 */
 	public void onFailure(String ip) {
 		SNMPNode node = this.nodeList.get(ip);
 
@@ -395,6 +398,10 @@ public class SNMPAgent extends Snmp implements Closeable {
 		sendNextRequest(node);
 	}
 	
+	/**
+	 * snmp 요청에 대한 응답
+	 * @param ip
+	 */
 	public void onTimeout(String ip) {
 		SNMPNode node = this.nodeList.get(ip);
 
@@ -403,6 +410,19 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 		
 		node.request();
+	}
+	/**
+	 * snmp 요청에 대한 응답
+	 * @param ip
+	 */
+	public void onException(String ip) {
+		SNMPNode node = this.nodeList.get(ip);
+
+		if (node == null) {
+			return;
+		}
+		
+		sendNextRequest(node);
 	}
 	
 	public void onCritical(String ip, boolean critical, String message) {

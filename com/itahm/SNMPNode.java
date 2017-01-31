@@ -435,7 +435,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		
 		super.data.put("responseTime", time);
 		
-		this.agent.onSuccess(this.ip, time);
+		this.agent.onSuccess(this.ip);
 	}
 
 	@Override
@@ -443,6 +443,11 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		this.agent.onFailure(this.ip);
 	}
 
+	@Override
+	public void onException() {
+		this.agent.onException(this.ip);
+	}
+	
 	@Override
 	public void close() throws IOException {
 		this.icmp.stop();

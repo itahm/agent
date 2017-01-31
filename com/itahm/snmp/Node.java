@@ -111,6 +111,8 @@ public abstract class Node implements ResponseListener {
 			this.snmp.send(pdu, this.target, null, this);
 		} catch (IOException e) {
 			e.printStackTrace();
+			
+			onException();
 		}
 	}
 	
@@ -469,6 +471,7 @@ public abstract class Node implements ResponseListener {
 	
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
+	abstract protected void onException();
 	
 	public static void main(String [] args) throws IOException {
 	}
