@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 import com.itahm.icmp.ICMPListener;
@@ -21,8 +22,12 @@ public class ICMPAgent implements ICMPListener, Closeable {
 		JSONObject snmpData = monitorTable.getJSONObject();
 		
 		for (Object ip : snmpData.keySet()) {
-			if ("icmp".equals(snmpData.getJSONObject((String)ip).getString("protocol"))) {
-				addNode((String)ip);
+			try {
+				if ("icmp".equals(snmpData.getJSONObject((String)ip).getString("protocol"))) {
+					addNode((String)ip);
+				}
+			} catch (JSONException jsone) {
+				jsone.printStackTrace();
 			}
 		}
 		

@@ -51,52 +51,60 @@ class Message implements DownStream.Request {
 		data.put("date", System.currentTimeMillis());
 	}
 	
+	private boolean parseResponse() throws IOException {
+		JSONObject response;
+		
+		try(InputStream is = this.connection.getInputStream()) {
+			response = new JSONObject(new JSONTokener(is));
+		}
+		catch (IOException ioe) {
+			this.connection.getErrorStream();
+			
+			throw ioe;
+		}
+		
+		if (response.getInt("failure") > 0) {
+			String error = response.getJSONArray("results").getJSONObject(0).getString("error");
+			
+			switch(error) {
+			case INVALREG: // reg id의 포멧이 잘못되었음. 삭제할것
+			case NOTREG: // unregister
+				this.downstream.onUnRegister(this.message.getString("to"));
+				break;
+			case UNAVAILABLE:
+				
+				return false; // 구글문제.
+			case MISSINGREG:
+			case MSGEXCEEDED: // 스팸
+			case MISMATCHSENDER:	
+			case BIGMSG:
+			case INVALKEY:
+			case INVALTTL:
+			case INVALPACKAGE:
+				throw new IOException("GCM_ERROR: "+ error);
+			}
+		}
+		else if (response.getInt("canonical_ids") > 0){
+			this.downstream.onRefresh(this.message.getString("to"), response.getJSONArray("results").getJSONObject(0).getString("registration_id"));
+		}
+		
+		return true;
+	}
+	
 	private int getResponseStatus() throws IOException {
 		int status = this.connection.getResponseCode();
-		InputStream is = null;
 		
 		switch (status) {
 		case 200:
-			JSONObject response;
-			
 			try {
-				response = new JSONObject(new JSONTokener(is = this.connection.getInputStream()));
-			}
-			catch (IOException ioe) {
-				this.connection.getErrorStream();
-				
-				throw ioe;
-			}
-			finally {
-				if (is != null) {
-					is.close();
+				if (!parseResponse()) {
+					status = 0;
 				}
+			} catch (JSONException jsone) {
+				status = 0;
 			}
 			
-			if (response.getInt("failure") > 0) {
-				String error = response.getJSONArray("results").getJSONObject(0).getString("error");
-				
-				switch(error) {
-				case INVALREG: // reg id의 포멧이 잘못되었음. 삭제할것
-				case NOTREG: // unregister
-					this.downstream.onUnRegister(this.message.getString("to"));
-					break;
-				case UNAVAILABLE:
-					status = 0; // 구글문제.
-					break;
-				case MISSINGREG:
-				case MSGEXCEEDED: // 스팸
-				case MISMATCHSENDER:	
-				case BIGMSG:
-				case INVALKEY:
-				case INVALTTL:
-				case INVALPACKAGE:
-					throw new IOException("GCM_ERROR: "+ error);
-				}
-			}
-			else if (response.getInt("canonical_ids") > 0){
-				this.downstream.onRefresh(this.message.getString("to"), response.getJSONArray("results").getJSONObject(0).getString("registration_id"));
-			}
+			break;
 		}
 		
 		return status;

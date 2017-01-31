@@ -9,12 +9,5 @@ public class Config extends Table {
 
 	public Config(File dataRoot) throws IOException {
 		super(dataRoot, CONFIG);
-		/*
-		if (isEmpty()) {
-			getJSONObject()
-				.put("timeout", 5000);
-			
-			save();
-		}*/
 	}
 }

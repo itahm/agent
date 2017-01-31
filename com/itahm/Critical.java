@@ -3,6 +3,7 @@ package com.itahm;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 abstract public class Critical {
@@ -50,7 +51,12 @@ abstract public class Critical {
 			}
 			
 			for (Object index: list.keySet()) {
-				mapping.get(resource).put((String)index, new Data(list.getJSONObject((String)index).getInt("limit")));
+				try {
+					mapping.get(resource).put((String)index, new Data(list.getJSONObject((String)index).getInt("limit")));
+				}
+				catch(JSONException jsone) {
+					jsone.printStackTrace();
+				}
 			}
 		}
 	}

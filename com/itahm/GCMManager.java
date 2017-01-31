@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 import com.itahm.gcm.DownStream;
@@ -25,7 +26,11 @@ public class GCMManager extends DownStream {
 		for (Object key : gcmData.keySet()) {
 			id = (String)key;
 			
-			register(gcmData.getJSONObject(id).getString("token"), id);
+			try {
+				register(gcmData.getJSONObject(id).getString("token"), id);
+			} catch (JSONException jsone) {
+				jsone.printStackTrace();
+			}
 		}
 	}
 
@@ -35,8 +40,10 @@ public class GCMManager extends DownStream {
 		for (Object id : gcmData.keySet()) {
 			try {
 				send(gcmData.getJSONObject((String)id).getString("token"), "ITAhM message", message);
-			} catch (IOException e) {
-				e.printStackTrace();
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			} catch (JSONException jsone) {
+				jsone.printStackTrace();
 			}
 		}
 	}

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 import com.itahm.icmp.ICMPListener;
@@ -126,10 +127,15 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	public String getIFNameFromARP(String mac) {
 		Integer index = super.macTable.get(mac);
 		
-		if (index != null) {
-			JSONObject ifEntry = super.data.getJSONObject("ifEntry");
-			
-			return ifEntry.getJSONObject(index.toString()).getString("ifName");
+		if (index == null) {
+			return null;
+		}
+
+		try {
+			return super.data.getJSONObject("ifEntry").getJSONObject(index.toString()).getString("ifName");
+		}
+		catch(JSONException jsone) {
+			jsone.printStackTrace();
 		}
 		
 		return null;
@@ -141,11 +147,18 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		}
 		
 		JSONObject ifEntry = super.data.getJSONObject("ifEntry");
+		JSONObject ifData;
 		String mac;
 		String name;
 		
 		for (Object index : ifEntry.keySet()) {
-			mac = ifEntry.getJSONObject((String)index).getString("ifPhysAddress");
+			ifData = ifEntry.getJSONObject((String)index);
+			
+			if (!ifData.has("ifPhysAddress")) {
+				continue;
+			}
+			
+			mac = ifData.getString("ifPhysAddress");
 			
 			if (!"".equals(mac)) {
 				name = peer.getIFNameFromARP(mac);
@@ -261,21 +274,18 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 				
 				oldData = ifEntry.getJSONObject(index);
 				
-				if (data.getInt("ifAdminStatus") != 1) {
+				if (!data.has("ifAdminStatus") || data.getInt("ifAdminStatus") != 1) {
 					continue;
 				}
 				
 				if (ifSpeed !=null && ifSpeed.has(index)) {
 					capacity = ifSpeed.getLong(index);
 				}
-				else {
-					if (data.has("ifHighSpeed")) {
-						capacity = data.getLong("ifHighSpeed");
-					}
-					
-					if (capacity == 0 && data.has("ifSpeed")) {
-						capacity = data.getLong("ifSpeed");
-					}
+				else if (data.has("ifHighSpeed")) {
+					capacity = data.getLong("ifHighSpeed");
+				}
+				else if (capacity == 0 && data.has("ifSpeed")) {
+					capacity = data.getLong("ifSpeed");
 				}
 				
 				if (capacity <= 0) {

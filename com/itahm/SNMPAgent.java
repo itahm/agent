@@ -74,7 +74,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Map<String, JSONObject> arp;
 	private final Map<String, String> network;
 	
-	public SNMPAgent(File root) throws IOException {
+	public SNMPAgent(File root, boolean clean) throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
 		
 		System.out.println("SNMP manager start.");
@@ -97,7 +97,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 		nodeRoot = new File(root, "node");
 		nodeRoot.mkdir();
 		
-		clean();
+		if (clean) {
+			clean();
+		}
 		
 		addCommandResponder(new CommandResponder() {
 
@@ -161,8 +163,13 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			monitor = monitorData.getJSONObject(ip);
 			
-			if ("snmp".equals(monitor.getString("protocol"))) {
-				addNode(ip, monitor.getString("profile"));
+			try {
+				if ("snmp".equals(monitor.getString("protocol"))) {
+					addNode(ip, monitor.getString("profile"));
+				}
+			}
+			catch (JSONException jsone) {
+				jsone.printStackTrace();
 			}
 		}
 	}

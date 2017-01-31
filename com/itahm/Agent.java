@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 import com.itahm.command.Command;
@@ -27,7 +28,7 @@ import com.itahm.table.Table;
 public class Agent implements ITAhMAgent {
 
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.3.77";
+	public final static String VERSION = "1.3.3.7";
 	public final static int MAX_TIMEOUT = 10000;
 	public final static int ICMP_INTV = 1000;
 	public final static int MID_TIMEOUT = 5000;
@@ -46,7 +47,7 @@ public class Agent implements ITAhMAgent {
 		System.out.println(String.format("ITAhM Agent version %s ready.", VERSION));
 	}
 	
-	public boolean start(File dataRoot) {		
+	public boolean start(File dataRoot, boolean clean) {		
 		try {
 			tableMap.put(Table.ACCOUNT, new Account(dataRoot));
 			tableMap.put(Table.PROFILE, new Profile(dataRoot));
@@ -60,7 +61,7 @@ public class Agent implements ITAhMAgent {
 			
 			manager.gcmm = new GCMManager(API_KEY, InetAddress.getLocalHost().getHostAddress());
 			manager.log = new Log(dataRoot);
-			manager.snmp = new SNMPAgent(dataRoot);
+			manager.snmp = new SNMPAgent(dataRoot, clean);
 			manager.icmp = new ICMPAgent();
 			
 			System.out.println("ITAhM agent up.");
@@ -79,7 +80,7 @@ public class Agent implements ITAhMAgent {
 	private Session signIn(JSONObject data) {
 		String username = data.getString("username");
 		String password = data.getString("password");
-		JSONObject accountData = getTable("account").getJSONObject();
+		JSONObject accountData = getTable(Table.ACCOUNT).getJSONObject();
 		
 		if (accountData.has(username)) {
 			 JSONObject account = accountData.getJSONObject(username);
@@ -130,7 +131,13 @@ public class Agent implements ITAhMAgent {
 		
 		if ("signin".equals(cmd)) {
 			if (session == null) {
-				session = signIn(data);
+				try {
+					session = signIn(data);
+				} catch (JSONException jsone) {
+					jsone.printStackTrace();
+					
+					return Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "invalid json request").toString());
+				}
 			}
 			
 			if (session == null) {

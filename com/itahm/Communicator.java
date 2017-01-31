@@ -17,17 +17,31 @@ public class Communicator extends Listener {
 	
 	private final static String DATA = "data";
 	
-	private final File root;
+	enum Options {
+		PATH, TCP, CLEAN;
+	}
+	
+	private File root;
 	private ITAhMAgent agent;
 	
-	public Communicator(int tcp) throws Exception {
+	private Communicator(int tcp) throws Exception {
 		super("0.0.0.0", tcp);
 		
 		System.out.println(String.format("ITAhM communicator started with TCP %d.", tcp));
+	}
+	
+	public Communicator(int tcp, File path, boolean clean) throws Exception {
+		this(tcp);
 		
-		root = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
+		if (path == null) {
+			path = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
+		}
 		
-		loadAgent();
+		loadAgent(path, clean);
+	}
+	
+	public Communicator(File path, boolean clean) throws Exception {
+		this(2014, path, clean);
 	}
 	
 	@Override
@@ -49,14 +63,14 @@ public class Communicator extends Listener {
 		this.agent.closeRequest(request);
 	}
 	
-	
-	
-	private void loadAgent() throws Exception {
+	private void loadAgent(File root, boolean clean) throws Exception {
 		File dataRoot = new File(root, DATA);
 		dataRoot.mkdir();
 		
-		this.agent = new com.itahm.Agent();
-		agent.start(dataRoot);
+		this.root = root;
+		
+		this.agent = new Agent();
+		agent.start(dataRoot, clean);
 	}
 	
 	private void processRequest(Request request) throws IOException{
@@ -131,21 +145,62 @@ public class Communicator extends Listener {
 	
 	public static void main(String[] args) throws IOException {
 		int tcp = 2014;
+		File path = null;
+		boolean clean = true;
 		
-		if (args.length > 0) {
-			try {
-				tcp = Integer.parseInt(args[0]);
+		for (int i=0, _i=args.length; i<_i; i++) {
+			if (args[i].indexOf("-") != 0) {
+				System.out.println("잘못된 옵션 형식이 입력되어 실행을 중단합니다.");
+				
+				return;
 			}
-			catch(NumberFormatException nfe) {}
+			
+			try {
+				switch(Options.valueOf(args[i].substring(1).toUpperCase())) {
+				case PATH:
+					path = new File(args[++i]);
+					
+					if (!path.isDirectory()) {
+						System.out.println("PATH 옵션에 존재하지 않는 경로가 입력되어 실행을 중단합니다.");
+						
+						return;
+					}
+					
+					break;
+				case TCP:
+					try {
+						tcp = Integer.parseInt(args[++i]);
+					}
+					catch(NumberFormatException nfe) {
+						System.out.println("TCP 옵션에 숫자가 아닌 값이 입력되어 실행을 중단합니다.");
+						
+						return;
+					}
+					
+					break;
+				case CLEAN:
+					try {
+						clean = Boolean.valueOf(args[++i]);
+					}
+					catch(IllegalArgumentException iae) {
+						System.out.println("CLEAN 옵션에 잘못된 값이 입력되어 실행을 중단합니다.");
+						
+						return;
+					}
+					
+					break;
+				}
+			}
+			catch(IllegalArgumentException iae) {
+				break;
+			}
 		}
 		
-		try {
-			final Communicator c = new Communicator(tcp);
+		try(Communicator c = new Communicator(tcp, path, clean)) {
 			
 			Runtime.getRuntime().addShutdownHook(
 				new Thread() {
 					public void run() {
-						c.close();
 					}
 				});
 		}

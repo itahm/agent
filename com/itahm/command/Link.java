@@ -42,7 +42,7 @@ public class Link implements Command {
 			
 			return Response.getInstance(Response.Status.OK, table.save().toString());
 		}
-		catch (JSONException jsone) {jsone.printStackTrace();
+		catch (JSONException jsone) {
 			return Response.getInstance(Response.Status.BADREQUEST,
 				new JSONObject().put("error", "invalid json request").toString());
 		}

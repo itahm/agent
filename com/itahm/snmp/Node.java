@@ -124,6 +124,8 @@ public abstract class Node implements ResponseListener {
 			if (this.enterprise == null) {
 				this.enterprise = ((OID)variable).get(6);
 				
+				System.out.println("enterprise: "+ ((OID)variable).toDottedString());
+				
 				this.pdu.setEnterprise(this.enterprise);
 			}
 		}

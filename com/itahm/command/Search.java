@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Iterator;
 
+import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 import com.itahm.Agent;
@@ -26,6 +27,10 @@ public class Search implements Command {
 		}
 		catch (NullPointerException npe) {
 			return Response.getInstance(Response.Status.UNAVAILABLE);
+		}
+		catch (JSONException jsone) {
+			return Response.getInstance(Response.Status.BADREQUEST,
+				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}
 	
