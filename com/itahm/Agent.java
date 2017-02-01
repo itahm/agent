@@ -44,7 +44,7 @@ public class Agent implements ITAhMAgent {
 	}
 	
 	public Agent() {
-		System.out.println(String.format("ITAhM Agent version %s ready.", VERSION));
+		System.out.println(String.format("ITAhM Agent version %s.1 ready.", VERSION));
 	}
 	
 	public boolean start(File dataRoot, boolean clean) {		
