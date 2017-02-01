@@ -372,8 +372,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 				e.printStackTrace();
 			}
 		}
-		
-		node.request();
 	}
 	
 	/**
