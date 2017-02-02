@@ -14,6 +14,10 @@ import java.util.TimerTask;
 
 public class Request implements Closeable {
 
+	public enum Header {
+		ORIGIN;
+	};
+	
 	public final static byte CR = (byte)'\r';
 	public final static byte LF = (byte)'\n';
 	public final static String GET = "GET";
@@ -221,6 +225,10 @@ public class Request implements Closeable {
 	
 	public String getRequestHeader(String name) {
 		return this.header.get(name.toLowerCase());
+	}
+	
+	public String getRequestHeader(Header name) {
+		return this.header.get(name.toString().toLowerCase());
 	}
 	
 	public boolean sendResponse(Response response) throws IOException {

@@ -26,7 +26,7 @@ public class Config implements Command {
 		
 		table.save();
 		
-		return Response.getInstance(Response.Status.OK, config.toString());
+		return Response.getInstance(request, Response.Status.OK, config.toString());
 	}
 
 }

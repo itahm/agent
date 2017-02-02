@@ -17,18 +17,18 @@ public class Select implements Command {
 			JSONObject nodeData = Agent.manager.snmp.getNodeData(data.getString("ip"));
 			
 			if (nodeData != null) {
-				return Response.getInstance(Response.Status.OK, nodeData.toString());
+				return Response.getInstance(request, Response.Status.OK, nodeData.toString());
 			}
 			else {
-				return Response.getInstance(Response.Status.BADREQUEST,
+				return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "node not found").toString());
 			}
 		}
 		catch(NullPointerException npe) {
-			return Response.getInstance(Response.Status.UNAVAILABLE);
+			return Response.getInstance(request, Response.Status.UNAVAILABLE);
 		}
 		catch (JSONException jsone) {
-			return Response.getInstance(Response.Status.BADREQUEST,
+			return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "invalid json request").toString());
 		}
 	}

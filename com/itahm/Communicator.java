@@ -82,12 +82,12 @@ public class Communicator extends Listener {
 	}
 	private Response parseRequest(Request request) throws IOException{
 		if (!"HTTP/1.1".equals(request.getRequestVersion())) {
-			return Response.getInstance(Response.Status.VERSIONNOTSUP);
+			return Response.getInstance(request, Response.Status.VERSIONNOTSUP);
 		}
 		
 		switch(request.getRequestMethod()) {
 		case "OPTIONS":
-			return Response.getInstance(Response.Status.OK).setResponseHeader("Allow", "OPTIONS, GET, POST");
+			return Response.getInstance(request, Response.Status.OK).setResponseHeader("Allow", "OPTIONS, GET, POST");
 		
 		case"POST":
 			JSONObject data;
@@ -96,12 +96,12 @@ public class Communicator extends Listener {
 				data = new JSONObject(new String(request.getRequestBody(), StandardCharsets.UTF_8.name()));
 				
 				if (!data.has("command")) {
-					return Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "command not found").toString());
+					return Response.getInstance(request, Response.Status.BADREQUEST, new JSONObject().put("error", "command not found").toString());
 				}
 				
 				switch (data.getString("command")) {
 				case "agent":
-					return Response.getInstance(Response.Status.OK,
+					return Response.getInstance(request, Response.Status.OK,
 						new JSONObject()
 							.put("connections", getConnectionSize())
 							.put("space", this.root.getUsableSpace())
@@ -109,9 +109,9 @@ public class Communicator extends Listener {
 				}
 				
 			} catch (JSONException e) {
-				return Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "invalid json request").toString());
+				return Response.getInstance(request, Response.Status.BADREQUEST, new JSONObject().put("error", "invalid json request").toString());
 			} catch (UnsupportedEncodingException e) {
-				return Response.getInstance(Response.Status.BADREQUEST, new JSONObject().put("error", "UTF-8 encoding required").toString());
+				return Response.getInstance(request, Response.Status.BADREQUEST, new JSONObject().put("error", "UTF-8 encoding required").toString());
 			}
 			
 			return this.agent.executeRequest(request, data);

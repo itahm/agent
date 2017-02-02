@@ -32,7 +32,7 @@ public class Link implements Command {
 					ifEntry2.put(ip1, Agent.manager.snmp.getPeerIFName(ip2, ip1));
 				}
 				catch(NullPointerException npe) {
-					return Response.getInstance(Response.Status.UNAVAILABLE);
+					return Response.getInstance(request, Response.Status.UNAVAILABLE);
 				}
 			}
 			else {
@@ -40,10 +40,10 @@ public class Link implements Command {
 				ifEntry2.remove(ip1);
 			}
 			
-			return Response.getInstance(Response.Status.OK, table.save().toString());
+			return Response.getInstance(request, Response.Status.OK, table.save().toString());
 		}
 		catch (JSONException jsone) {
-			return Response.getInstance(Response.Status.BADREQUEST,
+			return Response.getInstance(request, Response.Status.BADREQUEST,
 				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}

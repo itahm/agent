@@ -18,15 +18,15 @@ public class Pull implements Command {
 			Table table = Agent.getTable(data.getString("database"));
 			
 			if (table == null) {
-				return Response.getInstance(Response.Status.BADREQUEST,
+				return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "database not found").toString());
 			}
 			else {
-				return Response.getInstance(Response.Status.OK, table.getJSONObject().toString());
+				return Response.getInstance(request, Response.Status.OK, table.getJSONObject().toString());
 			}
 		}
 		catch (JSONException jsone) {
-			return Response.getInstance(Response.Status.BADREQUEST,
+			return Response.getInstance(request, Response.Status.BADREQUEST,
 				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}

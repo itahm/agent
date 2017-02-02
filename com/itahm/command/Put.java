@@ -18,16 +18,16 @@ public class Put implements Command {
 			Table table = Agent.getTable(data.getString("database"));
 			
 			if (table == null) {
-				return Response.getInstance(Response.Status.BADREQUEST,
+				return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "database not found").toString());
 			}
 			else {
-				return Response.getInstance(Response.Status.OK,
+				return Response.getInstance(request, Response.Status.OK,
 					table.put(data.getString("key"), data.isNull("value")? null: data.getJSONObject("value")).toString());
 			}
 		}
 		catch (JSONException jsone) {jsone.printStackTrace();
-			return Response.getInstance(Response.Status.BADREQUEST,
+			return Response.getInstance(request, Response.Status.BADREQUEST,
 				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}

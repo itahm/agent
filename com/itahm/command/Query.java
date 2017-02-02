@@ -26,23 +26,23 @@ public class Query implements Command {
 					, data.has("summary")? data.getBoolean("summary"): false);
 				
 				if (data != null) {
-					return Response.getInstance(Response.Status.OK, data.toString());
+					return Response.getInstance(request, Response.Status.OK, data.toString());
 				}
 				else {
-					return Response.getInstance(Response.Status.BADREQUEST,
+					return Response.getInstance(request, Response.Status.BADREQUEST,
 						new JSONObject().put("error", "database not found").toString());
 				}
 			}
 			else {
-				return Response.getInstance(Response.Status.BADREQUEST,
+				return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "node not found").toString());
 			}
 		}
 		catch(NullPointerException npe) {
-			return Response.getInstance(Response.Status.UNAVAILABLE);
+			return Response.getInstance(request, Response.Status.UNAVAILABLE);
 		}
 		catch (JSONException jsone) {
-			return Response.getInstance(Response.Status.BADREQUEST,
+			return Response.getInstance(request, Response.Status.BADREQUEST,
 				new JSONObject().put("error", "invalid json request").toString());
 		}
 		

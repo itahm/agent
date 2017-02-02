@@ -13,10 +13,10 @@ public class ARP implements Command {
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			return Response.getInstance(Response.Status.OK, Agent.manager.snmp.getARP().toString());
+			return Response.getInstance(request, Response.Status.OK, Agent.manager.snmp.getARP().toString());
 		}
 		catch (NullPointerException npe) {
-			return Response.getInstance(Response.Status.UNAVAILABLE);
+			return Response.getInstance(request, Response.Status.UNAVAILABLE);
 		}
 	}
 	

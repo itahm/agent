@@ -29,8 +29,6 @@ public class Response {
 		int code = 200;
 		String reason = "OK";
 		
-		body = bytes;
-		
 		switch (status) {
 		case BADREQUEST:
 			code = 400;
@@ -116,18 +114,30 @@ public class Response {
 		
 		startLine = String.format("HTTP/1.1 %d %s" +CRLF, code, reason);
 		
+		body = bytes;
+	}
+	
+	private Response(Request request, Status status, byte [] bytes) {
+		this(status, bytes);
+		
+		String origin = request.getRequestHeader(Request.Header.ORIGIN);
+		
+		if (origin.indexOf("itahm.com") == -1) {
+			origin = "http://itahm.com";
+		}
+		
 		setResponseHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-		setResponseHeader("Access-Control-Allow-Origin", "http://itahm.com");
+		setResponseHeader("Access-Control-Allow-Origin", origin);
 		setResponseHeader("Access-Control-Allow-Credentials", "true");
 	}
 	
-	public static Response getInstance(Status status) {
-		return new Response(status, new byte [0]);
+	public static Response getInstance(Request request, Status status) {
+		return new Response(request, status, new byte [0]);
 	}
 	
-	public static Response getInstance(Status status, String body) {
+	public static Response getInstance(Request request, Status status, String body) {
 		try {
-			return new Response(status, body.getBytes(StandardCharsets.UTF_8.name()));
+			return new Response(request, status, body.getBytes(StandardCharsets.UTF_8.name()));
 		} catch (UnsupportedEncodingException e) {
 			return null;
 		}
@@ -153,7 +163,11 @@ public class Response {
 			return null;
 		}
 	}
-
+	
+	public static Response getInstance(Status status) {
+		return new Response(status, new byte[0]);
+	}
+	
 	public Response setResponseHeader(String name, String value) {
 		this.header.put(name, value);
 		

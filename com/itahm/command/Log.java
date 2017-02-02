@@ -12,7 +12,7 @@ public class Log implements Command {
 	
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
-		return Response.getInstance(Response.Status.OK, Agent.manager.log.read(data.getLong("date")));
+		return Response.getInstance(request, Response.Status.OK, Agent.manager.log.read(data.getLong("date")));
 	}
 
 }

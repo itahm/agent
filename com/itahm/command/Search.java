@@ -23,13 +23,13 @@ public class Search implements Command {
 				Agent.manager.snmp.testNode(it.next(), false);
 			}
 			
-			return Response.getInstance(Response.Status.OK);
+			return Response.getInstance(request, Response.Status.OK);
 		}
 		catch (NullPointerException npe) {
-			return Response.getInstance(Response.Status.UNAVAILABLE);
+			return Response.getInstance(request, Response.Status.UNAVAILABLE);
 		}
 		catch (JSONException jsone) {
-			return Response.getInstance(Response.Status.BADREQUEST,
+			return Response.getInstance(request, Response.Status.BADREQUEST,
 				new JSONObject().put("error", "invalid json request").toString());
 		}
 	}

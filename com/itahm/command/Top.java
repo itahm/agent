@@ -22,13 +22,13 @@ public class Top implements Command {
 				count = Math.min(data.getInt("count"), TOP_MAX);
 			}
 			
-			return Response.getInstance(Response.Status.OK, Agent.manager.snmp.getTop(count).toString());
+			return Response.getInstance(request, Response.Status.OK, Agent.manager.snmp.getTop(count).toString());
 		}
 		catch(NullPointerException npe) {
-			return Response.getInstance(Response.Status.UNAVAILABLE);
+			return Response.getInstance(request, Response.Status.UNAVAILABLE);
 		}
 		catch (JSONException jsone) {
-			return Response.getInstance(Response.Status.BADREQUEST,
+			return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "invalid json request").toString());
 		}
 	}

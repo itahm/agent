@@ -13,7 +13,7 @@ public class ShutDown implements Command {
 	public Response execute(Request request, JSONObject data) throws IOException {
 		System.out.println("shutdown command.");
 		
-		return Response.getInstance(Response.Status.OK);
+		return Response.getInstance(request, Response.Status.OK);
 	}
 
 }
