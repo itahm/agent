@@ -122,7 +122,7 @@ public class Response {
 		
 		String origin = request.getRequestHeader(Request.Header.ORIGIN);
 		
-		if (origin.indexOf("itahm.com") == -1) {
+		if (origin == null || origin.indexOf("itahm.com") == -1) {
 			origin = "http://itahm.com";
 		}
 		

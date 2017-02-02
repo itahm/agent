@@ -44,7 +44,7 @@ public class Agent implements ITAhMAgent {
 	}
 	
 	public Agent() {
-		System.out.println(String.format("ITAhM Agent version %s fix.2 ready.", VERSION));
+		System.out.println(String.format("ITAhM Agent version %s fix.3 ready.", VERSION));
 	}
 	
 	public boolean start(File dataRoot, boolean clean) {		
@@ -144,7 +144,7 @@ public class Agent implements ITAhMAgent {
 				return Response.getInstance(request, Response.Status.UNAUTHORIZED);
 			}
 			
-			return Response.getInstance(request, Response.Status.OK,	new JSONObject()
+			return Response.getInstance(request, Response.Status.OK, new JSONObject()
 				.put("level", (int)session.getExtras())
 				.put("version", VERSION).toString())
 					.setResponseHeader("Set-Cookie", String.format("SESSION=%s; HttpOnly", session.getCookie()));
