@@ -46,7 +46,9 @@ public abstract class DownStream implements Runnable, Closeable {
 	}	
 	
 	public void send(String to, String title, String body) throws IOException {
-		this.queue.add(new Message(this, to, title, body, this.host));
+		synchronized(this.queue) {
+			this.queue.add(new Message(this, to, title, body, this.host));
+		}
 	}
 	
 	@Override
@@ -62,21 +64,27 @@ public abstract class DownStream implements Runnable, Closeable {
 	
 	@Override
 	public void run() {
+		Request request;
+	
 		onStart();
 		
 		while (!Thread.interrupted()) {
-			if (queue.size() > 0) {
-				try {
-					queue.poll().send();
-				} catch (IOException ioe) {
-					ioe.printStackTrace();
-				}
+			synchronized(this.queue) {
+				request = this.queue.poll();
 			}
-			else {
+			
+			if (request == null) {
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException ie) {
 					break;
+				}
+			}
+			else {
+				try {
+					request.send();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
 				}
 			}
 		}

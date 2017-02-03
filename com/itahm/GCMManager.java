@@ -39,7 +39,7 @@ public class GCMManager extends DownStream {
 		
 		for (Object id : gcmData.keySet()) {
 			try {
-				send(gcmData.getJSONObject((String)id).getString("token"), "ITAhM message", message);
+				super.send(gcmData.getJSONObject((String)id).getString("token"), "ITAhM message", message);
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
 			} catch (JSONException jsone) {

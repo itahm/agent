@@ -112,8 +112,7 @@ class Message implements DownStream.Request {
 	
 	@Override
 	public void send() throws IOException {
-	try{
-		this.connection = downstream.getConnection();
+		this.connection = this.downstream.getConnection();
 		OutputStream os = null;
 	
 		try {
@@ -140,10 +139,6 @@ class Message implements DownStream.Request {
 		this.connection.disconnect();
 		
 		this.downstream.onComplete(status);
-	}
-	catch (RuntimeException re) {
-		re.printStackTrace();
-	}
 	}
 	
 }

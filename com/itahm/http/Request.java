@@ -28,7 +28,7 @@ public class Request implements Closeable {
 	public final static String TRACE = "TRACE";
 	public final static String CONNECT = "CONNECT";
 
-	protected Map<String, String> header;
+	protected final Map<String, String> header = new HashMap<>();
 	
 	private final SocketChannel channel;
 	private final Listener listener;
@@ -39,6 +39,7 @@ public class Request implements Closeable {
 	private String version;
 	private int length;
 	private ByteArrayOutputStream body;
+	private boolean initialized = true;
 	private Boolean closed = false;
 	
 	public Request(SocketChannel channel, Listener listener) {
@@ -104,7 +105,7 @@ public class Request implements Closeable {
 			this.listener.onRequest(this);
 			
 			this.body = null;
-			this.header = null;
+			this.initialized = true;
 		}
 		else if (this.length < length){
 			throw new IOException("malformed http request");
@@ -113,8 +114,10 @@ public class Request implements Closeable {
 	}
 	
 	private boolean parseHeader(String line) throws IOException {
-		if (this.header == null) {
+		if (this.initialized) {
 			parseStartLine(line);
+			
+			this.initialized = false;
 		}
 		else {
 			if ("".equals(line)) {			
@@ -159,7 +162,7 @@ public class Request implements Closeable {
 		this.uri = token[1];
 		this.version = token[2];
 		
-		this.header = new HashMap<String, String>();
+		this.header.clear();
 	}
 	
 	private String readLine(ByteBuffer src) throws IOException {
@@ -224,10 +227,6 @@ public class Request implements Closeable {
 	}
 	
 	public String getRequestHeader(Header name) {
-		if (this.header == null) {
-			return null;
-		}
-		
 		return this.header.get(name.toString().toLowerCase());
 	}
 	
