@@ -95,7 +95,7 @@ public class Agent implements ITAhMAgent {
 	}
 
 	private static Session getSession(Request request) {
-		String cookie = request.getRequestHeader("cookie");
+		String cookie = request.getRequestHeader(Request.Header.COOKIE);
 		
 		if (cookie == null) {
 			return null;

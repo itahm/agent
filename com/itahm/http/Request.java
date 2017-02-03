@@ -15,7 +15,7 @@ import java.util.TimerTask;
 public class Request implements Closeable {
 
 	public enum Header {
-		ORIGIN;
+		ORIGIN, COOKIE;
 	};
 	
 	public final static byte CR = (byte)'\r';
@@ -223,11 +223,11 @@ public class Request implements Closeable {
 		return this.version;
 	}
 	
-	public String getRequestHeader(String name) {
-		return this.header.get(name.toLowerCase());
-	}
-	
 	public String getRequestHeader(Header name) {
+		if (this.header == null) {
+			return null;
+		}
+		
 		return this.header.get(name.toString().toLowerCase());
 	}
 	
