@@ -9,7 +9,10 @@ import java.util.Map;
 
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
+import org.snmp4j.ScopedPDU;
 import org.snmp4j.Snmp;
+import org.snmp4j.Target;
+import org.snmp4j.UserTarget;
 import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.event.ResponseListener;
 import org.snmp4j.mp.SnmpConstants;
@@ -24,11 +27,13 @@ abstract public class TmpNode implements ResponseListener {
 	//protected final SNMPAgent agent;
 	protected final Snmp agent;
 	private long timeout;
-	private final PDU pdu;
-	private final LinkedList<CommunityTarget> list;
-	private final Map<CommunityTarget, String> profileMap;
+	private final LinkedList<Target> list;
+	private final Map<Target, String> profileMap;
 	
 	protected final String ip;
+	
+	abstract public void onSuccess(String profileName);
+	abstract public void onFailure();
 	
 	public TmpNode(Snmp agent, String ip, long timeout) {
 		this.agent = agent;
@@ -38,15 +43,12 @@ abstract public class TmpNode implements ResponseListener {
 		list = new LinkedList<>();
 		
 		profileMap = new HashMap<>();
-		
-		pdu = new PDU();
-		pdu.setType(PDU.GET);
 	}
 	
-	public TmpNode addProfile(String name, int udp, String community) throws UnknownHostException{
+	public TmpNode addProfile(String name, int udp, OctetString community) throws UnknownHostException{
 		CommunityTarget target;
 			
-		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(this.ip), udp), new OctetString(community));
+		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(this.ip), udp), community);
 		target.setVersion(SnmpConstants.version2c);
 		target.setTimeout(this.timeout);
 		
@@ -56,14 +58,39 @@ abstract public class TmpNode implements ResponseListener {
 		return this;
 	}
 	
+	public TmpNode addV3Profile(String name, int udp, OctetString user, int level) throws UnknownHostException{
+		UserTarget target = new UserTarget();
+		
+		target.setAddress(new UdpAddress(InetAddress.getByName(this.ip), udp));
+		target.setVersion(SnmpConstants.version3);
+		target.setSecurityLevel(level);
+		target.setSecurityName(user);
+		target.setTimeout(this.timeout);
+		
+		this.list.add(target);
+		this.profileMap.put(target, name);	
+		
+		return this;
+	}
+	
 	public void test() {
-		CommunityTarget target = this.list.peek();
+		Target target = this.list.peek();
+		PDU pdu;
 		
 		if (target == null) {
 			onFailure();
 		}
 		else {
-			try {
+			if (target instanceof UserTarget) {
+				pdu = new ScopedPDU();
+			}
+			else {
+				pdu = new PDU();
+			}
+			
+			pdu.setType(PDU.GET);
+			
+			try {	
 				this.agent.send(pdu, target, null, this);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -71,26 +98,17 @@ abstract public class TmpNode implements ResponseListener {
 		}
 	}
 	
-	abstract public void onSuccess(String profileName);
-	abstract public void onFailure();
-	
 	@Override
 	public void onResponse(ResponseEvent event) {
-		((Snmp)event.getSource()).cancel(event.getRequest(), this);
+		this.agent.cancel(event.getRequest(), this);
 
-		CommunityTarget target = this.list.pop();
+		Target target = this.list.pop();
 		
-		if (event.getResponse() == null) { // response timed out	
-			test();
+		if (!(event.getSource() instanceof Snmp.ReportHandler) && event.getResponse() != null && event.getResponse().getErrorStatus() == PDU.noError) {
+			onSuccess(this.profileMap.get(target));
 		}
 		else {
-			int status = event.getResponse().getErrorStatus();
-			
-			onSuccess(this.profileMap.get(target));
-			
-			if (status != PDU.noError) {
-				new Exception("status "+ status).printStackTrace();
-			}
+			test();
 		}
 	}
 	
@@ -111,7 +129,7 @@ abstract public class TmpNode implements ResponseListener {
 				System.out.println("falure");
 			}};
 			
-		node.addProfile("test", Integer.parseInt(args[2]), args[1]);
+		node.addProfile("test", Integer.parseInt(args[2]), new OctetString(args[1]));
 		
 		node.test();
 		

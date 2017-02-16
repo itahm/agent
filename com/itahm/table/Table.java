@@ -43,16 +43,6 @@ public class Table implements Closeable {
 		return null;
 	}
 	
-	public JSONObject remove(String key) {
-		JSONObject value = (JSONObject)this.table.remove(key);
-		
-		if (value != null) {
-			save();
-		}
-		
-		return value;
-	}
-	
 	public JSONObject put(String key, JSONObject value) {
 		if (value == null) {
 			this.table.remove(key);

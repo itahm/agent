@@ -20,9 +20,18 @@ import org.snmp4j.CommandResponder;
 import org.snmp4j.CommandResponderEvent;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
+import org.snmp4j.mp.MPv3;
+import org.snmp4j.security.AuthMD5;
+import org.snmp4j.security.PrivDES;
+import org.snmp4j.security.SecurityLevel;
+import org.snmp4j.security.SecurityModels;
+import org.snmp4j.security.SecurityProtocols;
+import org.snmp4j.security.USM;
+import org.snmp4j.security.UsmUser;
 import org.snmp4j.smi.Address;
 import org.snmp4j.smi.IpAddress;
 import org.snmp4j.smi.OID;
+import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
@@ -101,7 +110,13 @@ public class SNMPAgent extends Snmp implements Closeable {
 			clean();
 		}
 		
-		addCommandResponder(new CommandResponder() {
+		initialize();
+	}
+	
+	public void initialize() throws IOException {
+		initUSM();
+		
+		super.addCommandResponder(new CommandResponder() {
 
 			@Override
 			public void processPdu(CommandResponderEvent event) {
@@ -114,9 +129,42 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 		});
 		
-		listen();
+		super.listen();
 		
 		initNode();
+	}
+	public void initUSM() {
+		JSONObject profileData = profileTable.getJSONObject();
+		USM usm;
+		JSONObject profile;
+		OctetString user;
+		OctetString auth;
+		OctetString priv;
+		
+		SecurityModels.getInstance().addSecurityModel(new USM(SecurityProtocols.getInstance(), new OctetString(MPv3.createLocalEngineID()), 0));
+		
+		usm = super.getUSM();
+		
+		for (Object key : profileData.keySet()) {
+			profile = profileData.getJSONObject((String)key);
+			try {
+				if ("v3".equals(profile.getString("version"))) {
+					user = new OctetString(profile.getString("user"));
+					
+					if (user.length() == 0) {
+						throw new IllegalArgumentException();
+					}
+					
+					auth = profile.has("authentication")? new OctetString(profile.getString("authentication")): null;
+					priv = profile.has("privacy")? new OctetString(profile.getString("privacy")): null;
+					
+					usm.addUser(user, new UsmUser(user, auth == null? null: AuthMD5.ID, auth, priv == null? null: PrivDES.ID, priv));
+				}
+			}
+			catch (JSONException | IllegalArgumentException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	public void addNode(String ip, String profileName) {
@@ -131,9 +179,27 @@ public class SNMPAgent extends Snmp implements Closeable {
 		SNMPNode node;
 		
 		try {
-			node = new SNMPNode(this, ip, profile.getInt("udp")
-					, profile.getString("community")
-					, this.criticalTable.getJSONObject(ip));
+			if ("v3".equals(profile.getString("version"))) {
+				int level = SecurityLevel.NOAUTH_NOPRIV;
+				
+				if (profile.has("authentication")) {
+					level = SecurityLevel.AUTH_NOPRIV;
+					
+					if (profile.has("privacy")) {
+						level = SecurityLevel.AUTH_PRIV;
+					}
+				}
+				
+				node = SNMPNode.getInstance(this, ip, profile.getInt("udp")
+						, profile.getString("user")
+						, level
+						, this.criticalTable.getJSONObject(ip));
+			}
+			else {
+				node = SNMPNode.getInstance(this, ip, profile.getInt("udp")
+						, profile.getString("community")
+						, this.criticalTable.getJSONObject(ip));
+			}
 			
 			this.nodeList.put(ip, node);
 			
@@ -143,6 +209,52 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 	}
 	
+	private boolean addUSM(OctetString user, OID authProtocol, OctetString authPassphrase, OID privProtocol, OctetString privPassphrase) {		
+		if (super.getUSM().getUser(null, user) != null) {
+			return false;
+		}
+		
+		super.getUSM().addUser(new UsmUser(user, authProtocol, authPassphrase, privProtocol, privPassphrase));
+		
+		return true;
+	}
+	
+	public boolean addUSM(String user) {
+		return addUSM(new OctetString(user), null, null, null, null);
+	}
+	
+	public boolean addUSM(String user, String auth) {
+		return addUSM(new OctetString(user), AuthMD5.ID, new OctetString(auth), null, null);
+	}
+	
+	public boolean addUSM(String user, String auth, String priv) {
+		return addUSM(new OctetString(user), AuthMD5.ID, new OctetString(auth), null, null);
+	}
+	
+	public void removeUSM(String user) {
+		super.getUSM().removeAllUsers(new OctetString(user));
+	}
+	
+	public boolean isIdleProfile(String name) {
+		JSONObject monitor;
+		try {
+			for (Object key : this.monitorTable.getJSONObject().keySet()) {
+				monitor = this.monitorTable.getJSONObject((String)key);
+				
+				if (monitor.has("profile") && monitor.getString("profile").equals(name)) {
+					return false;
+				}
+			}
+		}
+		catch (JSONException jsone) {
+			jsone.printStackTrace();
+			
+			return false;
+		}
+		
+		return true;
+	}
+
 	public boolean removeNode(String ip) {
 		if (this.nodeList.remove(ip) == null) {
 			return false;
@@ -215,12 +327,28 @@ public class SNMPAgent extends Snmp implements Closeable {
 		JSONObject profile;
 		
 		TmpNode node = new TestNode(this, ip, onFailure);
+		int level;
 		
 		for (Object name : profileData.keySet()) {
 			profile = profileData.getJSONObject((String)name);
 			
 			try {
-				node.addProfile((String)name, profile.getInt("udp"), profile.getString("community"));
+				if ("v3".equals(profile.getString("version"))) {
+					level = SecurityLevel.NOAUTH_NOPRIV;
+					
+					if (profile.has("authentication")) {
+						level = SecurityLevel.AUTH_NOPRIV;
+						
+						if (profile.has("privacy")) {
+							level = SecurityLevel.AUTH_PRIV;
+						}
+					}
+					
+					node.addV3Profile((String)name, profile.getInt("udp"), new OctetString(profile.getString("user")), level);
+				}
+				else {
+					node.addProfile((String)name, profile.getInt("udp"), new OctetString(profile.getString("community")));
+				}
 			} catch (UnknownHostException | JSONException e) {
 				e.printStackTrace();
 			}

@@ -6,18 +6,8 @@ public enum Commander {
 	PUT("com.itahm.command.Put"),
 	QUERY("com.itahm.command.Query"),
 	SELECT("com.itahm.command.Select"),
-	LINK("com.itahm.command.Link"),
 	LISTEN("com.itahm.command.Listen"),
-	SHUTDOWN("com.itahm.command.ShutDown"),
-	MESSAGE("com.itahm.command.Message"),
-	TOP("com.itahm.command.Top"),
-	LOG("com.itahm.command.Log"),
-	SYSLOG("com.itahm.command.Syslog"),
-	ARP("com.itahm.command.ARP"),
-	CONFIG("com.itahm.command.Config"),
-	SEARCH("com.itahm.command.Search"),
-	EXTRA("com.itahm.command.Extra"),
-	NETWORK("com.itahm.command.Network");
+	EXTRA("com.itahm.command.Extra");
 	
 	private String className;
 	

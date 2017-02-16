@@ -28,7 +28,7 @@ import com.itahm.table.Table;
 public class Agent implements ITAhMAgent {
 
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.3.8";
+	public final static String VERSION = "1.3.3.9";
 	public final static int MAX_TIMEOUT = 10000;
 	public final static int ICMP_INTV = 1000;
 	public final static int MID_TIMEOUT = 5000;
@@ -44,7 +44,7 @@ public class Agent implements ITAhMAgent {
 	}
 	
 	public Agent() {
-		System.out.println(String.format("ITAhM Agent version %s fix.4 ready.", VERSION));
+		System.out.println(String.format("ITAhM Agent version %s fix.0 ready.", VERSION));
 	}
 	
 	public boolean start(File dataRoot, boolean clean) {		
@@ -215,9 +215,9 @@ public class Agent implements ITAhMAgent {
 	}
 
 	@Override
-	public void get(String key) {
+	public Object get(String key) {
 		// TODO Auto-generated method stub
-		
+		return null;
 	}
 
 	@Override

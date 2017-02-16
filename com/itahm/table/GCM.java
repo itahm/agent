@@ -17,16 +17,14 @@ public class GCM extends Table {
 	@Override
 	public JSONObject put(String id, JSONObject gcm) {
 		if (gcm == null) {
-			gcm = super.remove(id);
-			
-			Agent.manager.gcmm.unregister(gcm.getString("token"));
+			if (super.table.has(id)) {
+				Agent.manager.gcmm.unregister(super.getJSONObject(id).getString("token"));
+			}
 		}
 		else {
-			super.put(id,  gcm);
-			
 			Agent.manager.gcmm.register(gcm.getString("token"), id);
 		}
 		
-		return super.table;
+		return super.put(id,  gcm);
 	}
 }

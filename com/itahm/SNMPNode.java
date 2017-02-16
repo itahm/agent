@@ -3,8 +3,11 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.snmp4j.smi.OctetString;
 
 import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
@@ -38,32 +41,53 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		}
 	}
 	
-	private final File nodeRoot;
+	private File nodeRoot;
 	private final Map<Rolling, HashMap<String, RollingFile>> rollingMap = new HashMap<Rolling, HashMap<String, RollingFile>>();
-	private final String ip;
-	private final SNMPAgent agent;
-	private final Table deviceTable;
-	private final ICMPNode icmp;
+	private String ip;
+	private SNMPAgent agent;
+	private ICMPNode icmp;
 	private long responseTime;
 	private long lastRolling = 0;
 	private Critical critical;
 	
-	public SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
-		super(agent, ip, udp, community, Agent.MAX_TIMEOUT);
+	public static SNMPNode getInstance(SNMPAgent agent, String ip, int udp, String user, int level, JSONObject criticalCondition) throws IOException {
+		SNMPNode node = new SNMPNode(agent, ip, udp, user, level, criticalCondition);
 		
+		node.initialize(agent, ip, criticalCondition);
+		
+		return node;
+	}
+	
+	public static SNMPNode getInstance(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
+		SNMPNode node = new SNMPNode(agent, ip, udp, community, criticalCondition);
+		
+		node.initialize(agent, ip, criticalCondition);
+		
+		return node;
+	}
+	
+	private SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
+		super(agent, ip, udp, new OctetString(community), Agent.MAX_TIMEOUT);
+	}
+	
+	private SNMPNode(SNMPAgent agent, String ip, int udp, String user, int level, JSONObject criticalCondition) throws IOException {
+		super(agent, ip, udp, new OctetString(user), level, Agent.MAX_TIMEOUT);
+	}
+	
+	private void initialize(SNMPAgent agent, String ip, JSONObject criticalCondition) throws UnknownHostException {
 		this.agent = agent;
 		this.ip = ip;
-		deviceTable = Agent.getTable(Table.DEVICE);
-		nodeRoot = new File(agent.nodeRoot, ip);
-		nodeRoot.mkdirs();
+		
+		this.icmp = new ICMPNode(this, ip);
+		
+		this.nodeRoot = new File(agent.nodeRoot, ip);
+		this.nodeRoot.mkdirs();
 		
 		for (Rolling database : Rolling.values()) {
 			rollingMap.put(database, new HashMap<String, RollingFile>());
 			
 			new File(nodeRoot, database.toString()).mkdir();
 		}
-		
-		icmp = new ICMPNode(this, ip);
 		
 		setCritical(criticalCondition);
 		
@@ -272,7 +296,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	}
 	
 	private void parseInterface(JSONObject ifEntry) {
-		JSONObject device = deviceTable.getJSONObject(this.ip);
+		JSONObject device = Agent.getTable(Table.DEVICE).getJSONObject(this.ip);
 		JSONObject ifSpeed = device.has("ifSpeed")? device.getJSONObject("ifSpeed"): null;
 		JSONObject data;
 		JSONObject oldData;

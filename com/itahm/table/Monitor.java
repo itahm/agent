@@ -12,44 +12,28 @@ public class Monitor extends Table {
 	public Monitor(File dataRoot) throws IOException {
 		super(dataRoot, MONITOR);
 	}
-
-	public JSONObject remove(String ip) {
-		JSONObject monitor = super.remove(ip);
-		Table table;
-		
-		if (monitor != null) {
-			if ("snmp".equals(monitor.getString("protocol"))) {
-				if (Agent.manager.snmp.removeNode(ip)) {
-					table = Agent.getTable(Table.CRITICAL);
-					
-					table.remove(ip);
-				}
-				else {
-					// 오류
-					new RuntimeException().printStackTrace();
-				}
+	
+	private void remove(JSONObject monitor, String ip) {
+		if ("snmp".equals(monitor.getString("protocol"))) {
+			if (Agent.manager.snmp.removeNode(ip)) {
+				Agent.getTable(Table.CRITICAL).put(ip, null);
 			}
-			else if ("icmp".equals(monitor.getString("protocol"))) {
-				Agent.manager.icmp.removeNode(ip);
-			}
-			else {
-				// 오류
-				new RuntimeException().printStackTrace();
-			}
-			
-			save();
 		}
-		else {
-			// 정상
+		else if ("icmp".equals(monitor.getString("protocol"))) {
+			Agent.manager.icmp.removeNode(ip);
 		}
 		
-		return monitor;
+		super.put(ip, null);
 	}
 	
 	public JSONObject put(String ip, JSONObject monitor) {
-		remove(ip);
+		if (super.table.has(ip)) {
+			remove(super.table.getJSONObject(ip), ip);
+		}
 		
 		if (monitor != null) {
+			super.put(ip, null);
+			
 			if ("snmp".equals(monitor.getString("protocol"))) {
 				Agent.manager.snmp.testNode(ip);
 			}

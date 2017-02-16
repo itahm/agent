@@ -26,7 +26,7 @@ public class Put implements Command {
 					table.put(data.getString("key"), data.isNull("value")? null: data.getJSONObject("value")).toString());
 			}
 		}
-		catch (JSONException jsone) {jsone.printStackTrace();
+		catch (JSONException jsone) {
 			return Response.getInstance(request, Response.Status.BADREQUEST,
 				new JSONObject().put("error", "invalid json request").toString());
 		}

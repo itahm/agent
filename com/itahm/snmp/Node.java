@@ -13,7 +13,10 @@ import com.itahm.json.JSONObject;
 
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
+import org.snmp4j.ScopedPDU;
 import org.snmp4j.Snmp;
+import org.snmp4j.Target;
+import org.snmp4j.UserTarget;
 import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.event.ResponseListener;
 import org.snmp4j.mp.SnmpConstants;
@@ -33,9 +36,10 @@ import org.snmp4j.smi.VariableBinding;
 public abstract class Node implements ResponseListener {
 	
 	private final static int MAX_REQUEST = 100;
-	private final RequestPDU pdu;
+	private PDU pdu;
+	private PDU nextPDU;
 	private final Snmp snmp;
-	private final CommunityTarget target;
+	private Target target;
 	protected long lastResponse;
 	private Integer enterprise;
 	private long failureCount = 0;
@@ -43,7 +47,7 @@ public abstract class Node implements ResponseListener {
 	/**
 	 * 이전 데이터 보관소
 	 */
-	protected final JSONObject data;
+	protected final JSONObject data = new JSONObject();
 	
 	/**
 	 * 최신 데이터 보관소
@@ -58,15 +62,41 @@ public abstract class Node implements ResponseListener {
 	protected final Map<String, String> networkTable = new HashMap<>(); //ip - mask
 	protected final Map<Integer, String> maskTable = new HashMap<>(); //index - mask
 	
-	public Node(Snmp snmp, String ip, int udp, String community, long timeout) throws IOException {
-		pdu = RequestPDU.getInstance();
-		
+	public Node(Snmp snmp) throws IOException {
 		this.snmp = snmp;
+	}
+	
+	public Node(Snmp snmp, String ip, int udp, OctetString user, int level, long timeout) throws IOException {
+		this(snmp);
 		
-		data = new JSONObject();
+		pdu = new ScopedPDU();
+		RequestPDU.initialize(pdu);
+		
+		nextPDU = new ScopedPDU();
+		nextPDU.setType(PDU.GETNEXT);
 		
 		// target 설정
-		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), new OctetString(community));
+		target = new UserTarget();
+		target.setAddress(new UdpAddress(InetAddress.getByName(ip), udp));
+		target.setVersion(SnmpConstants.version3);
+		target.setSecurityLevel(level);
+		target.setSecurityName(user);
+		target.setTimeout(timeout);
+	}
+	
+	public Node(Snmp snmp, String ip, int udp, OctetString community, long timeout) throws IOException {
+		this(snmp);
+		
+		pdu = new PDU();
+		RequestPDU.initialize(pdu);
+		
+		nextPDU = new PDU();
+		nextPDU.setType(PDU.GETNEXT);
+		
+		
+		
+		// target 설정
+		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), community);
 		target.setVersion(SnmpConstants.version2c);
 		target.setTimeout(timeout);
 	}
@@ -128,7 +158,7 @@ public abstract class Node implements ResponseListener {
 				
 				System.out.println("enterprise: "+ ((OID)variable).toDottedString());
 				
-				this.pdu.setEnterprise(this.enterprise);
+				RequestPDU.setEnterprise(this.pdu, this.enterprise);
 			}
 		}
 		else if (request.startsWith(RequestPDU.sysName) && response.startsWith(RequestPDU.sysName)) {
@@ -416,17 +446,21 @@ public abstract class Node implements ResponseListener {
 			}
 		}
 		
-		return nextRequests.size() > 0? new PDU(PDU.GETNEXT, nextRequests): null;
-}
+		this.nextPDU.clear();
+		this.nextPDU.setRequestID(new Integer32(0));
+		this.nextPDU.setVariableBindings(nextRequests);
+		
+		return nextRequests.size() > 0? this.nextPDU: null;
+	}
 		
 	@Override
 	public void onResponse(ResponseEvent event) {
 		PDU request = event.getRequest();
 		PDU response = event.getResponse();
 		
-		((Snmp)event.getSource()).cancel(request, this);
+		this.snmp.cancel(request, this);
 		
-		if (response == null) {
+		if (response == null || (Snmp)event.getSource() instanceof Snmp.ReportHandler) {
 			onFailure();
 			
 			this.failureCount = Math.min(MAX_REQUEST, this.failureCount +1);
@@ -437,11 +471,18 @@ public abstract class Node implements ResponseListener {
 		int status = response.getErrorStatus();
 		
 		if (status != PDU.noError) {
-			new Exception("status: "+ status).printStackTrace();
+			try {
+				throw new Exception("status: "+ status);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			onException();
 			
 			return;
 		}
-			
+		
 		try {
 			PDU nextRequest = getNextRequest(request, response);
 			

@@ -161,26 +161,7 @@ public class RequestPDU extends PDU {
 	
 	private final static int CISCO = 9;
 	
-	private RequestPDU() {
-		
-	}
-
-	public static RequestPDU getInstance(boolean emptyPDU) {
-		if (emptyPDU) {
-			RequestPDU pdu = new RequestPDU();
-			
-			pdu.setType(PDU.GET);
-			
-			return pdu;
-		}
-		else {
-			return getInstance();
-		}
-	}
-	
-	public static RequestPDU getInstance() {
-		RequestPDU pdu = new RequestPDU();
-		
+	public static void initialize(PDU pdu) {
 		pdu.setType(PDU.GETNEXT);
 		pdu.add(new VariableBinding(sysDescr));
 		pdu.add(new VariableBinding(sysObjectID));
@@ -212,16 +193,14 @@ public class RequestPDU extends PDU {
 		pdu.add(new VariableBinding(hrStorageAllocationUnits));
 		pdu.add(new VariableBinding(hrStorageSize));
 		pdu.add(new VariableBinding(hrStorageUsed));
-		
-		return pdu;
 	}
 	
-	public void setEnterprise(int enterprise) {
+	public static void setEnterprise(PDU pdu, int enterprise) {
 		switch(enterprise) {
 		case CISCO:
-			add(new VariableBinding(busyPer));
-			add(new VariableBinding(cpmCPUTotal5sec));
-			add(new VariableBinding(cpmCPUTotal5secRev));
+			pdu.add(new VariableBinding(busyPer));
+			pdu.add(new VariableBinding(cpmCPUTotal5sec));
+			pdu.add(new VariableBinding(cpmCPUTotal5secRev));
 			
 			break;
 		}
