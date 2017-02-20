@@ -22,6 +22,7 @@ import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
 import org.snmp4j.mp.MPv3;
 import org.snmp4j.security.AuthMD5;
+import org.snmp4j.security.AuthSHA;
 import org.snmp4j.security.PrivDES;
 import org.snmp4j.security.SecurityLevel;
 import org.snmp4j.security.SecurityModels;
@@ -133,39 +134,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		initNode();
 	}
-	public void initUSM() {
-		JSONObject profileData = profileTable.getJSONObject();
-		USM usm;
-		JSONObject profile;
-		OctetString user;
-		OctetString auth;
-		OctetString priv;
-		
-		SecurityModels.getInstance().addSecurityModel(new USM(SecurityProtocols.getInstance(), new OctetString(MPv3.createLocalEngineID()), 0));
-		
-		usm = super.getUSM();
-		
-		for (Object key : profileData.keySet()) {
-			profile = profileData.getJSONObject((String)key);
-			try {
-				if ("v3".equals(profile.getString("version"))) {
-					user = new OctetString(profile.getString("user"));
-					
-					if (user.length() == 0) {
-						throw new IllegalArgumentException();
-					}
-					
-					auth = profile.has("authentication")? new OctetString(profile.getString("authentication")): null;
-					priv = profile.has("privacy")? new OctetString(profile.getString("privacy")): null;
-					
-					usm.addUser(user, new UsmUser(user, auth == null? null: AuthMD5.ID, auth, priv == null? null: PrivDES.ID, priv));
-				}
-			}
-			catch (JSONException | IllegalArgumentException e) {
-				e.printStackTrace();
-			}
-		}
-	}
 	
 	public void addNode(String ip, String profileName) {
 		JSONObject profile = profileTable.getJSONObject(profileName);
@@ -209,6 +177,51 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 	}
 	
+	public void initUSM() {
+		JSONObject profileData = profileTable.getJSONObject();
+		JSONObject profile;
+		
+		SecurityModels.getInstance().addSecurityModel(new USM(SecurityProtocols.getInstance(), new OctetString(MPv3.createLocalEngineID()), 0));
+		
+		for (Object key : profileData.keySet()) {
+			profile = profileData.getJSONObject((String)key);
+			try {
+				if ("v3".equals(profile.getString("version"))) {
+					addUSM(profile);
+				}
+			}
+			catch (JSONException | IllegalArgumentException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public boolean addUSM(JSONObject profile) {
+		String user = profile.getString("user");
+		
+		if (user.length() == 0) {
+			return false;
+		}
+		
+		String authentication = profile.has("md5")? "md5": profile.has("sha")? "sha": null;
+		String privacy = profile.has("des")? "des": null;
+		
+		if (authentication == null) {
+			return addUSM(new OctetString()
+				, null, null, null, null);
+		}
+		else if (privacy == null) {
+			return addUSM(new OctetString(user)
+				, "sha".equals(authentication)? AuthSHA.ID: AuthMD5.ID, new OctetString(profile.getString(authentication))
+				, null, null);
+		}
+		else {
+			return addUSM(new OctetString(user)
+			, "sha".equals(authentication)? AuthSHA.ID: AuthMD5.ID, new OctetString(profile.getString(authentication))
+			, PrivDES.ID, new OctetString(profile.getString(privacy)));
+		}
+	}
+	
 	private boolean addUSM(OctetString user, OID authProtocol, OctetString authPassphrase, OID privProtocol, OctetString privPassphrase) {		
 		if (super.getUSM().getUser(null, user) != null) {
 			return false;
@@ -217,18 +230,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 		super.getUSM().addUser(new UsmUser(user, authProtocol, authPassphrase, privProtocol, privPassphrase));
 		
 		return true;
-	}
-	
-	public boolean addUSM(String user) {
-		return addUSM(new OctetString(user), null, null, null, null);
-	}
-	
-	public boolean addUSM(String user, String auth) {
-		return addUSM(new OctetString(user), AuthMD5.ID, new OctetString(auth), null, null);
-	}
-	
-	public boolean addUSM(String user, String auth, String priv) {
-		return addUSM(new OctetString(user), AuthMD5.ID, new OctetString(auth), null, null);
 	}
 	
 	public void removeUSM(String user) {
@@ -399,25 +400,32 @@ public class SNMPAgent extends Snmp implements Closeable {
 	}
 	
 	private void clean() {
-		Calendar date = Calendar.getInstance();
-		
-		date.set(Calendar.HOUR_OF_DAY, 0);
-		date.set(Calendar.MINUTE, 0);
-		date.set(Calendar.SECOND, 0);
-		date.set(Calendar.MILLISECOND, 0);
-		
-		date.add(Calendar.MONTH, -3);
-				
-		new DataCleaner(this.nodeRoot, date.getTimeInMillis(), 3) {
+		new Thread(new Runnable() {
 
 			@Override
-			public void onDelete(File file) {
+			public void run() {
+				Calendar date = Calendar.getInstance();
+				
+				date.set(Calendar.HOUR_OF_DAY, 0);
+				date.set(Calendar.MINUTE, 0);
+				date.set(Calendar.SECOND, 0);
+				date.set(Calendar.MILLISECOND, 0);
+				
+				date.add(Calendar.MONTH, -3);
+						
+				new DataCleaner(nodeRoot, date.getTimeInMillis(), 3) {
+
+					@Override
+					public void onDelete(File file) {
+					}
+					
+					@Override
+					public void onComplete(long count) {
+					}
+				};
 			}
 			
-			@Override
-			public void onComplete(long count) {
-			}
-		};
+		}).start();
 	}
 	
 	public JSONObject getFailureRate(String ip) {

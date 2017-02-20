@@ -36,17 +36,8 @@ public class Profile extends Table {
 		}
 		// v3 추가
 		else if ("v3".equals(profile.getString("version"))) {
-			if (profile.has("authentication")) {
-				if (profile.has("privacy")) {
-					success = Agent.manager.snmp.addUSM(profile.getString("user"), profile.getString("authentication"), profile.getString("privacy"));
-				}
-				else {
-					success = Agent.manager.snmp.addUSM(profile.getString("user"), profile.getString("authentication"));
-				}
-			}
-			else {
-				success = Agent.manager.snmp.addUSM(profile.getString("user"));
-			}
+			success = Agent.manager.snmp.addUSM(profile);
+			
 		}
 		// else v2c 추가
 		
