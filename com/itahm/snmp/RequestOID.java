@@ -1,12 +1,8 @@
 package com.itahm.snmp;
 
-import org.snmp4j.PDU;
 import org.snmp4j.smi.OID;
-import org.snmp4j.smi.VariableBinding;
 
-public class RequestPDU extends PDU {
-
-	private static final long serialVersionUID = -4679454908141027650L;
+public class RequestOID {
 
 	public final static OID iso = new OID(new int [] {1});
 	public final static OID org = new OID(new int [] {1,3}); // iso.org
@@ -127,6 +123,7 @@ public class RequestPDU extends PDU {
 	
 	//public final static OID 	private = new OID(internet).append(4); // 5
 	//public final static OID 		enterprises = new OID(internet).append(4).append(1); // 6
+	public final static OID 		enterprises = new OID(new int [] {1,3,6,1,4,1}); // 6
 
 	// iso.org.dod.internet.snmpV2
 	//public final static OID snmpV2 = new OID(new int [] {1,3,6,1,6});
@@ -155,54 +152,4 @@ public class RequestPDU extends PDU {
 	public final static OID	busyPer = new OID(new int [] {1,3,6,1,4,1,9,2,1,5,6});
 	public final static OID	cpmCPUTotal5sec = new OID(new int [] {1,3,6,1,4,1,9,9,109,1,1,1,1,3});
 	public final static OID	cpmCPUTotal5secRev = new OID(new int [] {1,3,6,1,4,1,9,9,109,1,1,1,1,6});
-	
-	//public final static OID authenticationFailure = new OID(snmpTraps).append(5); // 10
-	//public final static OID egpNeighborLoss = new OID(snmpTraps).append(6); // 10
-	
-	private final static int CISCO = 9;
-	
-	public static void initialize(PDU pdu) {
-		pdu.setType(PDU.GETNEXT);
-		pdu.add(new VariableBinding(sysDescr));
-		pdu.add(new VariableBinding(sysObjectID));
-		pdu.add(new VariableBinding(sysName));
-		pdu.add(new VariableBinding(sysServices));
-		pdu.add(new VariableBinding(ifDescr));
-		pdu.add(new VariableBinding(ifType));
-		pdu.add(new VariableBinding(ifSpeed));
-		pdu.add(new VariableBinding(ifPhysAddress));
-		pdu.add(new VariableBinding(ifAdminStatus));
-		pdu.add(new VariableBinding(ifOperStatus));
-		pdu.add(new VariableBinding(ifName));
-		pdu.add(new VariableBinding(ifInOctets));
-		pdu.add(new VariableBinding(ifInErrors));
-		pdu.add(new VariableBinding(ifOutOctets));
-		pdu.add(new VariableBinding(ifOutErrors));
-		pdu.add(new VariableBinding(ifHCInOctets));
-		pdu.add(new VariableBinding(ifHCOutOctets));
-		pdu.add(new VariableBinding(ifHighSpeed));
-		pdu.add(new VariableBinding(ifAlias));
-		pdu.add(new VariableBinding(ipAdEntIfIndex));
-		pdu.add(new VariableBinding(ipAdEntNetMask));
-		pdu.add(new VariableBinding(ipNetToMediaType));
-		pdu.add(new VariableBinding(ipNetToMediaPhysAddress));
-		pdu.add(new VariableBinding(hrSystemUptime));
-		pdu.add(new VariableBinding(hrProcessorLoad));
-		pdu.add(new VariableBinding(hrStorageType));
-		pdu.add(new VariableBinding(hrStorageDescr));
-		pdu.add(new VariableBinding(hrStorageAllocationUnits));
-		pdu.add(new VariableBinding(hrStorageSize));
-		pdu.add(new VariableBinding(hrStorageUsed));
-	}
-	
-	public static void setEnterprise(PDU pdu, int enterprise) {
-		switch(enterprise) {
-		case CISCO:
-			pdu.add(new VariableBinding(busyPer));
-			pdu.add(new VariableBinding(cpmCPUTotal5sec));
-			pdu.add(new VariableBinding(cpmCPUTotal5secRev));
-			
-			break;
-		}
-	}
 }

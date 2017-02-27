@@ -36,7 +36,9 @@ import org.snmp4j.smi.VariableBinding;
 public abstract class Node implements ResponseListener {
 	
 	private final static int MAX_REQUEST = 100;
-	private PDU pdu;
+	private final static int CISCO = 9;
+	
+	protected PDU pdu;
 	private PDU nextPDU;
 	private final Snmp snmp;
 	private Target target;
@@ -70,7 +72,7 @@ public abstract class Node implements ResponseListener {
 		this(snmp);
 		
 		pdu = new ScopedPDU();
-		RequestPDU.initialize(pdu);
+		pdu.setType(PDU.GETNEXT);
 		
 		nextPDU = new ScopedPDU();
 		nextPDU.setType(PDU.GETNEXT);
@@ -88,7 +90,7 @@ public abstract class Node implements ResponseListener {
 		this(snmp);
 		
 		pdu = new PDU();
-		RequestPDU.initialize(pdu);
+		pdu.setType(PDU.GETNEXT);
 		
 		nextPDU = new PDU();
 		nextPDU.setType(PDU.GETNEXT);
@@ -99,6 +101,17 @@ public abstract class Node implements ResponseListener {
 		target = new CommunityTarget(new UdpAddress(InetAddress.getByName(ip), udp), community);
 		target.setVersion(SnmpConstants.version2c);
 		target.setTimeout(timeout);
+	}
+	
+	private void setEnterprise(int enterprise) {
+		switch(enterprise) {
+		case CISCO:
+			this.pdu.add(new VariableBinding(RequestOID.busyPer));
+			this.pdu.add(new VariableBinding(RequestOID.cpmCPUTotal5sec));
+			this.pdu.add(new VariableBinding(RequestOID.cpmCPUTotal5secRev));
+			
+			break;
+		}
 	}
 	
 	public void request() {		
@@ -147,21 +160,19 @@ public abstract class Node implements ResponseListener {
 	}
 	
 	private final boolean parseSystem(OID response, Variable variable, OID request) {
-		if (request.startsWith(RequestPDU.sysDescr) && response.startsWith(RequestPDU.sysDescr)) {
+		if (request.startsWith(RequestOID.sysDescr) && response.startsWith(RequestOID.sysDescr)) {
 			this.data.put("sysDescr", new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(RequestPDU.sysObjectID) && response.startsWith(RequestPDU.sysObjectID)) {
+		else if (request.startsWith(RequestOID.sysObjectID) && response.startsWith(RequestOID.sysObjectID)) {
 			this.data.put("sysObjectID", ((OID)variable).toDottedString());
 			
 			if (this.enterprise == null) {
 				this.enterprise = ((OID)variable).get(6);
 				
-				System.out.println("enterprise: "+ ((OID)variable).toDottedString());
-				
-				RequestPDU.setEnterprise(this.pdu, this.enterprise);
+				setEnterprise(this.enterprise);
 			}
 		}
-		else if (request.startsWith(RequestPDU.sysName) && response.startsWith(RequestPDU.sysName)) {
+		else if (request.startsWith(RequestOID.sysName) && response.startsWith(RequestOID.sysName)) {
 			this.data.put("sysName", new String(((OctetString)variable).getValue()));
 		}
 		
@@ -181,16 +192,16 @@ public abstract class Node implements ResponseListener {
 			ifData.put("ifOutBPS", 0);
 		}
 		
-		if (request.startsWith(RequestPDU.ifDescr) && response.startsWith(RequestPDU.ifDescr)) {
+		if (request.startsWith(RequestOID.ifDescr) && response.startsWith(RequestOID.ifDescr)) {
 			ifData.put("ifDescr", new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(RequestPDU.ifType) && response.startsWith(RequestPDU.ifType)) {			
+		else if (request.startsWith(RequestOID.ifType) && response.startsWith(RequestOID.ifType)) {			
 			ifData.put("ifType", ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifSpeed) && response.startsWith(RequestPDU.ifSpeed)) {			
+		else if (request.startsWith(RequestOID.ifSpeed) && response.startsWith(RequestOID.ifSpeed)) {			
 			ifData.put("ifSpeed", ((Gauge32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifPhysAddress) && response.startsWith(RequestPDU.ifPhysAddress)) {
+		else if (request.startsWith(RequestOID.ifPhysAddress) && response.startsWith(RequestOID.ifPhysAddress)) {
 			byte [] mac = ((OctetString)variable).getValue();
 			
 			String macString = "";
@@ -205,22 +216,22 @@ public abstract class Node implements ResponseListener {
 			
 			ifData.put("ifPhysAddress", macString);
 		}
-		else if (request.startsWith(RequestPDU.ifAdminStatus) && response.startsWith(RequestPDU.ifAdminStatus)) {
+		else if (request.startsWith(RequestOID.ifAdminStatus) && response.startsWith(RequestOID.ifAdminStatus)) {
 			ifData.put("ifAdminStatus", ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifOperStatus) && response.startsWith(RequestPDU.ifOperStatus)) {			
+		else if (request.startsWith(RequestOID.ifOperStatus) && response.startsWith(RequestOID.ifOperStatus)) {			
 			ifData.put("ifOperStatus", ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifInOctets) && response.startsWith(RequestPDU.ifInOctets)) {
+		else if (request.startsWith(RequestOID.ifInOctets) && response.startsWith(RequestOID.ifInOctets)) {
 			ifData.put("ifInOctets", ((Counter32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifOutOctets) && response.startsWith(RequestPDU.ifOutOctets)) {
+		else if (request.startsWith(RequestOID.ifOutOctets) && response.startsWith(RequestOID.ifOutOctets)) {
 			ifData.put("ifOutOctets", ((Counter32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifInErrors) && response.startsWith(RequestPDU.ifInErrors)) {
+		else if (request.startsWith(RequestOID.ifInErrors) && response.startsWith(RequestOID.ifInErrors)) {
 			ifData.put("ifInErrors", ((Counter32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifOutErrors) && response.startsWith(RequestPDU.ifOutErrors)) {
+		else if (request.startsWith(RequestOID.ifOutErrors) && response.startsWith(RequestOID.ifOutErrors)) {
 			ifData.put("ifOutErrors", ((Counter32)variable).getValue());
 		}
 		else {
@@ -240,19 +251,19 @@ public abstract class Node implements ResponseListener {
 			this.ifEntry.put(index, ifData);
 		}
 		
-		if (request.startsWith(RequestPDU.ifName) && response.startsWith(RequestPDU.ifName)) {
+		if (request.startsWith(RequestOID.ifName) && response.startsWith(RequestOID.ifName)) {
 			ifData.put("ifName", new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(RequestPDU.ifAlias) && response.startsWith(RequestPDU.ifAlias)) {
+		else if (request.startsWith(RequestOID.ifAlias) && response.startsWith(RequestOID.ifAlias)) {
 			ifData.put("ifAlias", new String(((OctetString)variable).getValue()));
 		}
-		else if (request.startsWith(RequestPDU.ifHCInOctets) && response.startsWith(RequestPDU.ifHCInOctets)) {
+		else if (request.startsWith(RequestOID.ifHCInOctets) && response.startsWith(RequestOID.ifHCInOctets)) {
 			ifData.put("ifHCInOctets", ((Counter64)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifHCOutOctets) && response.startsWith(RequestPDU.ifHCOutOctets)) {
+		else if (request.startsWith(RequestOID.ifHCOutOctets) && response.startsWith(RequestOID.ifHCOutOctets)) {
 			ifData.put("ifHCOutOctets", ((Counter64)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.ifHighSpeed) && response.startsWith(RequestPDU.ifHighSpeed)) {
+		else if (request.startsWith(RequestOID.ifHighSpeed) && response.startsWith(RequestOID.ifHighSpeed)) {
 			ifData.put("ifHighSpeed", ((Gauge32)variable).getValue() * 1000000L);
 		}
 		else {
@@ -263,7 +274,7 @@ public abstract class Node implements ResponseListener {
 	}
 	
 	private final boolean parseHost(OID response, Variable variable, OID request) throws JSONException, IOException {
-		if (request.startsWith(RequestPDU.hrSystemUptime) && response.startsWith(RequestPDU.hrSystemUptime)) {
+		if (request.startsWith(RequestOID.hrSystemUptime) && response.startsWith(RequestOID.hrSystemUptime)) {
 			this.data.put("hrSystemUptime", ((TimeTicks)variable).toMilliseconds());
 			
 			return false;
@@ -271,10 +282,10 @@ public abstract class Node implements ResponseListener {
 		
 		String index = Integer.toString(response.last());
 		
-		if (request.startsWith(RequestPDU.hrProcessorLoad) && response.startsWith(RequestPDU.hrProcessorLoad)) {
+		if (request.startsWith(RequestOID.hrProcessorLoad) && response.startsWith(RequestOID.hrProcessorLoad)) {
 			this.hrProcessorEntry.put(index, ((Integer32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.hrStorageEntry) && response.startsWith(RequestPDU.hrStorageEntry)) {
+		else if (request.startsWith(RequestOID.hrStorageEntry) && response.startsWith(RequestOID.hrStorageEntry)) {
 			JSONObject storageData = this.hrStorageEntry.get(index);
 			
 			if (storageData == null) {
@@ -283,19 +294,19 @@ public abstract class Node implements ResponseListener {
 				this.hrStorageEntry.put(index, storageData = new JSONObject());
 			}
 			
-			if (request.startsWith(RequestPDU.hrStorageType) && response.startsWith(RequestPDU.hrStorageType)) {
+			if (request.startsWith(RequestOID.hrStorageType) && response.startsWith(RequestOID.hrStorageType)) {
 				storageData.put("hrStorageType", ((OID)variable).last());
 			}
-			else if (request.startsWith(RequestPDU.hrStorageDescr) && response.startsWith(RequestPDU.hrStorageDescr)) {
+			else if (request.startsWith(RequestOID.hrStorageDescr) && response.startsWith(RequestOID.hrStorageDescr)) {
 				storageData.put("hrStorageDescr", new String(((OctetString)variable).getValue()));
 			}
-			else if (request.startsWith(RequestPDU.hrStorageAllocationUnits) && response.startsWith(RequestPDU.hrStorageAllocationUnits)) {
+			else if (request.startsWith(RequestOID.hrStorageAllocationUnits) && response.startsWith(RequestOID.hrStorageAllocationUnits)) {
 				storageData.put("hrStorageAllocationUnits", ((Integer32)variable).getValue());
 			}
-			else if (request.startsWith(RequestPDU.hrStorageSize) && response.startsWith(RequestPDU.hrStorageSize)) {
+			else if (request.startsWith(RequestOID.hrStorageSize) && response.startsWith(RequestOID.hrStorageSize)) {
 				storageData.put("hrStorageSize", ((Integer32)variable).getValue());
 			}
-			else if (request.startsWith(RequestPDU.hrStorageUsed) && response.startsWith(RequestPDU.hrStorageUsed)) {
+			else if (request.startsWith(RequestOID.hrStorageUsed) && response.startsWith(RequestOID.hrStorageUsed)) {
 				storageData.put("hrStorageUsed", ((Integer32)variable).getValue());
 			}
 			else {
@@ -313,8 +324,8 @@ public abstract class Node implements ResponseListener {
 		byte [] array = response.toByteArray();
 		String ip = new IpAddress(new byte [] {array[array.length -4], array[array.length -3], array[array.length -2], array[array.length -1]}).toString();
 		
-		if (request.startsWith(RequestPDU.ipAddrTable)) {
-			if (request.startsWith(RequestPDU.ipAdEntIfIndex) && response.startsWith(RequestPDU.ipAdEntIfIndex)) {
+		if (request.startsWith(RequestOID.ipAddrTable)) {
+			if (request.startsWith(RequestOID.ipAdEntIfIndex) && response.startsWith(RequestOID.ipAdEntIfIndex)) {
 				if (this.data.has("ifEntry")) {
 					JSONObject ifEntry = this.data.getJSONObject("ifEntry");
 					Integer index = ((Integer32)variable).getValue();
@@ -328,7 +339,7 @@ public abstract class Node implements ResponseListener {
 					}
 				}
 			}
-			else if (request.startsWith(RequestPDU.ipAdEntNetMask) && response.startsWith(RequestPDU.ipAdEntNetMask)) {
+			else if (request.startsWith(RequestOID.ipAdEntNetMask) && response.startsWith(RequestOID.ipAdEntNetMask)) {
 				String mask = ((IpAddress)variable).toString();
 				
 				this.networkTable.put(ip, mask);
@@ -338,15 +349,15 @@ public abstract class Node implements ResponseListener {
 			else {
 				return false;
 			}
-		} else if (request.startsWith(RequestPDU.ipNetToMediaTable)) {
+		} else if (request.startsWith(RequestOID.ipNetToMediaTable)) {
 			int index = array[array.length -5];
 			
-			if (request.startsWith(RequestPDU.ipNetToMediaType) && response.startsWith(RequestPDU.ipNetToMediaType)) {
+			if (request.startsWith(RequestOID.ipNetToMediaType) && response.startsWith(RequestOID.ipNetToMediaType)) {
 				if (((Integer32)variable).getValue() == 3) {
 					this.remoteIPTable.put(ip, index);
 				}
 			}
-			else if (request.startsWith(RequestPDU.ipNetToMediaPhysAddress) && response.startsWith(RequestPDU.ipNetToMediaPhysAddress)) {
+			else if (request.startsWith(RequestOID.ipNetToMediaPhysAddress) && response.startsWith(RequestOID.ipNetToMediaPhysAddress)) {
 				if (this.remoteIPTable.containsKey(ip) && this.remoteIPTable.get(ip) == index) {
 					byte [] mac = ((OctetString)variable).getValue();
 					String macString = String.format("%02X", 0L |mac[0] & 0xff);
@@ -373,14 +384,14 @@ public abstract class Node implements ResponseListener {
 	private final boolean parseCisco(OID response, Variable variable, OID request) {
 		String index = Integer.toString(response.last());
 		
-		if (request.startsWith(RequestPDU.busyPer) && response.startsWith(RequestPDU.busyPer)) {
+		if (request.startsWith(RequestOID.busyPer) && response.startsWith(RequestOID.busyPer)) {
 			this.hrProcessorEntry.put(index, (int)((Gauge32)variable).getValue());
 		}
-		else if (request.startsWith(RequestPDU.cpmCPUTotal5sec) && response.startsWith(RequestPDU.cpmCPUTotal5sec)) {
+		else if (request.startsWith(RequestOID.cpmCPUTotal5sec) && response.startsWith(RequestOID.cpmCPUTotal5sec)) {
 			this.hrProcessorEntry.put(index, (int)((Gauge32)variable).getValue());
 			
 		}
-		else if (request.startsWith(RequestPDU.cpmCPUTotal5secRev) && response.startsWith(RequestPDU.cpmCPUTotal5secRev)) {
+		else if (request.startsWith(RequestOID.cpmCPUTotal5secRev) && response.startsWith(RequestOID.cpmCPUTotal5secRev)) {
 			this.hrProcessorEntry.put(index, (int)((Gauge32)variable).getValue());
 		}
 		else {
@@ -399,28 +410,38 @@ public abstract class Node implements ResponseListener {
 	 * @throws IOException 
 	 */
 	private final boolean parseResponse (OID response, Variable variable, OID request) throws IOException {
-		if (request.startsWith(RequestPDU.system)) {
+		// 1,3,6,1,2,1,1,5
+		if (request.startsWith(RequestOID.system)) {
 			return parseSystem(response, variable, request);
 		}
-		else if (request.startsWith(RequestPDU.ifEntry)) {
+		// 1,3,6,1,2,1,2,2,1
+		else if (request.startsWith(RequestOID.ifEntry)) {
 			return parseIFEntry(response, variable, request);
 		}
-		else if (request.startsWith(RequestPDU.ifXEntry)) {
+		// 1,3,6,1,2,1,31,1,1,1
+		else if (request.startsWith(RequestOID.ifXEntry)) {
 			return parseIFXEntry(response, variable, request);
 		}
-		else if (request.startsWith(RequestPDU.host)) {
+		// 1,3,6,1,2,1,25
+		else if (request.startsWith(RequestOID.host)) {
 			return parseHost(response, variable, request);
 		}
-		else if (request.startsWith(RequestPDU.ip)) {
+		// 1,3,6,1,2,1,4
+		else if (request.startsWith(RequestOID.ip)) {
 			return parseIP(response, variable, request);
 		}
-		else if (request.startsWith(RequestPDU.cisco)) {
-			return parseCisco(response, variable, request);
+		else if (request.startsWith(RequestOID.enterprises)) {
+			if (request.startsWith(RequestOID.cisco)) {
+				return parseCisco(response, variable, request);
+			}
+			else {
+				return parseEnterprise(response, variable, request);
+			}
 		}
 		
 		return false;
 	}
-
+	
 	public final PDU getNextRequest(PDU request, PDU response) throws IOException {
 		Vector<? extends VariableBinding> requestVBs = request.getVariableBindings();
 		Vector<? extends VariableBinding> responseVBs = response.getVariableBindings();
@@ -513,6 +534,7 @@ public abstract class Node implements ResponseListener {
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
 	abstract protected void onException();
+	abstract protected boolean parseEnterprise(OID response, Variable variable, OID request);
 	
 	public static void main(String [] args) throws IOException {
 	}

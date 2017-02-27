@@ -7,17 +7,22 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
+import org.snmp4j.smi.Variable;
 
 import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
-
 import com.itahm.icmp.ICMPListener;
 import com.itahm.json.RollingFile;
 import com.itahm.snmp.Node;
 import com.itahm.table.Table;
 
 public class SNMPNode extends Node implements ICMPListener, Closeable {
+	
+	private final static OID OID_TRAP = new OID(new int [] {1,3,6,1,6,3,1,1,5});
+	private final static OID OID_LINKDOWN = new OID(new int [] {1,3,6,1,6,3,1,1,5,3});
+	private final static OID OID_LINKUP = new OID(new int [] {1,3,6,1,6,3,1,1,5,4});
 	
 	public enum Rolling {
 		HRPROCESSORLOAD("hrProcessorLoad"),
@@ -68,10 +73,14 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	
 	private SNMPNode(SNMPAgent agent, String ip, int udp, String community, JSONObject criticalCondition) throws IOException {
 		super(agent, ip, udp, new OctetString(community), Agent.MAX_TIMEOUT);
+		
+		agent.setRequestOID(super.pdu);
 	}
 	
 	private SNMPNode(SNMPAgent agent, String ip, int udp, String user, int level, JSONObject criticalCondition) throws IOException {
 		super(agent, ip, udp, new OctetString(user), level, Agent.MAX_TIMEOUT);
+		
+		agent.setRequestOID(super.pdu);
 	}
 	
 	private void initialize(SNMPAgent agent, String ip, JSONObject criticalCondition) throws UnknownHostException {
@@ -435,6 +444,17 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		}		
 	}
 	
+	public void parseTrap(OID trap, Variable variable) {
+		if (trap.startsWith(OID_TRAP)) {
+			if (trap.startsWith(OID_LINKUP)) {
+				
+			}
+			else if (trap.startsWith(OID_LINKDOWN)) {
+				
+			}
+		}
+	}
+	
 	@Override
 	public void onSuccess() {
 		processSuccess();
@@ -475,6 +495,11 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	@Override
 	public void close() throws IOException {
 		this.icmp.stop();
+	}
+
+	@Override
+	protected boolean parseEnterprise(OID response, Variable variable, OID request) {
+		return this.agent.parseEnterprise(this, response, variable, request);
 	}
 	
 }

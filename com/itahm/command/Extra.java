@@ -25,7 +25,8 @@ public class Extra implements Command {
 		NETWORK,
 		LOG,
 		ARP,
-		LINK;
+		LINK,
+		ENTERPRISE;
 	};
 	
 	@Override
@@ -93,6 +94,8 @@ public class Extra implements Command {
 				}
 				
 				return Response.getInstance(request, Response.Status.OK, table.save().toString());
+			case ENTERPRISE:
+				return Agent.manager.snmp.executeEnterprise(request, data);
 			}
 		}
 		catch (NullPointerException npe) {

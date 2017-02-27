@@ -3,6 +3,9 @@ package com.itahm;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -12,6 +15,9 @@ import java.util.TimerTask;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.itahm.enterprise.Extension;
+import com.itahm.http.Request;
+import com.itahm.http.Response;
 import com.itahm.json.JSONException;
 import com.itahm.json.JSONFile;
 import com.itahm.json.JSONObject;
@@ -38,6 +44,7 @@ import org.snmp4j.smi.Variable;
 import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
+import com.itahm.snmp.RequestOID;
 import com.itahm.snmp.TmpNode;
 import com.itahm.table.Table;
 import com.itahm.util.DataCleaner;
@@ -46,9 +53,6 @@ import com.itahm.util.TopTable;
 public class SNMPAgent extends Snmp implements Closeable {
 	
 	private final static long REQUEST_INTERVAL = 10000;
-	private final static OID OID_TRAP = new OID(new int [] {1,3,6,1,6,3,1,1,5});
-	public final static OID	OID_LINKDOWN = new OID(new int [] {1,3,6,1,6,3,1,1,5,3});
-	public final static OID	OID_LINKUP = new OID(new int [] {1,3,6,1,6,3,1,1,5,4});
 	
 	public enum Resource {
 		RESPONSETIME("responseTime"),
@@ -83,6 +87,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Timer timer;
 	private final Map<String, JSONObject> arp;
 	private final Map<String, String> network;
+	private final Extension enterprise;
 	
 	public SNMPAgent(File root, boolean clean) throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
@@ -106,6 +111,8 @@ public class SNMPAgent extends Snmp implements Closeable {
 		 
 		nodeRoot = new File(root, "node");
 		nodeRoot.mkdir();
+		
+		enterprise = loadEnterprise();
 		
 		if (clean) {
 			clean();
@@ -135,6 +142,65 @@ public class SNMPAgent extends Snmp implements Closeable {
 		initNode();
 	}
 	
+	public Extension loadEnterprise() {
+		try {
+			URI uri = this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
+			
+			File f = new File(new File(uri), "ITAhMEnterprise.jar");
+			try (URLClassLoader ucl = new URLClassLoader(new URL [] {f.toURI().toURL()})) {
+				return (Extension)(ucl.loadClass("com.itahm.enterprise.Enterprise").newInstance());
+			} 
+		} catch (Exception e) {
+			System.out.println("enterprise is not set : "+ e.getMessage());
+		}
+		
+		return null;
+	}
+	
+	public void setRequestOID(PDU pdu) {
+		pdu.add(new VariableBinding(RequestOID.sysDescr));
+		pdu.add(new VariableBinding(RequestOID.sysObjectID));
+		pdu.add(new VariableBinding(RequestOID.sysName));
+		pdu.add(new VariableBinding(RequestOID.sysServices));
+		pdu.add(new VariableBinding(RequestOID.ifDescr));
+		pdu.add(new VariableBinding(RequestOID.ifType));
+		pdu.add(new VariableBinding(RequestOID.ifSpeed));
+		pdu.add(new VariableBinding(RequestOID.ifPhysAddress));
+		pdu.add(new VariableBinding(RequestOID.ifAdminStatus));
+		pdu.add(new VariableBinding(RequestOID.ifOperStatus));
+		pdu.add(new VariableBinding(RequestOID.ifName));
+		pdu.add(new VariableBinding(RequestOID.ifInOctets));
+		pdu.add(new VariableBinding(RequestOID.ifInErrors));
+		pdu.add(new VariableBinding(RequestOID.ifOutOctets));
+		pdu.add(new VariableBinding(RequestOID.ifOutErrors));
+		pdu.add(new VariableBinding(RequestOID.ifHCInOctets));
+		pdu.add(new VariableBinding(RequestOID.ifHCOutOctets));
+		pdu.add(new VariableBinding(RequestOID.ifHighSpeed));
+		pdu.add(new VariableBinding(RequestOID.ifAlias));
+		pdu.add(new VariableBinding(RequestOID.ipAdEntIfIndex));
+		pdu.add(new VariableBinding(RequestOID.ipAdEntNetMask));
+		pdu.add(new VariableBinding(RequestOID.ipNetToMediaType));
+		pdu.add(new VariableBinding(RequestOID.ipNetToMediaPhysAddress));
+		pdu.add(new VariableBinding(RequestOID.hrSystemUptime));
+		pdu.add(new VariableBinding(RequestOID.hrProcessorLoad));
+		pdu.add(new VariableBinding(RequestOID.hrStorageType));
+		pdu.add(new VariableBinding(RequestOID.hrStorageDescr));
+		pdu.add(new VariableBinding(RequestOID.hrStorageAllocationUnits));
+		pdu.add(new VariableBinding(RequestOID.hrStorageSize));
+		pdu.add(new VariableBinding(RequestOID.hrStorageUsed));
+		
+		if (this.enterprise != null) {
+			this.enterprise.setRequestOID(pdu);
+		}
+	}
+	
+	public boolean parseEnterprise(SNMPNode node, OID response, Variable variable, OID request) {
+		if (this.enterprise != null) {
+			return this.enterprise.parseRequest(node, response, variable, request);
+		}
+		return false;
+	}
+	
 	public void addNode(String ip, String profileName) {
 		JSONObject profile = profileTable.getJSONObject(profileName);
 		
@@ -148,19 +214,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		try {
 			if ("v3".equals(profile.getString("version"))) {
-				int level = SecurityLevel.NOAUTH_NOPRIV;
-				
-				if (profile.has("authentication")) {
-					level = SecurityLevel.AUTH_NOPRIV;
-					
-					if (profile.has("privacy")) {
-						level = SecurityLevel.AUTH_PRIV;
-					}
-				}
-				
 				node = SNMPNode.getInstance(this, ip, profile.getInt("udp")
 						, profile.getString("user")
-						, level
+						, (profile.has("md5") || profile.has("sha"))? (profile.has("des")) ? SecurityLevel.AUTH_PRIV: SecurityLevel.AUTH_NOPRIV : SecurityLevel.NOAUTH_NOPRIV
 						, this.criticalTable.getJSONObject(ip));
 			}
 			else {
@@ -204,26 +260,29 @@ public class SNMPAgent extends Snmp implements Closeable {
 		}
 		
 		String authentication = profile.has("md5")? "md5": profile.has("sha")? "sha": null;
-		String privacy = profile.has("des")? "des": null;
 		
 		if (authentication == null) {
-			return addUSM(new OctetString()
+			return addUSM(new OctetString(user)
 				, null, null, null, null);
 		}
-		else if (privacy == null) {
+		else {
+			String privacy = profile.has("des")? "des": null;
+		
+			if (privacy == null) {
+				return addUSM(new OctetString(user)
+					, "sha".equals(authentication)? AuthSHA.ID: AuthMD5.ID, new OctetString(profile.getString(authentication))
+					, null, null);
+			}
+			
 			return addUSM(new OctetString(user)
 				, "sha".equals(authentication)? AuthSHA.ID: AuthMD5.ID, new OctetString(profile.getString(authentication))
-				, null, null);
-		}
-		else {
-			return addUSM(new OctetString(user)
-			, "sha".equals(authentication)? AuthSHA.ID: AuthMD5.ID, new OctetString(profile.getString(authentication))
-			, PrivDES.ID, new OctetString(profile.getString(privacy)));
+				, PrivDES.ID, new OctetString(profile.getString(privacy)));
 		}
 	}
 	
 	private boolean addUSM(OctetString user, OID authProtocol, OctetString authPassphrase, OID privProtocol, OctetString privPassphrase) {		
-		if (super.getUSM().getUser(null, user) != null) {
+		if (super.getUSM().getUserTable().getUser(user) != null) {
+			
 			return false;
 		}
 		
@@ -328,24 +387,14 @@ public class SNMPAgent extends Snmp implements Closeable {
 		JSONObject profile;
 		
 		TmpNode node = new TestNode(this, ip, onFailure);
-		int level;
 		
 		for (Object name : profileData.keySet()) {
 			profile = profileData.getJSONObject((String)name);
 			
 			try {
 				if ("v3".equals(profile.getString("version"))) {
-					level = SecurityLevel.NOAUTH_NOPRIV;
-					
-					if (profile.has("authentication")) {
-						level = SecurityLevel.AUTH_NOPRIV;
-						
-						if (profile.has("privacy")) {
-							level = SecurityLevel.AUTH_PRIV;
-						}
-					}
-					
-					node.addV3Profile((String)name, profile.getInt("udp"), new OctetString(profile.getString("user")), level);
+					node.addV3Profile((String)name, profile.getInt("udp"), new OctetString(profile.getString("user"))
+						, (profile.has("md5") || profile.has("sha"))? (profile.has("des")) ? SecurityLevel.AUTH_PRIV: SecurityLevel.AUTH_NOPRIV : SecurityLevel.NOAUTH_NOPRIV);
 				}
 				else {
 					node.addProfile((String)name, profile.getInt("udp"), new OctetString(profile.getString("community")));
@@ -643,8 +692,9 @@ public class SNMPAgent extends Snmp implements Closeable {
 	
 	private final void parseTrap(Address addr, byte [] ba, PDU pdu) {
 		String ip = ((UdpAddress)addr).getInetAddress().getHostAddress();
+		SNMPNode node = this.nodeList.get(ip);
 		
-		if (!this.nodeList.containsKey(ip)) {
+		if (node == null) {
 			return;
 		}
 		
@@ -655,23 +705,20 @@ public class SNMPAgent extends Snmp implements Closeable {
 		for (int i = 0, _i= vbs.size();i< _i; i++) {
 			vb = (VariableBinding)vbs.get(i);
 			
-			parseTrap(vb.getOid(), vb.getVariable());
+			if (this.enterprise == null || !this.enterprise.parseTrap(node, vb.getOid(), vb.getVariable())) {
+				node.parseTrap(vb.getOid(), vb.getVariable());
+			}
 		}
 	}
 	
-	private void parseTrap(OID oid, Variable variable) {
-		if (OID_TRAP.leftMostCompare(OID_TRAP.size(), oid) != 0) {
-			return;
+	public Response executeEnterprise(Request request, JSONObject data) {
+		if (this.enterprise == null) {
+			return Response.getInstance(request, Response.Status.BADREQUEST,
+					new JSONObject().put("error", "enterprise is not set").toString());
 		}
 		
-		if (OID_LINKDOWN.leftMostCompare(OID_LINKDOWN.size(), oid) == 0) {
-			System.out.println("linkDown trap : "+ oid);
-		}
-		else if (OID_LINKUP.leftMostCompare(OID_LINKUP.size(), oid) == 0) {
-			System.out.println("linkUp trap : "+ oid);
-		}
+		return this.enterprise.execute(request, data);
 	}
-	
 	/**
 	 * ovverride
 	 */
