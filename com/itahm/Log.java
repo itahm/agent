@@ -129,7 +129,7 @@ public class Log implements Closeable {
 		}
 		
 		if(broadcast) {
-			Agent.manager.gcmm.broadcast(logData.getString("message"));
+			Agent.gcmm.broadcast(logData.getString("message"));
 		}
 	}
 	

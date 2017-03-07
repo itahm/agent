@@ -10,11 +10,21 @@ public class Profile extends Table {
 	
 	public Profile(File dataRoot) throws IOException {
 		super(dataRoot, PROFILE);
+		
+		if (isEmpty()) {
+			getJSONObject()
+				.put("default", new JSONObject()
+					.put("udp", 161)
+					.put("community", "public")
+					.put("version", "v2c"));
+		
+			super.save();
+		}
 	}
 	
 	private void removeProfile(JSONObject profile) {
 		if ("v3".equals(profile.getString("version"))) {
-			Agent.manager.snmp.removeUSM(profile.getString("user"));
+			Agent.snmp.removeUSM(profile.getString("user"));
 		}
 	}
 	
@@ -23,7 +33,7 @@ public class Profile extends Table {
 		
 		// 삭제
 		if (profile == null) {
-			if (super.table.has(name) && Agent.manager.snmp.isIdleProfile(name)) {
+			if (super.table.has(name) && Agent.snmp.isIdleProfile(name)) {
 				removeProfile(super.table.getJSONObject(name));
 			}
 			else {
@@ -36,7 +46,7 @@ public class Profile extends Table {
 		}
 		// v3 추가
 		else if ("v3".equals(profile.getString("version"))) {
-			success = Agent.manager.snmp.addUSM(profile);
+			success = Agent.snmp.addUSM(profile);
 			
 		}
 		// else v2c 추가

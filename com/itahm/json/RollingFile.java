@@ -8,8 +8,6 @@ import java.util.Calendar;
 
 import com.itahm.json.JSONObject;
 
-import com.itahm.util.DataCleaner;
-
 /**
  * The Class RollingFile.
  */
@@ -18,8 +16,8 @@ public class RollingFile implements Closeable {
 	/** The lastHour. */
 	//private int lastHour;
 	//private int lastDay;
-	private long _lastHour = -1;
-	private long _lastDay = -1;
+	private long lastHour = -1;
+	private long lastDay = -1;
 	
 	/** rollingRoot, itahm/snmp/ip address/resource/index */
 	private final File root;
@@ -66,38 +64,13 @@ public class RollingFile implements Closeable {
 		return c;
 	}
 	
-	private Calendar getCalendar(long mills) {
-		Calendar c = Calendar.getInstance();
-	
-		c.setTimeInMillis(mills);
-		
-		return c;
-	}
-	
 	/**
 	 * Roll.
 	 *
 	 * @param value the value
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	/*
 	public void roll(long value) throws IOException {
-		Calendar date = getCalendar();
-		
-		if (date.get(Calendar.HOUR_OF_DAY) != this.lastHour) {
-			//summarize();
-			
-			if (date.get(Calendar.DAY_OF_YEAR) != this.lastDay) {
-				initDay(date);
-			}
-			
-			initHour(date);
-		}
-		
-		roll(Long.toString(date.getTimeInMillis()), value);
-	}
-	*/
-	public void _roll(long value) throws IOException {
 		Calendar date = getCalendar();
 		String minString;
 		long hourMills;
@@ -108,15 +81,15 @@ public class RollingFile implements Closeable {
 		date.set(Calendar.MINUTE, 0);
 		hourMills = date.getTimeInMillis();
 		
-		if (this._lastHour != hourMills) {
+		if (this.lastHour != hourMills) {
 			date.set(Calendar.HOUR_OF_DAY, 0);
 			dayMills = date.getTimeInMillis();
 			
-			if (this._lastDay != dayMills) {
-				_initDay(dayMills);
+			if (this.lastDay != dayMills) {
+				initDay(dayMills);
 			}
 			
-			_initHour(hourMills);
+			initHour(hourMills);
 		}
 		
 		roll(minString, value);
@@ -153,37 +126,9 @@ public class RollingFile implements Closeable {
 		// TODO 아래 반복되는 save가 성능에 영향을 주는가 확인 필요함.
 		this.hourFile.save();
 	}
-	/*
-	private void initDay(Calendar date) throws IOException {
-		String dateString;
-		
-		date.set(Calendar.MINUTE, 0);
-		date.set(Calendar.HOUR_OF_DAY, 0);
-		
-		dateString = Long.toString(date.getTimeInMillis());
-		
-		this.lastDay = date.get(Calendar.DAY_OF_YEAR);
-		
-		// day directory 생성
-		this.dayDirectory = new File(this.root, dateString);
-		this.dayDirectory.mkdir();
-		
-		if (this.summaryFile != null) {
-			this.summaryFile.close();
-		}
-		
-		// summary file 생성
-		this.summaryFile = new JSONFile(new File(this.dayDirectory, "summary"));
-		this.summaryData = this.summaryFile.getJSONObject();
-		
-		// 지난 파일 삭제
-		date.add(Calendar.MONTH, -3);
-		
-		DataCleaner.deleteDirectory(new File(this.root, Long.toString(date.getTimeInMillis())));
-	}
-	*/
-	private void _initDay(long dayMills) throws IOException {
-		this._lastDay = dayMills;
+	
+	private void initDay(long dayMills) throws IOException {
+		this.lastDay = dayMills;
 		
 		// day directory 생성
 		this.dayDirectory = new File(this.root, Long.toString(dayMills));
@@ -196,8 +141,6 @@ public class RollingFile implements Closeable {
 		// summary file 생성
 		this.summaryFile = new JSONFile(new File(this.dayDirectory, "summary"));
 		this.summaryData = this.summaryFile.getJSONObject();
-		
-		clear(dayMills);
 	}
 	
 	/**
@@ -205,32 +148,10 @@ public class RollingFile implements Closeable {
 	 * @param date
 	 * @throws IOException
 	 */
-	/*
-	private void initHour(Calendar date) throws IOException {
-		String hourString;
-		
-		if (this.hourFile != null) {
-			this.hourFile.close();
-		}
-		
-		date.set(Calendar.MINUTE, 0);
-		
-		hourString = Long.toString(date.getTimeInMillis());
-		
-		// 마지막 시간 변경
-		this.lastHour = date.get(Calendar.HOUR_OF_DAY);
-		
-		// hourly file 생성
-		this.hourFile = new JSONFile(new File(this.dayDirectory, hourString));
-		this.hourData = this.hourFile.getJSONObject();
-		this.summaryHour = hourString;
-		this.hourCnt = 0;
-	}
-	*/
-	private void _initHour(long hourMills) throws IOException {
+	private void initHour(long hourMills) throws IOException {
 		String hourString = Long.toString(hourMills);
 		
-		this._lastHour = hourMills;
+		this.lastHour = hourMills;
 		
 		if (this.hourFile != null) {
 			this.hourFile.close();
@@ -241,15 +162,6 @@ public class RollingFile implements Closeable {
 		this.hourData = this.hourFile.getJSONObject();
 		this.summaryHour = hourString;
 		this.hourCnt = 0;
-	}
-	
-	private void clear(long dayMills) {
-		Calendar date = getCalendar(dayMills);
-		
-		// 지난 파일 삭제
-		date.add(Calendar.MONTH, -3);
-				
-		DataCleaner.deleteDirectory(new File(this.root, Long.toString(date.getTimeInMillis())));
 	}
 	
 	private void summarize() throws IOException {

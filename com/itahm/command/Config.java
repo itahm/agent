@@ -6,35 +6,33 @@ import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
 import com.itahm.table.Table;
-import com.itahm.table.Config;
 import com.itahm.Agent;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
-public class Pull implements Command {
+public class Config implements Command {
 	
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			Table table = Agent.getTable(data.getString("database"));
-			
-			if (table == null) {
-				return Response.getInstance(request, Response.Status.BADREQUEST,
-					new JSONObject().put("error", "database not found").toString());
-			}
-			else {
-				if (table instanceof Config) {
-					data = table.getJSONObject()
-						.put("space", Agent.getUsableSpace())
-						.put("version", Agent.VERSION)
-						.put("java", System.getProperty("java.version"));
-				}
-				else {
-					data = table.getJSONObject();
-				}
+			switch(data.getString("key")) {
+			case "clean":
+				Table table = Agent.getTable(Table.CONFIG);
+				int clean = data.getInt("value");
 				
-				return Response.getInstance(request, Response.Status.OK, data.toString());
+				table.getJSONObject().put("clean", clean);
+				table.save();
+				
+				Agent.snmp.clean(clean);
+				
+				break;
+				
+			default:
+				return Response.getInstance(request, Response.Status.BADREQUEST,
+					new JSONObject().put("error", "invalid config parameter").toString());
 			}
+			
+			return Response.getInstance(request, Response.Status.OK);
 		}
 		catch (JSONException jsone) {
 			return Response.getInstance(request, Response.Status.BADREQUEST,

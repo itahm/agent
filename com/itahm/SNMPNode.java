@@ -120,7 +120,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 		}
 		
 		try {
-			rollingFile._roll(value);
+			rollingFile.roll(value);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -14,7 +14,7 @@ public class Select implements Command {
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
-			JSONObject nodeData = Agent.manager.snmp.getNodeData(data.getString("ip"));
+			JSONObject nodeData = Agent.snmp.getNodeData(data.getString("ip"));
 			
 			if (nodeData != null) {
 				return Response.getInstance(request, Response.Status.OK, nodeData.toString());

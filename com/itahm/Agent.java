@@ -3,8 +3,16 @@ package com.itahm;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.itahm.ITAhMAgent;
+import com.itahm.GCMManager;
+import com.itahm.Log;
+import com.itahm.SNMPAgent;
+import com.itahm.ICMPAgent;
+
 
 import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
@@ -27,8 +35,9 @@ import com.itahm.table.Table;
 
 public class Agent implements ITAhMAgent {
 
+	public final static String VERSION = "1.3.3.10";
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
-	public final static String VERSION = "1.3.3.9";
+	
 	public final static int MAX_TIMEOUT = 10000;
 	public final static int ICMP_INTV = 1000;
 	public final static int MID_TIMEOUT = 5000;
@@ -36,18 +45,27 @@ public class Agent implements ITAhMAgent {
 	
 	private static Map<String, Table> tableMap = new HashMap<>();
 	
-	public final static class manager {
-		public static Log log;
-		public static GCMManager gcmm;
-		public static SNMPAgent snmp;
-		public static ICMPAgent icmp;
-	}
+	public static Log log;
+	public static GCMManager gcmm;
+	public static SNMPAgent snmp;
+	public static ICMPAgent icmp;
+	
+	private static File root;
+	private boolean isClosed = true;
 	
 	public Agent() {
-		System.out.println(String.format("ITAhM Agent version %s fix.2 ready.", VERSION));
+		System.out.format("ITAhM Agent version %s ready.\n", VERSION);
 	}
 	
-	public boolean start(File dataRoot, boolean clean) {		
+	public boolean start(File dataRoot) {
+		if (!this.isClosed) {
+			return false;
+		}
+		
+		root = dataRoot;
+		
+		this.isClosed = false;
+		
 		try {
 			tableMap.put(Table.ACCOUNT, new Account(dataRoot));
 			tableMap.put(Table.PROFILE, new Profile(dataRoot));
@@ -59,10 +77,21 @@ public class Agent implements ITAhMAgent {
 			tableMap.put(Table.CRITICAL, new Critical(dataRoot));
 			tableMap.put(Table.GCM, new GCM(dataRoot));
 			
-			manager.gcmm = new GCMManager(API_KEY, InetAddress.getLocalHost().getHostAddress());
-			manager.log = new Log(dataRoot);
-			manager.snmp = new SNMPAgent(dataRoot, clean);
-			manager.icmp = new ICMPAgent();
+			log = new Log(dataRoot);
+			gcmm = new GCMManager(API_KEY, InetAddress.getLocalHost().getHostAddress());
+			snmp = new SNMPAgent(dataRoot);
+			icmp = new ICMPAgent();
+			
+			try {
+				int clean = getTable(Table.CONFIG).getJSONObject().getInt("clean");
+				
+				if (clean > 0) {
+					snmp.clean(clean);
+				}
+			}
+			catch (JSONException jsone) {
+				jsone.printStackTrace();
+			}
 			
 			System.out.println("ITAhM agent up.");
 			
@@ -75,6 +104,27 @@ public class Agent implements ITAhMAgent {
 		stop();
 		
 		return false;
+	}
+	
+	public static void log(String msg) {
+		Calendar c = Calendar.getInstance();
+		String log = String.format("%04d-%02d-%02d %02d:%02d:%02d %s"
+			, c.get(Calendar.YEAR)
+			, c.get(Calendar.MONTH +1)
+			, c.get(Calendar.DAY_OF_MONTH)
+			, c.get(Calendar.HOUR_OF_DAY)
+			, c.get(Calendar.MINUTE)
+			, c.get(Calendar.SECOND), msg);
+		
+		System.out.println(log);
+	}
+	
+	public static long getUsableSpace() {
+		if (root == null) {
+			return 0;
+		}
+		
+		return root.getUsableSpace();
 	}
 	
 	private Session signIn(JSONObject data) {
@@ -126,6 +176,10 @@ public class Agent implements ITAhMAgent {
 	
 	@Override
 	public Response executeRequest(Request request, JSONObject data) {
+		if (this.isClosed) {
+			return Response.getInstance(request, Response.Status.SERVERERROR);
+		}
+		
 		String cmd = data.getString("command");
 		Session session = getSession(request);
 		
@@ -182,26 +236,34 @@ public class Agent implements ITAhMAgent {
 
 	@Override
 	public void closeRequest(Request request) {
-		manager.log.cancel(request);
+		log.cancel(request);
 	}
 
 	@Override
 	public void stop() {
-		if (manager.snmp != null) {
-			manager.snmp.close();
+		if (this.isClosed) {
+			return;
 		}
 		
-		if (manager.icmp != null) {
-			manager.icmp.close();
+		this.isClosed = true;
+		
+		if (snmp != null) {
+			snmp.close();
 		}
 		
-		if (manager.log != null) {
-			manager.log.close();
+		if (icmp != null) {
+			icmp.close();
 		}
 		
-		if (manager.gcmm != null) {
-			manager.gcmm.close();
+		if (log != null) {
+			log.close();
 		}
+		
+		if (gcmm != null) {
+			gcmm.close();
+		}
+		
+		System.out.format("%d",tableMap.size());
 		
 		for (Table table : tableMap.values()) {
 			try {
@@ -225,9 +287,9 @@ public class Agent implements ITAhMAgent {
 		// TODO Auto-generated method stub
 		
 	}
-
+	
 	public static void main(String [] args) {
-		
+		System.out.format("ITAhM Agent. since 2014.");
 	}
 
 }

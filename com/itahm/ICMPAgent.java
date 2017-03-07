@@ -85,7 +85,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 				
 				if (!isReachable) {
 					try {	
-						Agent.manager.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown", false, false);
+						Agent.log.write(ip, String.format("%s ICMP 등록 실패.", ip), "shutdown", false, false);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -101,7 +101,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 					addNode(ip);
 					
 					try {
-						Agent.manager.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "shutdown", true, false);
+						Agent.log.write(ip, String.format("%s ICMP 등록 성공.", ip), "shutdown", true, false);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -134,7 +134,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			this.monitorTable.save();
 			
 			try {
-				Agent.manager.log.write(ip, String.format("%s ICMP 정상.", ip), "shutdown", true, true);
+				Agent.log.write(ip, String.format("%s ICMP 정상.", ip), "shutdown", true, true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -165,7 +165,7 @@ public class ICMPAgent implements ICMPListener, Closeable {
 			
 			try {
 				
-				Agent.manager.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown", false, true);
+				Agent.log.write(ip, String.format("%s ICMP 응답 없음.", ip), "shutdown", false, true);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -184,6 +184,8 @@ public class ICMPAgent implements ICMPListener, Closeable {
 		}
 		
 		this.nodeList.clear();
+		
+		System.out.format("ICMP manager stop.\n");
 	}
 	
 }

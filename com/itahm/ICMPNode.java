@@ -7,8 +7,9 @@ import com.itahm.icmp.ICMPListener;
 
 public class ICMPNode extends AbstractNode {
 
-	private static final int [] TIMEOUT = new int [] {Agent.DEF_TIMEOUT, Agent.MID_TIMEOUT, Agent.MAX_TIMEOUT};
-	private static final int MAX_RETRY = 3; 
+	//private static final int [] TIMEOUT = new int [] {Agent.DEF_TIMEOUT, Agent.MID_TIMEOUT, Agent.MAX_TIMEOUT};
+	private static final int [] TIMEOUT = new int [] {Agent.DEF_TIMEOUT, Agent.MID_TIMEOUT};
+	private static final int MAX_RETRY = TIMEOUT.length -1; 
 	
 	private final ICMPListener listener;
 	private final String host;
@@ -34,14 +35,12 @@ public class ICMPNode extends AbstractNode {
 	
 	@Override
 	public void onFailure() {
-		failure++;
-		
 		if (failure < MAX_RETRY) {
+			failure++;
+			
 			super.setTimeout(TIMEOUT[failure]);
 		}
 		else {
-			failure--;
-			
 			this.listener.onFailure(host);
 		}
 	}

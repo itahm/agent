@@ -14,7 +14,7 @@ public class Critical extends Table {
 	}
 	
 	public JSONObject put(String ip, JSONObject critical) {
-		Agent.manager.snmp.resetCritical(ip, critical);
+		Agent.snmp.resetCritical(ip, critical);
 		
 		return super.put(ip, critical);
 	}

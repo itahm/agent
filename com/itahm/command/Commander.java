@@ -7,6 +7,7 @@ public enum Commander {
 	QUERY("com.itahm.command.Query"),
 	SELECT("com.itahm.command.Select"),
 	LISTEN("com.itahm.command.Listen"),
+	CONFIG("com.itahm.command.Config"),
 	EXTRA("com.itahm.command.Extra");
 	
 	private String className;

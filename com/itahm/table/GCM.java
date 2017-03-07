@@ -18,11 +18,11 @@ public class GCM extends Table {
 	public JSONObject put(String id, JSONObject gcm) {
 		if (gcm == null) {
 			if (super.table.has(id)) {
-				Agent.manager.gcmm.unregister(super.getJSONObject(id).getString("token"));
+				Agent.gcmm.unregister(super.getJSONObject(id).getString("token"));
 			}
 		}
 		else {
-			Agent.manager.gcmm.register(gcm.getString("token"), id);
+			Agent.gcmm.register(gcm.getString("token"), id);
 		}
 		
 		return super.put(id,  gcm);

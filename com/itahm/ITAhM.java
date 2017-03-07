@@ -1,47 +1,48 @@
 package com.itahm;
-
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-import com.itahm.json.JSONException;
-import com.itahm.json.JSONObject;
-
+import com.itahm.ITAhMAgent;
 import com.itahm.http.Listener;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
+import com.itahm.json.JSONException;
+import com.itahm.json.JSONObject;
 
-public class Communicator extends Listener {
+public class ITAhM extends Listener {
 	
 	private final static String DATA = "data";
 	
 	enum Options {
-		PATH, TCP, CLEAN;
+		PATH, TCP;
 	}
 	
-	private File root;
+	private final File root;
 	private ITAhMAgent agent;
 	
-	private Communicator(int tcp) throws Exception {
+	public ITAhM(int tcp, File root, boolean clean) throws Exception {
 		super("0.0.0.0", tcp);
 		
-		System.out.println(String.format("ITAhM communicator started with TCP %d.", tcp));
-	}
-	
-	public Communicator(int tcp, File path, boolean clean) throws Exception {
-		this(tcp);
+		System.out.format("ITAhM communicator started with TCP %d.\n", tcp);
 		
-		if (path == null) {
-			path = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
-		}
+		this.root = root == null? new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile(): root;
 		
-		loadAgent(path, clean);
-	}
-	
-	public Communicator(File path, boolean clean) throws Exception {
-		this(2014, path, clean);
+		System.out.format("Directory : %s\n", this.root.getAbsoluteFile());
+		
+		System.out.format("Agent loading...\n");
+		
+		this.agent = loadAgent();
+		
+		File dataRoot = new File(root, DATA);
+		dataRoot.mkdir();
+		
+		this.agent.start(dataRoot);
 	}
 	
 	@Override
@@ -63,16 +64,22 @@ public class Communicator extends Listener {
 		this.agent.closeRequest(request);
 	}
 	
-	private void loadAgent(File root, boolean clean) throws Exception {
-		File dataRoot = new File(root, DATA);
-		dataRoot.mkdir();
-		
-		this.root = root;
-		
-		this.agent = new Agent();
-		agent.start(dataRoot, clean);
+	private static ITAhMAgent loadAgent() {
+		return new Agent();
 	}
-	
+	/*
+	private ITAhMAgent loadAgent() throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+		File jar = new File(this.root, AGENT_JAR);
+		
+		if (!jar.isFile()) {
+			download(new URL("http", "itahm.com", "/download/"+ AGENT_JAR), jar);
+		}
+		
+		try (URLClassLoader ucl = new URLClassLoader(new URL [] {jar.toURI().toURL()})) {
+			return (ITAhMAgent)(ucl.loadClass("com.itahm.Agent").newInstance());
+		}
+	}
+	*/
 	private void processRequest(Request request) throws IOException{
 		Response response = parseRequest(request);
 		
@@ -98,16 +105,6 @@ public class Communicator extends Listener {
 				if (!data.has("command")) {
 					return Response.getInstance(request, Response.Status.BADREQUEST, new JSONObject().put("error", "command not found").toString());
 				}
-				
-				switch (data.getString("command")) {
-				case "agent":
-					return Response.getInstance(request, Response.Status.OK,
-						new JSONObject()
-							.put("connections", getConnectionSize())
-							.put("space", this.root.getUsableSpace())
-							.put("java", System.getProperty("java.version")).toString());
-				}
-				
 			} catch (JSONException e) {
 				return Response.getInstance(request, Response.Status.BADREQUEST, new JSONObject().put("error", "invalid json request").toString());
 			} catch (UnsupportedEncodingException e) {
@@ -143,10 +140,49 @@ public class Communicator extends Listener {
 		}
 	}
 	
-	public static void main(String[] args) throws IOException {
+	public static void download(URL url, File output) throws IOException {
+		HttpURLConnection hurlc = (HttpURLConnection)url.openConnection();
+		
+		hurlc.setConnectTimeout(3000);
+		
+		try {
+			hurlc.setRequestMethod("GET");
+			hurlc.connect();
+		
+			if (hurlc.getResponseCode() == 200) {
+				try (InputStream is = hurlc.getInputStream()) {
+					try (FileOutputStream fos = new FileOutputStream(output)) {
+						int length;
+						
+						byte [] buffer = new byte [1024];
+						
+						while(true) {
+							length = is.read(buffer);
+							
+							if (length == -1) {
+								break;
+							}
+							
+							fos.write(buffer, 0, length);
+						}
+					}
+				}	
+			}
+			else {
+				throw new IOException("HTTP status "+ hurlc.getResponseCode());
+			}
+		}
+		finally {
+			hurlc.disconnect();
+		}
+	}
+	
+	public static void main(String[] args) {
 		int tcp = 2014;
 		File path = null;
 		boolean clean = true;
+		
+		System.out.format("ITAhM Agent, since 2014.\n");
 		
 		for (int i=0, _i=args.length; i<_i; i++) {
 			if (args[i].indexOf("-") != 0) {
@@ -178,17 +214,6 @@ public class Communicator extends Listener {
 					}
 					
 					break;
-				case CLEAN:
-					try {
-						clean = Boolean.valueOf(args[++i]);
-					}
-					catch(IllegalArgumentException iae) {
-						System.out.println("CLEAN 옵션에 잘못된 값이 입력되어 실행을 중단합니다.");
-						
-						return;
-					}
-					
-					break;
 				}
 			}
 			catch(IllegalArgumentException iae) {
@@ -198,7 +223,8 @@ public class Communicator extends Listener {
 		
 		try {
 		
-			final Communicator c = new Communicator(tcp, path, clean);
+			//final ITAhM c = new ITAhM(tcp, path, clean);
+			final ITAhM c = new ITAhM(tcp, new File("f:\\data"), clean);
 			
 			Runtime.getRuntime().addShutdownHook(
 				new Thread() {

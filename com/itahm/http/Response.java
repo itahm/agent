@@ -22,7 +22,7 @@ public class Response {
 	private byte [] body;
 	
 	public enum Status {
-		OK, BADREQUEST, UNAUTHORIZED, NOTFOUND, NOTALLOWED, VERSIONNOTSUP, CONFLICT, UNAVAILABLE
+		OK, BADREQUEST, UNAUTHORIZED, NOTFOUND, NOTALLOWED, VERSIONNOTSUP, CONFLICT, UNAVAILABLE, SERVERERROR
 	};
 	
 	private Response(Status status, byte [] bytes) {
@@ -73,6 +73,17 @@ public class Response {
 			
 			try {
 				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 401 Unauthorized</h1></body></html>"
+					.getBytes(StandardCharsets.UTF_8.name());
+			} catch (UnsupportedEncodingException e) {
+			}
+			
+			break;
+		case SERVERERROR:
+			code = 500;
+			reason = "Internal Server Error";
+			
+			try {
+				bytes = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h1>HTTP1.1 500 Internal Server Error</h1></body></html>"
 					.getBytes(StandardCharsets.UTF_8.name());
 			} catch (UnsupportedEncodingException e) {
 			}

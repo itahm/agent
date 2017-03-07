@@ -89,10 +89,12 @@ public class SNMPAgent extends Snmp implements Closeable {
 	private final Map<String, String> network;
 	private final Extension enterprise;
 	
-	public SNMPAgent(File root, boolean clean) throws IOException {
+	private Thread cleaner = null;
+	
+	public SNMPAgent(File root) throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
 		
-		System.out.println("SNMP manager start.");
+		System.out.println("SNMP manager start.3");
 		
 		nodeList = new ConcurrentHashMap<String, SNMPNode>();
 		
@@ -113,10 +115,6 @@ public class SNMPAgent extends Snmp implements Closeable {
 		nodeRoot.mkdir();
 		
 		enterprise = loadEnterprise();
-		
-		if (clean) {
-			clean();
-		}
 		
 		initialize();
 	}
@@ -374,7 +372,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		if (this.nodeList.containsKey(ip)) {
 			if(onFailure) {
 				try {
-					Agent.manager.log.write(ip, "이미 등록된 노드 입니다.", "information", false, false);
+					Agent.log.write(ip, "이미 등록된 노드 입니다.", "information", false, false);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -448,33 +446,61 @@ public class SNMPAgent extends Snmp implements Closeable {
 		return peerNode.getPeerIFName(node);
 	}
 	
-	private void clean() {
-		new Thread(new Runnable() {
+	public void clean(final int day) {
+		if (this.cleaner != null) {
+			this.cleaner.interrupt();
+		}
+		
+		if (day <= 0) {
+			this.cleaner = null;
+			
+			Agent.log(String.format("데이터 정리 해제."));
+			
+			return;
+		}
+		
+		Agent.log(String.format("데이터 보관 주기 설정 : %d 일.", day));
+		
+		this.cleaner = new Thread(new Runnable() {
 
 			@Override
 			public void run() {
-				Calendar date = Calendar.getInstance();
-				
-				date.set(Calendar.HOUR_OF_DAY, 0);
-				date.set(Calendar.MINUTE, 0);
-				date.set(Calendar.SECOND, 0);
-				date.set(Calendar.MILLISECOND, 0);
-				
-				date.add(Calendar.MONTH, -3);
-						
-				new DataCleaner(nodeRoot, date.getTimeInMillis(), 3) {
-
-					@Override
-					public void onDelete(File file) {
-					}
+				while (!Thread.interrupted()) {
+					Calendar date = Calendar.getInstance();
 					
-					@Override
-					public void onComplete(long count) {
+					date.set(Calendar.HOUR_OF_DAY, 0);
+					date.set(Calendar.MINUTE, 0);
+					date.set(Calendar.SECOND, 0);
+					date.set(Calendar.MILLISECOND, 0);
+					
+					date.add(Calendar.DATE, -1* day);
+							
+					new DataCleaner(nodeRoot, date.getTimeInMillis(), 3) {
+	
+						@Override
+						public void onDelete(File file) {
+						}
+						
+						@Override
+						public void onComplete(long count) {
+							if (count > 0) {
+								Agent.log(String.format("데이터 정리 % 건 완료.", count));
+							}
+						}
+					};
+					
+					try {
+						Thread.sleep(1000 *60 *60 *24);
+					} catch (InterruptedException e) {
+						break;
 					}
-				};
+				}
 			}
 			
-		}).start();
+		});
+		
+		this.cleaner.setDaemon(true);
+		this.cleaner.start();
 	}
 	
 	public JSONObject getFailureRate(String ip) {
@@ -516,7 +542,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			this.monitorTable.save();
 			
 			try {
-				Agent.manager.log.write(ip,
+				Agent.log.write(ip,
 					nodeData.has("sysName")? String.format("%s [%s] 정상.", ip, nodeData.getString("sysName")): String.format("%s 정상.", ip),
 					"shutdown", true, true);
 			} catch (IOException e) {
@@ -550,7 +576,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			try {
 				
-				Agent.manager.log.write(ip,
+				Agent.log.write(ip,
 					nodeData.has("sysName")? String.format("%s [%s] 응답 없음.", ip, nodeData.getString("sysName")): String.format("%s 응답 없음.", ip),
 					"shutdown", false, true);
 			} catch (IOException e) {
@@ -628,7 +654,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 		this.monitorTable.save();
 		
 		try {
-			Agent.manager.log.write(ip,
+			Agent.log.write(ip,
 				nodeData.has("sysName")? String.format("%s [%s] %s", ip, nodeData.getString("sysName"), message): String.format("%s %s", ip, message),
 				"critical", !critical, true);
 		} catch (IOException e) {
@@ -731,6 +757,8 @@ public class SNMPAgent extends Snmp implements Closeable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		System.out.format("SNMP manager stop.\n");
 	}
 	
 }

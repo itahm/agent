@@ -30,7 +30,7 @@ public class TestNode extends TmpNode {
 			deviceTable.put(super.ip, new JSONObject());
 		}
 		
-		Agent.manager.icmp.removeNode(super.ip);
+		Agent.icmp.removeNode(super.ip);
 		
 		monitorTable.getJSONObject().put(super.ip, new JSONObject()
 			.put("protocol", "snmp")
@@ -44,7 +44,7 @@ public class TestNode extends TmpNode {
 		this.agent.addNode(this.ip, profileName);
 		
 		try {
-			Agent.manager.log.write(ip, String.format("%s SNMP 등록 성공.", super.ip), "", true, false);
+			Agent.log.write(ip, String.format("%s SNMP 등록 성공.", super.ip), "", true, false);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -57,7 +57,7 @@ public class TestNode extends TmpNode {
 		}
 		
 		try {
-			Agent.manager.log.write(ip, String.format("%s SNMP 등록 실패.", super.ip), "shutdown", false, false);
+			Agent.log.write(ip, String.format("%s SNMP 등록 실패.", super.ip), "shutdown", false, false);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
