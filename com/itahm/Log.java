@@ -139,7 +139,7 @@ public class Log implements Closeable {
 		try {
 			this.sysLog.roll();
 			
-			this.sysLog.append(log.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8.name()));
+			this.sysLog.append((log + System.lineSeparator()).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8.name()));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

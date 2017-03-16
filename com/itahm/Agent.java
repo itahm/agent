@@ -109,13 +109,13 @@ public class Agent implements ITAhMAgent {
 	public static void log(String msg) {
 		Calendar c = Calendar.getInstance();
 		
-		log.sysLog(String.format("%04d-%02d-%02d %02d:%02d:%02d %s%s"
+		log.sysLog(String.format("%04d-%02d-%02d %02d:%02d:%02d %s"
 				, c.get(Calendar.YEAR)
 				, c.get(Calendar.MONTH +1)
 				, c.get(Calendar.DAY_OF_MONTH)
 				, c.get(Calendar.HOUR_OF_DAY)
 				, c.get(Calendar.MINUTE)
-				, c.get(Calendar.SECOND), msg, File.separator));
+				, c.get(Calendar.SECOND), msg));
 	}
 	
 	public static long getUsableSpace() {
