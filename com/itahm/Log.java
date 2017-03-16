@@ -110,6 +110,8 @@ public class Log implements Closeable {
 			this.log.clear();
 		}
 		
+		sysLog(message);
+		
 		this.log.put(Long.toString(index), logData);
 		
 		this.dailyFile.write(this.log.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8.name()));
