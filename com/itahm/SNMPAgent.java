@@ -94,7 +94,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 	public SNMPAgent(File root) throws IOException {
 		super(new DefaultUdpTransportMapping(new UdpAddress("0.0.0.0/162")));
 		
-		System.out.println("SNMP manager start.3");
+		System.out.println("SNMP manager start.");
 		
 		nodeList = new ConcurrentHashMap<String, SNMPNode>();
 		
@@ -418,17 +418,21 @@ public class SNMPAgent extends Snmp implements Closeable {
 		
 		JSONObject data = node.getData();
 		
-		if (data.length() > 0) {
+		if (data != null) {
 			return data;
 		}
 		
 		try {
-			return JSONFile.getJSONObject(new File(this.nodeRoot, ip));
+			return JSONFile.getJSONObject(new File(new File(this.nodeRoot, ip), "node"));
 		} catch (IOException e) {
-			e.printStackTrace();
+			Agent.log("SNMPAgent "+ e.getMessage());
 		}
 		
 		return null;
+	}
+	
+	public JSONObject getNodeData(String ip, boolean offline) {
+		return getNodeData(ip);
 	}
 	
 	public JSONObject getTop(int count) {
@@ -543,7 +547,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			
 			try {
 				Agent.log.write(ip,
-					nodeData.has("sysName")? String.format("%s [%s] 정상.", ip, nodeData.getString("sysName")): String.format("%s 정상.", ip),
+					(nodeData != null && nodeData.has("sysName"))? String.format("%s [%s] 정상.", ip, nodeData.getString("sysName")): String.format("%s 정상.", ip),
 					"shutdown", true, true);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -577,7 +581,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 			try {
 				
 				Agent.log.write(ip,
-					nodeData.has("sysName")? String.format("%s [%s] 응답 없음.", ip, nodeData.getString("sysName")): String.format("%s 응답 없음.", ip),
+						(nodeData != null && nodeData.has("sysName"))? String.format("%s [%s] 응답 없음.", ip, nodeData.getString("sysName")): String.format("%s 응답 없음.", ip),
 					"shutdown", false, true);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -618,7 +622,13 @@ public class SNMPAgent extends Snmp implements Closeable {
 			return;
 		}
 		
-		node.request();
+		try {
+			node.request();
+		} catch (IOException e) {
+			e.printStackTrace();
+			
+			sendNextRequest(node);
+		}
 	}
 	/**
 	 * snmp 요청에 대한 응답
@@ -710,7 +720,13 @@ public class SNMPAgent extends Snmp implements Closeable {
 
 				@Override
 				public void run() {
-					node.request();
+					try {
+						node.request();
+					} catch (IOException e) {
+						sendNextRequest(node);
+						
+						e.printStackTrace();
+					}
 				}
 				
 			}, REQUEST_INTERVAL);

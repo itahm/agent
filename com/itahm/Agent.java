@@ -54,7 +54,7 @@ public class Agent implements ITAhMAgent {
 	private boolean isClosed = true;
 	
 	public Agent() {
-		System.out.format("ITAhM Agent version %s ready.\n", VERSION);
+		System.out.format("ITAhM Agent version %s fix.1 ready.\n", VERSION);
 	}
 	
 	public boolean start(File dataRoot) {
@@ -108,15 +108,14 @@ public class Agent implements ITAhMAgent {
 	
 	public static void log(String msg) {
 		Calendar c = Calendar.getInstance();
-		String log = String.format("%04d-%02d-%02d %02d:%02d:%02d %s"
-			, c.get(Calendar.YEAR)
-			, c.get(Calendar.MONTH +1)
-			, c.get(Calendar.DAY_OF_MONTH)
-			, c.get(Calendar.HOUR_OF_DAY)
-			, c.get(Calendar.MINUTE)
-			, c.get(Calendar.SECOND), msg);
 		
-		System.out.println(log);
+		log.sysLog(String.format("%04d-%02d-%02d %02d:%02d:%02d %s%s"
+				, c.get(Calendar.YEAR)
+				, c.get(Calendar.MONTH +1)
+				, c.get(Calendar.DAY_OF_MONTH)
+				, c.get(Calendar.HOUR_OF_DAY)
+				, c.get(Calendar.MINUTE)
+				, c.get(Calendar.SECOND), msg, File.separator));
 	}
 	
 	public static long getUsableSpace() {
@@ -203,7 +202,7 @@ public class Agent implements ITAhMAgent {
 				.put("version", VERSION).toString())
 					.setResponseHeader("Set-Cookie", String.format("SESSION=%s; HttpOnly", session.getCookie()));
 		}
-			
+		
 		if ("signout".equals(cmd)) {
 			if (session != null) {
 				session.close();
@@ -263,7 +262,6 @@ public class Agent implements ITAhMAgent {
 			gcmm.close();
 		}
 		
-		System.out.format("%d",tableMap.size());
 		
 		for (Table table : tableMap.values()) {
 			try {
@@ -286,10 +284,6 @@ public class Agent implements ITAhMAgent {
 	public void set(Object value) {
 		// TODO Auto-generated method stub
 		
-	}
-	
-	public static void main(String [] args) {
-		System.out.format("ITAhM Agent. since 2014.");
 	}
 
 }

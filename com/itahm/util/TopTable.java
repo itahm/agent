@@ -73,40 +73,5 @@ public class TopTable <E extends Enum<E>> implements Comparator<String> {
          
         return value2.compareTo(value1);
 	}
-/*
-	public static void main(String [] args) {
-		TopTable<Key> t = new TopTable<>(Key.class);
-		
-		t.submit("127", Key.MEMORY, 100);
-		t.submit("192", Key.MEMORY, 200);
-		t.submit("172", Key.MEMORY, 300);
-		t.submit("10", Key.MEMORY, 10);
-		
-		System.out.println(t.getTop(3));
-	}
-
 	
-	private enum Key {
-		RESPONSETIME("responseTime"),
-		FAILURERATE("failureRate"),
-		PROCESSOR("processor"),
-		MEMORY("memory"),
-		MEMORYRATE("memoryRate"),
-		STORAGE("storage"),
-		STORAGERATE("storageRate"),
-		THROUGHPUT("throughput"),
-		THROUGHPUTRATE("throughputRate"),
-		THROUGHPUTERR("throughputErr");
-		
-		private String string;
-		
-		private Key(String string) {
-			this.string = string;
-		}
-		
-		public String toString() {
-			return this.string;
-		}
-	};
-*/	
 }

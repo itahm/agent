@@ -10,11 +10,12 @@ public class Config extends Table {
 	public Config(File dataRoot) throws IOException {
 		super(dataRoot, CONFIG);
 		
-		if (isEmpty()) {
+		if (isEmpty() || !getJSONObject().has("clean")) {
 			getJSONObject()
 				.put("clean", 0);
 	
 			super.save();
 		}
 	}
+	
 }

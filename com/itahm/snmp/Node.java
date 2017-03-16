@@ -5,9 +5,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 
+import com.itahm.Agent;
 import com.itahm.json.JSONException;
 import com.itahm.json.JSONObject;
 
@@ -45,6 +48,8 @@ public abstract class Node implements ResponseListener {
 	protected long lastResponse;
 	private Integer enterprise;
 	private long failureCount = 0;
+	private boolean isInitialized = false;
+	private final Set<Integer> error = new HashSet<>();
 	
 	/**
 	 * 이전 데이터 보관소
@@ -114,7 +119,7 @@ public abstract class Node implements ResponseListener {
 		}
 	}
 	
-	public void request() {		
+	public void request() throws IOException {		
 		// 존재하지 않는 index 지워주기 위해 초기화
 		hrProcessorEntry.clear();
 		hrStorageEntry.clear();
@@ -127,7 +132,7 @@ public abstract class Node implements ResponseListener {
 		maskTable.clear();
 		
 		this.pdu.setRequestID(new Integer32(0));
-					
+		
 		sendRequest(this.pdu);
 	}
 	
@@ -143,20 +148,18 @@ public abstract class Node implements ResponseListener {
 		this.failureCount = 0;
 	}
 
-	public JSONObject getData() {
+	public JSONObject getData() {		
+		if (!this.isInitialized) {
+			return null;
+		}
+		
 		this.data.put("failure", getFailureRate());
 		
 		return this.data;
 	}
 	
-	private final void sendRequest(PDU pdu) {
-		try {
-			this.snmp.send(pdu, this.target, null, this);
-		} catch (IOException e) {
-			e.printStackTrace();
-			
-			onException();
-		}
+	private final void sendRequest(PDU pdu) throws IOException {
+		this.snmp.send(pdu, this.target, null, this);
 	}
 	
 	private final boolean parseSystem(OID response, Variable variable, OID request) {
@@ -461,9 +464,9 @@ public abstract class Node implements ResponseListener {
 			try {
 				if (parseResponse(responseVB.getOid(), value, requestVB.getOid())) {
 					nextRequests.add(responseVB);
-				}				
-			} catch(Exception jsone) {
-				jsone.printStackTrace();
+				}
+			} catch(JSONException jsone) {
+				Agent.log.sysLog(jsone.getMessage());
 			}
 		}
 		
@@ -492,14 +495,12 @@ public abstract class Node implements ResponseListener {
 		int status = response.getErrorStatus();
 		
 		if (status != PDU.noError) {
-			try {
-				throw new Exception("status: "+ status);
+			if (this.error.add(status)) {
+				onException(String.format("Node %s reports error status %d", this.target.getAddress(), status));
 			}
-			catch (Exception e) {
-				e.printStackTrace();
+			else {
+				onException(null);
 			}
-			
-			onException();
 			
 			return;
 		}
@@ -524,8 +525,10 @@ public abstract class Node implements ResponseListener {
 		
 		this.failureCount = Math.max(0, this.failureCount -1);
 		
+		this.isInitialized = true;
+		
 		onSuccess();
-			
+		
 		this.data.put("hrProcessorEntry", this.hrProcessorEntry);
 		this.data.put("hrStorageEntry", this.hrStorageEntry);
 		this.data.put("ifEntry", this.ifEntry);	
@@ -533,7 +536,8 @@ public abstract class Node implements ResponseListener {
 	
 	abstract protected void onSuccess();
 	abstract protected void onFailure();
-	abstract protected void onException();
+	abstract protected void onException(String message);
+	
 	abstract protected boolean parseEnterprise(OID response, Variable variable, OID request);
 	
 	public static void main(String [] args) throws IOException {

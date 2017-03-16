@@ -186,7 +186,7 @@ public class RollingFile implements Closeable {
 		this.summaryFile.save();
 	}
 	
-	public JSONObject getData(long start, long end, boolean summary) {
+	public JSONObject getData(long start, long end, boolean summary) throws IOException {
 		return (summary? this.summary: this.data).getJSON(start, end);
 	}
 	

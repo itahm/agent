@@ -127,20 +127,26 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	}
 	
 	public JSONObject getData(String database, String index, long start, long end, boolean summary) {
-		JSONObject data = null;
-	
 		try {
 			RollingFile rollingFile = this.rollingMap.get(Rolling.valueOf(database.toUpperCase())).get(index);
 			
+			if (rollingFile == null) {
+				try {
+					rollingFile = new RollingFile(new File(this.nodeRoot, database), index);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
 			if (rollingFile != null) {
-				data = rollingFile.getData(start, end, summary);
+				return rollingFile.getData(start, end, summary);
 			}
 		}
-		catch (IllegalArgumentException iae) {
-			iae.printStackTrace();
+		catch (IllegalArgumentException | IOException e) {
+			e.printStackTrace();
 		}
 		
-		return data;
+		return null;
 	}
 	
 	public void setCritical(JSONObject criticalCondition) {
@@ -488,7 +494,11 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 	}
 
 	@Override
-	public void onException() {
+	public void onException(String message) {
+		if (message != null) {
+			Agent.log.sysLog(message);
+		}
+		
 		this.agent.onException(this.ip);
 	}
 	

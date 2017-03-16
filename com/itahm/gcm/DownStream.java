@@ -58,7 +58,6 @@ public abstract class DownStream implements Runnable, Closeable {
 		try {
 			this.thread.join();
 		} catch (InterruptedException e) {
-			e.printStackTrace();
 		}
 	}
 	

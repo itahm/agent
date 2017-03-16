@@ -108,9 +108,6 @@ public class JSONFile implements Closeable{
 			raf.setLength(0);
 			raf.getChannel().write(ByteBuffer.wrap(json.toString().getBytes(StandardCharsets.UTF_8.name())));
 		}
-		catch (FileNotFoundException fnfe) {
-			fnfe.printStackTrace();
-		}
 	}
 	
 	@Override

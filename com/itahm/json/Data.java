@@ -1,6 +1,7 @@
 package com.itahm.json;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Calendar;
 
 import com.itahm.json.JSONObject;
@@ -15,7 +16,7 @@ public abstract class Data {
 		data = new JSONObject();
 	}
 	
-	public void buildJSON(final long end, Calendar calendar) {
+	public void buildJSON(final long end, Calendar calendar) throws IOException {
 		long mills = calendar.getTimeInMillis();
 		
 		if (end <= mills) {
@@ -29,7 +30,7 @@ public abstract class Data {
 		buildJSON(end, calendar);
 	}
 	
-	public JSONObject getJSON(long startMills, long endMills) {
+	public JSONObject getJSON(long startMills, long endMills) throws IOException {
 		Calendar calendar = Calendar.getInstance();
 		
 		this.data.clear();
@@ -53,5 +54,5 @@ public abstract class Data {
 		this.data.put(key, value);
 	}
 	
-	abstract protected void buildNext(File dir);
+	abstract protected void buildNext(File dir) throws IOException;
 }

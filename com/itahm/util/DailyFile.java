@@ -60,6 +60,10 @@ public class DailyFile {
 		this.channel.write(ByteBuffer.wrap(data));
 	}
 	
+	public void append(byte [] data) throws IOException {
+		this.channel.write(ByteBuffer.wrap(data));
+	}
+	
 	public void close() throws IOException {
 		if (this.file != null) {
 			if (this.channel != null) {

@@ -67,19 +67,7 @@ public class ITAhM extends Listener {
 	private static ITAhMAgent loadAgent() {
 		return new Agent();
 	}
-	/*
-	private ITAhMAgent loadAgent() throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException {
-		File jar = new File(this.root, AGENT_JAR);
-		
-		if (!jar.isFile()) {
-			download(new URL("http", "itahm.com", "/download/"+ AGENT_JAR), jar);
-		}
-		
-		try (URLClassLoader ucl = new URLClassLoader(new URL [] {jar.toURI().toURL()})) {
-			return (ITAhMAgent)(ucl.loadClass("com.itahm.Agent").newInstance());
-		}
-	}
-	*/
+	
 	private void processRequest(Request request) throws IOException{
 		Response response = parseRequest(request);
 		
@@ -222,9 +210,7 @@ public class ITAhM extends Listener {
 		}
 		
 		try {
-		
-			//final ITAhM c = new ITAhM(tcp, path, clean);
-			final ITAhM c = new ITAhM(tcp, new File("f:\\data"), clean);
+			final ITAhM c = new ITAhM(tcp, path, clean);
 			
 			Runtime.getRuntime().addShutdownHook(
 				new Thread() {

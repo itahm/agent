@@ -27,6 +27,7 @@ public class Log implements Closeable {
 	
 	private DailyFile dailyFile;
 	private RandomAccessFile indexFile;
+	private DailyFile sysLog;
 	private JSONObject indexObject;
 	private FileChannel indexChannel;
 	private long index;
@@ -35,19 +36,18 @@ public class Log implements Closeable {
 	public Log(File root) throws IOException {
 		File logRoot = new File(root, "log");
 		File indexFile = new File(logRoot, "index");
+		File systemRoot = new File(logRoot, "system");
+		long mills = DailyFile.trim(Calendar.getInstance()).getTimeInMillis();
 		
 		logRoot.mkdir();
+		systemRoot.mkdir();
 		
-		this.dailyFile = new DailyFile(logRoot);
+		dailyFile = new DailyFile(logRoot);
+		sysLog = new DailyFile(systemRoot);
 		
-		byte [] bytes = this.dailyFile.read(DailyFile.trim(Calendar.getInstance()).getTimeInMillis());
+		byte [] bytes = dailyFile.read(mills);
 		
-		if (bytes == null) {
-			this.log = new JSONObject();
-		}
-		else {
-			this.log = new JSONObject(new String(bytes, StandardCharsets.UTF_8.name()));
-		}
+		this.log = bytes == null? new JSONObject(): new JSONObject(new String(bytes, StandardCharsets.UTF_8.name()));
 		
 		this.indexFile = new RandomAccessFile(indexFile, "rws");
 		this.indexChannel = this.indexFile.getChannel();
@@ -133,6 +133,15 @@ public class Log implements Closeable {
 		}
 	}
 	
+	public void sysLog(String log) {
+		try {
+			this.sysLog.roll();
+			
+			this.sysLog.append(log.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8.name()));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	public String read(long mills) throws IOException {
 		byte [] bytes = this.dailyFile.read(mills);
@@ -196,9 +205,16 @@ public class Log implements Closeable {
 		}
 		
 		try {
+			this.sysLog.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		try {
 			this.indexFile.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
+	
 }
