@@ -110,7 +110,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 				return;
 			}
 		} catch (IOException ioe) {
-			// TODO reset
+			ioe.printStackTrace();
 		}
 		
 		closeRequest(request);
@@ -198,7 +198,7 @@ public abstract class Listener extends Timer implements Runnable, Closeable {
 	}
 	
 	abstract protected void onStart();
-	abstract protected void onRequest(Request request);
+	abstract protected void onRequest(Request request)  throws IOException;
 	abstract protected void onClose(Request request);
 	
 	public static void main(String [] args) throws IOException {

@@ -51,12 +51,8 @@ public class ITAhM extends Listener {
 	}
 
 	@Override
-	protected void onRequest(Request request) {
-		try {
-			processRequest(request);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	protected void onRequest(Request request) throws IOException {
+		processRequest(request);
 	}
 	
 	@Override
