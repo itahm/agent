@@ -35,6 +35,8 @@ public class DailyFile {
 			this.file = new RandomAccessFile(new File(this.root, Long.toString(calendar.getTimeInMillis())), "rw");
 			this.channel = this.file.getChannel();
 			
+			this.file.seek(this.file.length());
+			
 			if (this.day != 0) {
 				roll = true;
 			}
@@ -84,22 +86,21 @@ public class DailyFile {
 	}
 	
 	private byte [] read(File file) throws IOException {
-		RandomAccessFile raf = new RandomAccessFile(file, "r");
-		FileChannel channel = raf.getChannel();
-		int size = (int)channel.size();
-		ByteBuffer buffer = ByteBuffer.allocate(size);
-		byte[] bytes = new byte [size];
+		try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+			try (FileChannel fc = raf.getChannel()) {
+				int size = (int)fc.size();
+				byte[] bytes = new byte [size];
+				ByteBuffer bb = ByteBuffer.allocate(size);
 		
-		channel.read(buffer);
-		
-		channel.close();
-		raf.close();
-		
-		buffer.flip();
-		
-		buffer.get(bytes);
-		
-		return bytes;
+				while ((size -= channel.read(bb)) > 0);
+				
+				bb.flip();
+				
+				bb.get(bytes);
+				
+				return bytes;
+			}
+		}
 	}
 
 	public static void main(String[] args) throws IOException {
