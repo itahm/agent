@@ -35,7 +35,7 @@ import com.itahm.table.Table;
 
 public class Agent implements ITAhMAgent {
 
-	public final static String VERSION = "1.3.3.10";
+	public final static String VERSION = "1.3.3.11";
 	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
 	
 	public final static int MAX_TIMEOUT = 10000;
@@ -54,7 +54,7 @@ public class Agent implements ITAhMAgent {
 	private boolean isClosed = true;
 	
 	public Agent() {
-		System.out.format("ITAhM Agent version %s fix.1 ready.\n", VERSION);
+		System.out.format("ITAhM Agent version %s ready.\n", VERSION);
 	}
 	
 	public boolean start(File dataRoot) {
