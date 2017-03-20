@@ -15,15 +15,22 @@ public class Config implements Command {
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
+			Table table = Agent.getTable(Table.CONFIG);
+			
 			switch(data.getString("key")) {
 			case "clean":
-				Table table = Agent.getTable(Table.CONFIG);
 				int clean = data.getInt("value");
 				
 				table.getJSONObject().put("clean", clean);
 				table.save();
 				
 				Agent.snmp.clean(clean);
+				
+				break;
+			
+			case "dashboard":
+				table.getJSONObject().put("clean", data.getJSONObject("value"));
+				table.save();
 				
 				break;
 				

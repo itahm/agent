@@ -488,7 +488,7 @@ public class SNMPAgent extends Snmp implements Closeable {
 						@Override
 						public void onComplete(long count) {
 							if (count > 0) {
-								Agent.log(String.format("데이터 정리 % 건 완료.", count));
+								Agent.log(String.format("데이터 정리 %d 건 완료.", count));
 							}
 						}
 					};

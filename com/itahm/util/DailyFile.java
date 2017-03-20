@@ -92,7 +92,7 @@ public class DailyFile {
 				byte[] bytes = new byte [size];
 				ByteBuffer bb = ByteBuffer.allocate(size);
 		
-				while ((size -= channel.read(bb)) > 0);
+				while ((size -= fc.read(bb)) > 0);
 				
 				bb.flip();
 				
