@@ -29,11 +29,17 @@ public class Config implements Command {
 				break;
 			
 			case "dashboard":
-				table.getJSONObject().put("clean", data.getJSONObject("value"));
+				table.getJSONObject().put("dashboard", data.getJSONObject("value"));
 				table.save();
 				
 				break;
+
+			case "display":
+				table.getJSONObject().put("display", data.getString("value"));
+				table.save();
 				
+				break;
+
 			default:
 				return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "invalid config parameter").toString());
