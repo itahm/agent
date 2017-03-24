@@ -2,7 +2,6 @@ package com.itahm;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,8 +34,8 @@ import com.itahm.table.Table;
 
 public class Agent implements ITAhMAgent {
 
-	public final static String VERSION = "1.3.3.11";
-	private final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
+	public final static String VERSION = "1.3.3.12";
+	public final static String API_KEY = "AIzaSyBg6u1cj9pPfggp-rzQwvdsTGKPgna0RrA";
 	
 	public final static int MAX_TIMEOUT = 10000;
 	public final static int ICMP_INTV = 1000;
@@ -46,7 +45,7 @@ public class Agent implements ITAhMAgent {
 	private static Map<String, Table> tableMap = new HashMap<>();
 	
 	public static Log log;
-	public static GCMManager gcmm;
+	public static GCMManager gcmm = null;
 	public static SNMPAgent snmp;
 	public static ICMPAgent icmp;
 	
@@ -78,15 +77,19 @@ public class Agent implements ITAhMAgent {
 			tableMap.put(Table.GCM, new GCM(dataRoot));
 			
 			log = new Log(dataRoot);
-			gcmm = new GCMManager(API_KEY, InetAddress.getLocalHost().getHostAddress());
 			snmp = new SNMPAgent(dataRoot);
 			icmp = new ICMPAgent();
 			
 			try {
-				int clean = getTable(Table.CONFIG).getJSONObject().getInt("clean");
+				JSONObject config = getTable(Table.CONFIG).getJSONObject();
+				int clean = config.getInt(com.itahm.command.Config.Key.CLEAN.toString().toLowerCase());
 				
 				if (clean > 0) {
 					snmp.clean(clean);
+				}
+				
+				if (!config.isNull(com.itahm.command.Config.Key.GCM.toString().toLowerCase())) {
+					gcmm = new GCMManager(API_KEY, config.getString(com.itahm.command.Config.Key.GCM.toString().toLowerCase()));
 				}
 			}
 			catch (JSONException jsone) {
@@ -261,7 +264,6 @@ public class Agent implements ITAhMAgent {
 		if (gcmm != null) {
 			gcmm.close();
 		}
-		
 		
 		for (Table table : tableMap.values()) {
 			try {

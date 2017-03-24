@@ -9,15 +9,17 @@ public class Position extends Table {
 	
 	public Position(File dataRoot) throws IOException {
 		super(dataRoot, POSITION);
-		
-		if (isEmpty()) {
-			getJSONObject().put("127.0.0.1", new JSONObject()
-				.put("x", 0)
-				.put("y", 0)
-			);
+	}
+	
+	@Override
+	public JSONObject save(JSONObject data) {
+		for (Object key : data.keySet()) {
+			String ip = (String)key;
 			
-			save();
+			super.table.put(ip, data.getJSONObject(ip));
 		}
+		
+		return super.save();
 	}
 
 }

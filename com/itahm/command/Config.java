@@ -7,18 +7,26 @@ import com.itahm.json.JSONObject;
 
 import com.itahm.table.Table;
 import com.itahm.Agent;
+import com.itahm.GCMManager;
 import com.itahm.http.Request;
 import com.itahm.http.Response;
 
 public class Config implements Command {
+	
+	public enum Key {
+		CLEAN,
+		DASHBOARD,
+		DISPLAY,
+		GCM
+	}
 	
 	@Override
 	public Response execute(Request request, JSONObject data) throws IOException {
 		try {
 			Table table = Agent.getTable(Table.CONFIG);
 			
-			switch(data.getString("key")) {
-			case "clean":
+			switch(Key.valueOf(data.getString("key").toUpperCase())) {
+			case CLEAN:
 				int clean = data.getInt("value");
 				
 				table.getJSONObject().put("clean", clean);
@@ -28,18 +36,40 @@ public class Config implements Command {
 				
 				break;
 			
-			case "dashboard":
+			case DASHBOARD:
 				table.getJSONObject().put("dashboard", data.getJSONObject("value"));
 				table.save();
 				
 				break;
 
-			case "display":
+			case DISPLAY:
 				table.getJSONObject().put("display", data.getString("value"));
 				table.save();
 				
 				break;
-
+			case GCM:
+				if (data.isNull("value")) {
+					if (Agent.gcmm != null) {
+						Agent.gcmm.close();
+						
+						Agent.gcmm = null;
+					}
+					
+					table.getJSONObject().put("gcm", JSONObject.NULL);
+				}
+				else {
+					String host = data.getString("value");
+					
+					if (Agent.gcmm == null) {
+						Agent.gcmm = new GCMManager(Agent.API_KEY, data.getString("value"));
+					}
+					
+					table.getJSONObject().put("gcm", host);
+				}
+				
+				table.save();
+				
+				return Response.getInstance(request, Response.Status.OK);
 			default:
 				return Response.getInstance(request, Response.Status.BADREQUEST,
 					new JSONObject().put("error", "invalid config parameter").toString());

@@ -130,7 +130,7 @@ public class Log implements Closeable {
 			waiter.clear();
 		}
 		
-		if(broadcast) {
+		if(broadcast && Agent.gcmm != null) {
 			Agent.gcmm.broadcast(logData.getString("message"));
 		}
 	}

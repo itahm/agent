@@ -57,6 +57,11 @@ public class Extra implements Command {
 				
 				return Response.getInstance(request, Response.Status.OK);
 			case MESSAGE:
+				if (Agent.gcmm == null) {
+					return Response.getInstance(request, Response.Status.BADREQUEST,
+						new JSONObject().put("error", "gcm not enabled").toString());
+				}
+				
 				Agent.gcmm.broadcast(data.getString("message"));
 				
 				return Response.getInstance(request, Response.Status.OK);
@@ -96,6 +101,7 @@ public class Extra implements Command {
 				return Response.getInstance(request, Response.Status.OK, table.save().toString());
 			case ENTERPRISE:
 				return Agent.snmp.executeEnterprise(request, data);
+				
 			}
 		}
 		catch (NullPointerException npe) {

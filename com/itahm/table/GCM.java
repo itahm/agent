@@ -16,13 +16,15 @@ public class GCM extends Table {
 	
 	@Override
 	public JSONObject put(String id, JSONObject gcm) {
-		if (gcm == null) {
-			if (super.table.has(id)) {
-				Agent.gcmm.unregister(super.getJSONObject(id).getString("token"));
+		if (Agent.gcmm != null) {
+			if (gcm == null) {
+				if (super.table.has(id)) {
+					Agent.gcmm.unregister(super.getJSONObject(id).getString("token"));
+				}
 			}
-		}
-		else {
-			Agent.gcmm.register(gcm.getString("token"), id);
+			else {
+				Agent.gcmm.register(gcm.getString("token"), id);
+			}
 		}
 		
 		return super.put(id,  gcm);
