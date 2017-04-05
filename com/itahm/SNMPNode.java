@@ -174,7 +174,7 @@ public class SNMPNode extends Node implements ICMPListener, Closeable {
 			return super.data.getJSONObject("ifEntry").getJSONObject(index.toString()).getString("ifName");
 		}
 		catch(JSONException jsone) {
-			jsone.printStackTrace();
+			Agent.log(String.format("%s ifEntry not found", ip));
 		}
 		
 		return null;

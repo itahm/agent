@@ -2,6 +2,7 @@ package com.itahm.icmp;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.util.Calendar;
 
@@ -13,7 +14,7 @@ public abstract class AbstractNode implements Runnable {
 	private Thread thread;
 
 	public AbstractNode(String host, int timeout, long interval) throws UnknownHostException {
-		target = InetAddress.getByName(host);
+		target = Inet4Address.getByName(host);
 		this.timeout = timeout;
 		this.interval = interval;
 	}
@@ -57,7 +58,7 @@ public abstract class AbstractNode implements Runnable {
 			sent = Calendar.getInstance().getTimeInMillis();
 			
 			try {
-				if (this.target.isReachable(this.timeout)) {
+				if (((Inet4Address)this.target).isReachable(this.timeout)) {
 					onSuccess(Calendar.getInstance().getTimeInMillis() - sent);
 				}
 				else {

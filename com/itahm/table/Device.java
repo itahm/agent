@@ -37,6 +37,8 @@ public class Device extends Table {
 			
 			if (posTable.getJSONObject(ip) == null) {
 				posTable.put(ip, new JSONObject().put("x", 0).put("y", 0));
+				
+				posTable.save();
 			}
 			
 			if (!device.has("name")) {
